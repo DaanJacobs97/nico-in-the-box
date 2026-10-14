@@ -231,6 +231,31 @@ void main() {
     );
   });
 
+  test('host can change game, which resizes the room', () async {
+    final host = await join('Nico', asHost: true);
+    await join('Daan');
+    await until(host, () => host.lobby?.players.length == 2);
+
+    host.changeGame('colorclash');
+    await until(host, () => host.lobby!.maxPlayers == 4);
+    final third = await join('Kim');
+    await until(third, () => third.lobby?.players.length == 3);
+
+    // Three players don't fit in Tic Tac Toe any more.
+    final notice = host.notices.first;
+    host.changeGame('tictactoe');
+    expect(
+      await notice.timeout(const Duration(seconds: 5)),
+      contains('at most 2'),
+    );
+    expect(host.lobby!.gameId, 'colorclash');
+
+    host.startGame();
+    await until(third, () => third.gameId == 'colorclash');
+    final hand = third.gameView!['hand']! as List<Object?>;
+    expect(hand, hasLength(7));
+  });
+
   test('a client with another protocol version is rejected', () async {
     final socket = await WebSocket.connect(
       'ws://127.0.0.1:${server.port}$kWebSocketPath',

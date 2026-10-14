@@ -1,5 +1,9 @@
+import 'dart:math';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:nico_in_the_box/games/color_clash/color_clash_game.dart';
+import 'package:nico_in_the_box/games/color_clash/color_clash_view.dart';
 import 'package:nico_in_the_box/games/game_views.dart';
 import 'package:nico_in_the_box/games/tictactoe/tictactoe_view.dart';
 import 'package:nico_in_the_box/main.dart';
@@ -85,6 +89,41 @@ void main() {
     expect(sent, [
       {'type': 'place', 'cell': 4},
     ]);
+  });
+
+  testWidgets('color clash view renders a real hand and plays a card', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1280, 800);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+
+    final session = ColorClashSession(const [
+      PlayerInfo(id: 'h', nickname: 'Nico'),
+      PlayerInfo(id: 'g', nickname: 'Daan'),
+    ], random: Random(5));
+    final view = session.viewFor('h');
+    final sent = <Json>[];
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: ColorClashView(
+            ctx: GameViewContext(
+              view: view,
+              myId: 'h',
+              lobby: _lobby,
+              sendAction: sent.add,
+            ),
+          ),
+        ),
+      ),
+    );
+    expect(tester.takeException(), isNull);
+    expect(find.text('Your turn!'), findsOneWidget);
+    expect(find.text('Draw (${view['drawPile']})'), findsOneWidget);
+
+    await tester.tap(find.byIcon(Icons.style));
+    expect(sent.last, {'type': 'draw'});
   });
 
   test('manual address parsing', () {
