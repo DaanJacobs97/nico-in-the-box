@@ -3,7 +3,8 @@
 Jackbox-style LAN party games built with Flutter. One device hosts a room, and friends on the same Wi-Fi find it
 automatically and join with a nickname. No internet connection and no accounts are needed.
 
-> **Status:** early development. See [PLAN.md](PLAN.md) for the design and milestones.
+> **Status:** v0.1. Playable on Windows and Android over a LAN. See [PLAN.md](PLAN.md) for the design and
+> milestones.
 
 ## Features
 
@@ -34,7 +35,9 @@ automatically and join with a nickname. No internet connection and no accounts a
 ### Requirements
 
 - [Flutter SDK](https://docs.flutter.dev/get-started/install) (stable channel)
-- **Windows builds:** Visual Studio 2022 with the *Desktop development with C++* workload
+- **Windows builds:** Visual Studio 2022 with the *Desktop development with C++* workload, and Windows
+  **Developer Mode** turned on (Flutter plugins need its symlink support). You'll find it under Settings → System →
+  For developers.
 - **Android builds:** the Android SDK, through Android Studio or the command-line tools
 
 Run `flutter doctor` to check your setup.
@@ -52,6 +55,23 @@ flutter run -d windows     # or: flutter run -d <android-device-id>
 flutter analyze
 flutter test
 ```
+
+`flutter test` runs the game engines, the protocol, and in-process server/client tests over real loopback sockets.
+
+### End-to-end test on two devices
+
+[`integration_test/lan_play_test.dart`](integration_test/lan_play_test.dart) drives the real app on two devices at
+once. It plays two rounds of Tic Tac Toe, switches to Color Clash and plays it to a winner, then the host closes the
+room. Start the two sides at roughly the same time (each waits up to 5 minutes for the other):
+
+```bash
+flutter devices                                                         # find device ids
+flutter test integration_test/lan_play_test.dart -d windows --dart-define=ROLE=host
+flutter test integration_test/lan_play_test.dart -d <android-id> --dart-define=ROLE=join
+```
+
+The joiner finds the room by scanning. Add `--dart-define=JOIN_IP=<host ip>` to test manual IP entry instead.
+Any device can take either role.
 
 ## Playing on a LAN
 
