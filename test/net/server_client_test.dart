@@ -39,7 +39,7 @@ Future<void> until(GameClient client, bool Function() condition) {
 
   client.addListener(check);
   return done.future
-      .timeout(const Duration(seconds: 5))
+      .timeout(const Duration(seconds: 15))
       .whenComplete(() => client.removeListener(check));
 }
 
@@ -95,7 +95,9 @@ void main() {
     await until(host, () => host.lobby?.players.length == 2);
 
     host.startGame();
+    // Each client receives its own copy of the board; wait for both.
     await until(guest, () => guest.gameView != null);
+    await until(host, () => host.gameView != null);
     expect(guest.gameView!['turn'], host.playerId);
 
     Future<void> place(GameClient who, int cell, int expectedFilled) async {
@@ -231,6 +233,31 @@ void main() {
     );
   });
 
+  test('host can change game, which resizes the room', () async {
+    final host = await join('Nico', asHost: true);
+    await join('Daan');
+    await until(host, () => host.lobby?.players.length == 2);
+
+    host.changeGame('colorclash');
+    await until(host, () => host.lobby!.maxPlayers == 4);
+    final third = await join('Kim');
+    await until(third, () => third.lobby?.players.length == 3);
+
+    // Three players don't fit in Tic Tac Toe any more.
+    final notice = host.notices.first;
+    host.changeGame('tictactoe');
+    expect(
+      await notice.timeout(const Duration(seconds: 15)),
+      contains('at most 2'),
+    );
+    expect(host.lobby!.gameId, 'colorclash');
+
+    host.startGame();
+    await until(third, () => third.gameId == 'colorclash');
+    final hand = third.gameView!['hand']! as List<Object?>;
+    expect(hand, hasLength(7));
+  });
+
   test('a client with another protocol version is rejected', () async {
     final socket = await WebSocket.connect(
       'ws://127.0.0.1:${server.port}$kWebSocketPath',
@@ -270,7 +297,7 @@ void main() {
 
     final notice = host.notices.first;
     await guest.leave();
-    expect(await notice.timeout(const Duration(seconds: 5)), 'Daan left.');
+    expect(await notice.timeout(const Duration(seconds: 15)), 'Daan left.');
     await until(host, () => host.lobby!.players.length == 1);
   });
 

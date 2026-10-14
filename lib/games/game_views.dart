@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../net/protocol.dart';
+import 'color_clash/color_clash_view.dart';
 import 'tictactoe/tictactoe_view.dart';
 
 /// What a game's widget needs to render the current view and send moves.
@@ -28,4 +29,5 @@ typedef GameViewBuilder = Widget Function(GameViewContext context);
 /// stay pure Dart.
 final Map<String, GameViewBuilder> gameViews = {
   'tictactoe': (ctx) => TicTacToeView(ctx: ctx),
+  'colorclash': (ctx) => ColorClashView(ctx: ctx),
 };
