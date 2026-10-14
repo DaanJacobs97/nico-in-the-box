@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 
 import '../games/registry.dart';
@@ -143,6 +145,17 @@ class _JoinInfo extends StatelessWidget {
                     fontFamily: 'monospace',
                   ),
                 ),
+            if (Platform.isWindows) ...[
+              const SizedBox(height: 12),
+              Text(
+                'Nobody can connect? Windows Firewall may be blocking the '
+                'game. Allow "Nico in the Box" on Private networks (Windows '
+                'Security → Firewall & network protection → Allow an app '
+                'through firewall), and make sure your Wi-Fi is set to a '
+                'Private network.',
+                style: theme.textTheme.bodySmall,
+              ),
+            ],
           ],
         ),
       ),

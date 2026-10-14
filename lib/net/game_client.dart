@@ -181,7 +181,13 @@ class GameClient extends ChangeNotifier {
   }
 
   void _send(String type, [Json body = const {}]) {
-    if (isConnected) _socket.add(encodeMessage(type, body));
+    if (!isConnected) return;
+    try {
+      _socket.add(encodeMessage(type, body));
+    } on StateError {
+      // The socket closed before onDone was delivered.
+      _onConnectionClosed();
+    }
   }
 
   void sendAction(Json action) => _send(Msg.action, {'action': action});

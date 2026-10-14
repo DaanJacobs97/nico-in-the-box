@@ -19,8 +19,11 @@ class _Connection {
   Timer? helloTimeout;
 
   void send(String type, [Json body = const {}]) {
-    if (socket.readyState == WebSocket.open) {
+    if (socket.readyState != WebSocket.open) return;
+    try {
       socket.add(encodeMessage(type, body));
+    } on StateError {
+      // Closing concurrently; the disconnect handler cleans up.
     }
   }
 }
@@ -97,7 +100,12 @@ class GameServer extends ChangeNotifier {
       await request.response.close();
       return;
     }
-    final socket = await WebSocketTransformer.upgrade(request);
+    final WebSocket socket;
+    try {
+      socket = await WebSocketTransformer.upgrade(request);
+    } on Object {
+      return; // Client went away mid-handshake.
+    }
     if (_closed) {
       await socket.close();
       return;
