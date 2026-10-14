@@ -74,8 +74,11 @@ flutter test --platform chrome
 
 The root `flutter test` runs the server, discovery and in-process server/client tests over real loopback sockets.
 The shared package's tests cover the game engines and protocol. `--platform chrome` runs them compiled for the web,
-which proves the package stays browser-safe; on Windows without Chrome, set `CHROME_EXECUTABLE` to Edge's
-`msedge.exe`.
+which proves the package stays browser-safe. It needs Google Chrome: pointing `CHROME_EXECUTABLE` at Edge was tried
+and hangs while loading. CI always runs this step with Chrome, so you can also leave it to CI.
+
+Compiling for the web does **not** catch a stray `dart:io` import; Dart only fails when that code runs. CI therefore
+also rejects any `dart:io` import in `packages/nico_shared`.
 
 ### End-to-end test on two devices
 
