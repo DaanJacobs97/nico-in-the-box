@@ -53,6 +53,7 @@ class TicTacToeView extends StatelessWidget {
                   children: [
                     for (var i = 0; i < 9; i++)
                       _Cell(
+                        key: ValueKey('ttt-cell-$i'),
                         mark: board[i],
                         highlighted: winLine.contains(i),
                         onTap: myTurn && board[i] == null
@@ -71,7 +72,12 @@ class TicTacToeView extends StatelessWidget {
 }
 
 class _Cell extends StatelessWidget {
-  const _Cell({required this.mark, required this.highlighted, this.onTap});
+  const _Cell({
+    super.key,
+    required this.mark,
+    required this.highlighted,
+    this.onTap,
+  });
 
   final String? mark;
   final bool highlighted;

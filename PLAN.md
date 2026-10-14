@@ -164,7 +164,7 @@ win or draw. The host can then use *Restart game*, which starts a rematch where 
    players, reshuffle, the last-card rule), then its UI.
 8. ✅ **Platform polish:** manifest and Info.plist entries, the firewall note, error handling (disconnects, full room,
    host leaving).
-9. **Verification** (below), then a README with run instructions.
+9. ✅ **Verification** (below), then a README with run instructions.
 
 ## Verification
 
@@ -175,6 +175,18 @@ win or draw. The host can then use *Restart game*, which starts a rematch where 
 - `flutter build apk --debug` succeeds.
 - **Limit:** an Android *emulator* sits behind NAT and won't see LAN broadcasts, so a real Windows ↔ Android LAN
   test needs your physical phone. I'll give you the steps to run it.
+
+**Result (2026-10-14):** analyze is clean and 61 unit/integration tests pass. The Windows and Android debug builds
+succeed. Instead of two Windows instances, the real app was driven on two physical devices (a Windows PC and an Android
+10 tablet on the same Wi-Fi) by `integration_test/lan_play_test.dart`. Each run played two rounds of Tic Tac Toe
+(marks swap), switched to Color Clash, played it to a winner, and closed the room:
+- Windows hosts, the tablet joins by Scan: passed
+- The tablet hosts, Windows joins by Scan: passed
+- Windows hosts, the tablet joins by manual IP: passed
+
+Two app bugs found this way and fixed:
+- Closing a room told guests that the host had *left* rather than *closed* it.
+- The closed notice could be lost because the server shut down before it was delivered.
 
 ## Out of scope for v1
 Reconnecting after a drop, a browser join client, more than one room per host, a polished iOS build, sound and
