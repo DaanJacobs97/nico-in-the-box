@@ -477,4 +477,73 @@ void main() {
       expect(game.isOver, isTrue, reason: 'seed $seed did not finish');
     }
   });
+
+  group('table view (shared screen)', () {
+    /// Every card-shaped object anywhere inside [value].
+    Iterable<Json> cardsIn(Object? value) sync* {
+      if (value is Map<String, Object?>) {
+        if (value.containsKey('kind') && value.containsKey('color')) {
+          yield value;
+        }
+        for (final v in value.values) {
+          yield* cardsIn(v);
+        }
+      } else if (value is List<Object?>) {
+        for (final v in value) {
+          yield* cardsIn(v);
+        }
+      }
+    }
+
+    test('has public state but no private fields', () {
+      final game = ColorClashSession([a, b, c], random: Random(11));
+      final table = game.tableView();
+      for (final key in ['hand', 'playable', 'pendingDrawn', 'canCallLast']) {
+        expect(table.containsKey(key), isFalse, reason: key);
+      }
+      final players = (table['players']! as List<Object?>).cast<Json>();
+      expect(players.map((p) => p['cards']), [7, 7, 7]);
+      expect(table['turn'], 'a');
+      // A player's view is the table view plus their own private parts.
+      final view = game.viewFor('a');
+      for (final key in table.keys) {
+        expect(view[key], table[key], reason: key);
+      }
+    });
+
+    test('never contains a card from any hand, in any state', () {
+      for (var seed = 0; seed < 10; seed++) {
+        final random = Random(seed);
+        final game = ColorClashSession([a, b, c], random: random);
+        var moves = 0;
+        while (!game.isOver && moves < 5000) {
+          final handIds = {
+            for (final p in [a, b, c])
+              for (final card in game.viewFor(p.id)['hand']! as List<Object?>)
+                (card! as Json)['id'],
+          };
+          final shown = cardsIn(game.tableView()).toList();
+          // The only card on the table is the public top of the discard pile.
+          expect(shown, hasLength(1), reason: 'seed $seed move $moves');
+          expect(handIds.contains(shown.single['id']), isFalse);
+
+          final turn = turnOf(game)!;
+          final view = game.viewFor(turn);
+          final playable = (view['playable']! as List<Object?>).cast<int>();
+          if (playable.isNotEmpty) {
+            game.applyAction(turn, {
+              'type': 'play',
+              'cardId': playable.first,
+              'color': playableColors[random.nextInt(4)].name,
+            });
+          } else if (view['pendingDrawn'] != null) {
+            game.applyAction(turn, {'type': 'pass'});
+          } else {
+            game.applyAction(turn, {'type': 'draw'});
+          }
+          moves++;
+        }
+      }
+    });
+  });
 }

@@ -1,7 +1,7 @@
 import 'dart:convert';
 
 /// Bump whenever a message shape changes so mismatched builds refuse to talk.
-const int kProtocolVersion = 1;
+const int kProtocolVersion = 2;
 
 /// TCP port the game server listens on (WebSocket at [kWebSocketPath]).
 const int kGamePort = 47800;
@@ -13,6 +13,9 @@ const int kDiscoveryPort = 47801;
 const String kDiscoveryAppId = 'nicobox';
 
 const String kWebSocketPath = '/ws';
+
+/// Read-only WebSocket for shared screens (browser displays).
+const String kDisplayPath = '/display';
 
 const int kMaxNicknameLength = 16;
 
@@ -31,6 +34,7 @@ abstract final class Msg {
   static const kick = 'kick';
   static const changeGame = 'changeGame';
   static const closeRoom = 'closeRoom';
+  static const setDisplay = 'setDisplay';
 
   // server -> client
   static const welcome = 'welcome';
@@ -41,6 +45,9 @@ abstract final class Msg {
   static const error = 'error';
   static const kicked = 'kicked';
   static const closed = 'closed';
+
+  // server -> shared screens (and the host's device when it is the screen)
+  static const display = 'display';
 }
 
 /// `code` values carried by [Msg.error].
@@ -109,6 +116,77 @@ class PlayerInfo {
   );
 }
 
+/// Where the shared screen is shown when Single game screen is on.
+enum DisplayTarget { browser, caster }
+
+/// The host's Single game screen settings, part of every lobby update.
+class DisplaySettings {
+  const DisplaySettings({
+    this.enabled = false,
+    this.target = DisplayTarget.browser,
+    this.hostPlays = true,
+  });
+
+  static const off = DisplaySettings();
+
+  final bool enabled;
+  final DisplayTarget target;
+
+  /// False when the host's own device is the shared screen: the host keeps
+  /// the session controls but takes no seat.
+  final bool hostPlays;
+
+  DisplaySettings copyWith({
+    bool? enabled,
+    DisplayTarget? target,
+    bool? hostPlays,
+  }) => DisplaySettings(
+    enabled: enabled ?? this.enabled,
+    target: target ?? this.target,
+    hostPlays: hostPlays ?? this.hostPlays,
+  );
+
+  Json toJson() => {
+    'enabled': enabled,
+    'target': target.name,
+    'hostPlays': hostPlays,
+  };
+
+  factory DisplaySettings.fromJson(Json json) => DisplaySettings(
+    enabled: json['enabled'] == true,
+    target: DisplayTarget.values.byName(json['target']! as String),
+    hostPlays: json['hostPlays'] != false,
+  );
+
+  @override
+  bool operator ==(Object other) =>
+      other is DisplaySettings &&
+      other.enabled == enabled &&
+      other.target == target &&
+      other.hostPlays == hostPlays;
+
+  @override
+  int get hashCode => Object.hash(enabled, target, hostPlays);
+}
+
+/// What kind of shared screen is connected.
+enum DisplayKind { browser, caster, host }
+
+/// A connected shared screen, as listed in the lobby.
+class DisplayInfo {
+  const DisplayInfo({required this.kind, required this.name});
+
+  final DisplayKind kind;
+  final String name;
+
+  Json toJson() => {'kind': kind.name, 'name': name};
+
+  factory DisplayInfo.fromJson(Json json) => DisplayInfo(
+    kind: DisplayKind.values.byName(json['kind']! as String),
+    name: json['name']! as String,
+  );
+}
+
 /// Snapshot of a room as broadcast to every client in [Msg.lobby].
 class LobbyState {
   const LobbyState({
@@ -119,24 +197,42 @@ class LobbyState {
     required this.maxPlayers,
     required this.hostId,
     required this.phase,
+    this.hostName = '',
+    this.display = DisplaySettings.off,
+    this.displays = const [],
   });
 
   final String roomName;
   final String gameId;
+
+  /// Seated players. The host is among them unless their device is the
+  /// shared screen ([DisplaySettings.hostPlays] is false).
   final List<PlayerInfo> players;
   final int minPlayers;
   final int maxPlayers;
   final String? hostId;
   final RoomPhase phase;
 
+  /// The host's nickname, even when the host has no seat.
+  final String hostName;
+
+  final DisplaySettings display;
+
+  /// Shared screens currently connected.
+  final List<DisplayInfo> displays;
+
   bool get canStart => players.length >= minPlayers;
 
-  String nicknameOf(String playerId) => players
-      .firstWhere(
-        (p) => p.id == playerId,
-        orElse: () => PlayerInfo(id: playerId, nickname: '?'),
-      )
-      .nickname;
+  /// Whether players should use their compact, hand-only layout: the shared
+  /// screen is on *and* at least one screen is actually showing the table.
+  bool get sharedScreenActive => display.enabled && displays.isNotEmpty;
+
+  String nicknameOf(String playerId) {
+    for (final p in players) {
+      if (p.id == playerId) return p.nickname;
+    }
+    return playerId == hostId && hostName.isNotEmpty ? hostName : '?';
+  }
 
   Json toJson() => {
     'room': roomName,
@@ -145,7 +241,10 @@ class LobbyState {
     'min': minPlayers,
     'max': maxPlayers,
     'hostId': hostId,
+    'hostName': hostName,
     'phase': phase.name,
+    'display': display.toJson(),
+    'displays': [for (final d in displays) d.toJson()],
   };
 
   factory LobbyState.fromJson(Json json) => LobbyState(
@@ -158,6 +257,50 @@ class LobbyState {
     minPlayers: json['min']! as int,
     maxPlayers: json['max']! as int,
     hostId: json['hostId'] as String?,
+    hostName: json['hostName'] as String? ?? '',
     phase: RoomPhase.values.byName(json['phase']! as String),
+    display: json['display'] == null
+        ? DisplaySettings.off
+        : DisplaySettings.fromJson(json['display']! as Json),
+    displays: [
+      for (final d in json['displays'] as List<Object?>? ?? const [])
+        DisplayInfo.fromJson(d! as Json),
+    ],
+  );
+}
+
+/// Everything a shared screen draws, sent as [Msg.display] after every
+/// change. Holds only public information: never a player's hand.
+class DisplayState {
+  const DisplayState({
+    required this.lobby,
+    this.gameId,
+    this.table,
+    this.result,
+  });
+
+  final LobbyState lobby;
+
+  /// Set while a game is running or finished.
+  final String? gameId;
+
+  /// The game's `GameSession.tableView()`.
+  final Json? table;
+
+  /// The finished game's result, like [Msg.gameOver].
+  final Json? result;
+
+  Json toJson() => {
+    'lobby': lobby.toJson(),
+    'game': gameId,
+    'table': table,
+    'result': result,
+  };
+
+  factory DisplayState.fromJson(Json json) => DisplayState(
+    lobby: LobbyState.fromJson(json['lobby']! as Json),
+    gameId: json['game'] as String?,
+    table: json['table'] as Json?,
+    result: json['result'] as Json?,
   );
 }

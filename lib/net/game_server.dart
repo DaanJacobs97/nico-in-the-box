@@ -40,6 +40,7 @@ class GameServer extends ChangeNotifier {
     required this.roomName,
     required this._game,
     this.webClient,
+    this._display = DisplaySettings.off,
     Random? random,
   }) : _random = random ?? Random.secure(),
        hostToken = _randomToken(random ?? Random.secure());
@@ -55,6 +56,8 @@ class GameServer extends ChangeNotifier {
 
   HttpServer? _http;
   final List<_Connection> _connections = [];
+  final List<DisplayHandle> _displays = [];
+  DisplaySettings _display;
   String? _hostId;
   int _nextPlayerId = 1;
   RoomPhase _phase = RoomPhase.lobby;
@@ -67,17 +70,31 @@ class GameServer extends ChangeNotifier {
   int get port => _http!.port;
   bool get isRunning => _http != null && !_closed;
 
-  List<PlayerInfo> get players => [
+  DisplaySettings get display => _display;
+
+  /// Everyone who said hello, including a host without a seat.
+  Iterable<PlayerInfo> get _everyone => [
     for (final c in _connections)
       if (c.player != null) c.player!,
   ];
+
+  /// Seated players, in join order. The host sits out when their device is
+  /// the shared screen.
+  List<PlayerInfo> get players => [
+    for (final p in _everyone)
+      if (p.id != _hostId || _display.hostPlays) p,
+  ];
+
+  bool get _hostIsScreen => _hostId != null && !_display.hostPlays;
 
   /// Whether a new (non-host) player could join right now.
   bool get acceptingPlayers =>
       _phase == RoomPhase.lobby && _seatsTaken < _game.maxPlayers;
 
-  /// Seats in use, counting one reserved for the host until they connect.
-  int get _seatsTaken => players.length + (_hostId == null ? 1 : 0);
+  /// Seats in use, counting one reserved for a playing host until they
+  /// connect.
+  int get _seatsTaken =>
+      players.length + (_hostId == null && _display.hostPlays ? 1 : 0);
 
   static String _randomToken(Random random) =>
       List.generate(16, (_) => random.nextInt(256).toRadixString(16)).join();
@@ -110,6 +127,11 @@ class GameServer extends ChangeNotifier {
     if (path == kWebSocketPath &&
         WebSocketTransformer.isUpgradeRequest(request)) {
       await _upgradeToPlayer(request);
+      return;
+    }
+    if (path == kDisplayPath &&
+        WebSocketTransformer.isUpgradeRequest(request)) {
+      await _upgradeToDisplay(request);
       return;
     }
     try {
@@ -167,6 +189,62 @@ class GameServer extends ChangeNotifier {
     response.headers.contentType = ContentType.html;
     response.write(html);
     await response.close();
+  }
+
+  /// A browser shared screen: read-only, so anything it sends is ignored.
+  Future<void> _upgradeToDisplay(HttpRequest request) async {
+    final WebSocket socket;
+    try {
+      socket = await WebSocketTransformer.upgrade(request);
+    } on Object {
+      return;
+    }
+    if (_closed) {
+      await socket.close();
+      return;
+    }
+    socket.pingInterval = const Duration(seconds: 5);
+    final browserCount = _displays
+        .where((d) => d.info.kind == DisplayKind.browser)
+        .length;
+    final handle = attachDisplay(
+      kind: DisplayKind.browser,
+      name: 'Browser ${browserCount + 1}',
+      send: (message) {
+        if (socket.readyState == WebSocket.open) socket.add(message);
+      },
+      close: () => socket.close(),
+    );
+    socket.listen(
+      (_) {},
+      onDone: handle.detach,
+      onError: (Object _) => handle.detach(),
+      cancelOnError: true,
+    );
+  }
+
+  /// Connects a shared screen. It immediately receives the current
+  /// [Msg.display] state and every update after that until detached.
+  DisplayHandle attachDisplay({
+    required DisplayKind kind,
+    required String name,
+    required void Function(String message) send,
+    Future<void> Function()? close,
+  }) {
+    late final DisplayHandle handle;
+    handle = DisplayHandle._(
+      DisplayInfo(kind: kind, name: name),
+      send,
+      close,
+      onDetach: () {
+        if (_displays.remove(handle) && !_closed) _broadcastLobby();
+      },
+    );
+    _displays.add(handle);
+    // The lobby lists the new screen; that broadcast also sends it the
+    // current display state.
+    _broadcastLobby();
+    return handle;
   }
 
   Future<void> _upgradeToPlayer(HttpRequest request) async {
@@ -229,6 +307,7 @@ class GameServer extends ChangeNotifier {
       Msg.kick,
       Msg.changeGame,
       Msg.closeRoom,
+      Msg.setDisplay,
     };
     if (!hostCommands.contains(type)) {
       conn.send(Msg.error, {
@@ -262,7 +341,36 @@ class GameServer extends ChangeNotifier {
         _changeGame(conn, msg['gameId']);
       case Msg.closeRoom:
         unawaited(close(reason: CloseReason.hostClosed));
+      case Msg.setDisplay:
+        _setDisplay(conn, msg['display']);
     }
+  }
+
+  void _setDisplay(_Connection conn, Object? raw) {
+    final DisplaySettings next;
+    try {
+      next = DisplaySettings.fromJson(raw! as Json);
+    } on Object {
+      _error(conn, ErrorCode.badMessage, 'Malformed display settings.');
+      return;
+    }
+    if (_phase != RoomPhase.lobby) {
+      _error(conn, ErrorCode.invalidAction, 'End the current game first.');
+      return;
+    }
+    // The host taking a seat again needs a free one.
+    if (next.hostPlays &&
+        !_display.hostPlays &&
+        players.length >= _game.maxPlayers) {
+      _error(
+        conn,
+        ErrorCode.tooManyPlayers,
+        'The room is full, so you can\'t take a seat.',
+      );
+      return;
+    }
+    _display = next;
+    _broadcastLobby();
   }
 
   void _onHello(_Connection conn, Json msg) {
@@ -280,7 +388,7 @@ class GameServer extends ChangeNotifier {
       _reject(
         conn,
         ErrorCode.invalidName,
-        'Nicknames must be 1â€“$kMaxNicknameLength characters.',
+        'Nicknames must be 1–$kMaxNicknameLength characters.',
       );
       return;
     }
@@ -296,7 +404,7 @@ class GameServer extends ChangeNotifier {
       }
     }
     final lower = nickname.toLowerCase();
-    if (players.any((p) => p.nickname.toLowerCase() == lower)) {
+    if (_everyone.any((p) => p.nickname.toLowerCase() == lower)) {
       _reject(conn, ErrorCode.nameTaken, '"$nickname" is already taken.');
       return;
     }
@@ -445,6 +553,9 @@ class GameServer extends ChangeNotifier {
     await conn.subscription?.cancel();
   }
 
+  String get _hostName =>
+      _everyone.where((p) => p.id == _hostId).firstOrNull?.nickname ?? '';
+
   LobbyState get lobbyState => LobbyState(
     roomName: roomName,
     gameId: _game.id,
@@ -452,11 +563,29 @@ class GameServer extends ChangeNotifier {
     minPlayers: _game.minPlayers,
     maxPlayers: _game.maxPlayers,
     hostId: _hostId,
+    hostName: _hostName,
     phase: _phase,
+    display: _display,
+    displays: [
+      for (final d in _displays) d.info,
+      if (_hostIsScreen) DisplayInfo(kind: DisplayKind.host, name: _hostName),
+    ],
   );
+
+  /// What every shared screen shows: public state only.
+  DisplayState get displayState {
+    final session = _session;
+    return DisplayState(
+      lobby: lobbyState,
+      gameId: session == null ? null : _game.id,
+      table: session?.tableView(),
+      result: session?.result,
+    );
+  }
 
   void _broadcastLobby() {
     _broadcast(Msg.lobby, lobbyState.toJson());
+    _broadcastDisplay();
     notifyListeners();
   }
 
@@ -465,11 +594,26 @@ class GameServer extends ChangeNotifier {
     if (session == null) return;
     for (final conn in _connections) {
       final player = conn.player;
-      if (player == null) continue;
+      // A host without a seat follows the game through the display feed.
+      if (player == null || (player.id == _hostId && _hostIsScreen)) continue;
       conn.send(Msg.gameState, {
         'game': _game.id,
         'view': session.viewFor(player.id),
       });
+    }
+    _broadcastDisplay();
+  }
+
+  void _broadcastDisplay() {
+    final message = encodeMessage(Msg.display, displayState.toJson());
+    for (final display in List.of(_displays)) {
+      display._send(message);
+    }
+    if (_hostIsScreen) {
+      _connections
+          .where((c) => c.player?.id == _hostId)
+          .firstOrNull
+          ?.send(Msg.display, displayState.toJson());
     }
   }
 
@@ -483,14 +627,62 @@ class GameServer extends ChangeNotifier {
   Future<void> close({String reason = CloseReason.hostClosed}) async {
     if (_closed) return;
     _closed = true;
+    final closedMessage = encodeMessage(Msg.closed, {'reason': reason});
     await Future.wait([
       for (final conn in List.of(_connections))
         () {
           conn.send(Msg.closed, {'reason': reason});
           return _drop(conn);
         }(),
+      for (final display in List.of(_displays))
+        () {
+          display._send(closedMessage);
+          return display._close();
+        }(),
     ]);
+    _displays.clear();
     await _http?.close(force: true);
     notifyListeners();
+  }
+}
+
+/// A connected shared screen. Call [detach] when it goes away.
+class DisplayHandle {
+  DisplayHandle._(
+    this.info,
+    this._sendFn,
+    this._closeFn, {
+    required this._onDetach,
+  });
+
+  final DisplayInfo info;
+  final void Function(String message) _sendFn;
+  final Future<void> Function()? _closeFn;
+  final void Function() _onDetach;
+  bool _detached = false;
+
+  void _send(String message) {
+    if (_detached) return;
+    try {
+      _sendFn(message);
+    } on Object {
+      // The screen is going away; its detach follows.
+    }
+  }
+
+  Future<void> _close() async {
+    _detached = true;
+    try {
+      await _closeFn?.call().timeout(const Duration(seconds: 2));
+    } on Object {
+      // Already gone.
+    }
+  }
+
+  /// Stops sending to this screen and removes it from the lobby.
+  void detach() {
+    if (_detached) return;
+    _detached = true;
+    _onDetach();
   }
 }

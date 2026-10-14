@@ -44,6 +44,10 @@ class GameClient extends ChangeNotifier {
   /// Outcome of the last finished game, cleared when a new one starts.
   Json? gameResult;
 
+  /// The shared-screen state, received only while this device *is* the
+  /// shared screen (the host chose not to take a seat).
+  DisplayState? displayState;
+
   DisconnectReason? disconnectReason;
 
   bool get isConnected => disconnectReason == null;
@@ -160,6 +164,8 @@ class GameClient extends ChangeNotifier {
         gameView = msg['view']! as Json;
       case Msg.gameOver:
         gameResult = msg['result'] as Json?;
+      case Msg.display:
+        displayState = DisplayState.fromJson(msg);
       case Msg.notice:
         _notices.add(msg['msg']! as String);
       case Msg.error:
@@ -202,6 +208,8 @@ class GameClient extends ChangeNotifier {
   void kick(String playerId) => _send(Msg.kick, {'playerId': playerId});
   void changeGame(String gameId) => _send(Msg.changeGame, {'gameId': gameId});
   void closeRoom() => _send(Msg.closeRoom);
+  void setDisplay(DisplaySettings display) =>
+      _send(Msg.setDisplay, {'display': display.toJson()});
 
   Future<void> leave() async {
     disconnectReason ??= DisconnectReason.left;

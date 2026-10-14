@@ -80,8 +80,12 @@ class TicTacToeSession implements GameSession {
     _turn = _turn == 'X' ? 'O' : 'X';
   }
 
+  /// Nothing is hidden in Tic Tac Toe, so every view is the table view.
   @override
-  Json viewFor(String playerId) => {
+  Json viewFor(String playerId) => tableView();
+
+  @override
+  Json tableView() => {
     'board': List.of(_board),
     'marks': {_xId: 'X', _oId: 'O'},
     'turn': isOver ? null : _idOf(_turn),

@@ -24,6 +24,10 @@ abstract class GameSession {
   /// The state as [playerId] is allowed to see it.
   Json viewFor(String playerId);
 
+  /// The public state for a shared screen everyone can see. Must never
+  /// include information hidden from any player, such as hands.
+  Json tableView();
+
   bool get isOver;
 
   /// Final outcome once [isOver]: `{'winnerIds': [...], 'summary': '...'}`.
