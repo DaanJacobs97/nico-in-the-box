@@ -88,16 +88,24 @@ String? normalizeNickname(String raw) {
 }
 
 class PlayerInfo {
-  const PlayerInfo({required this.id, required this.nickname});
+  const PlayerInfo({
+    required this.id,
+    required this.nickname,
+    this.isWeb = false,
+  });
 
   final String id;
   final String nickname;
 
-  Json toJson() => {'id': id, 'nickname': nickname};
+  /// Playing from a browser rather than the app (shown as an icon).
+  final bool isWeb;
+
+  Json toJson() => {'id': id, 'nickname': nickname, if (isWeb) 'web': true};
 
   factory PlayerInfo.fromJson(Json json) => PlayerInfo(
     id: json['id']! as String,
     nickname: json['nickname']! as String,
+    isWeb: json['web'] == true,
   );
 }
 

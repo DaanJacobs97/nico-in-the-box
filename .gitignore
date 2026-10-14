@@ -91,3 +91,7 @@ app.*.map.json
 
 # Local packages: the app's pubspec.lock pins versions for everything
 packages/*/pubspec.lock
+
+# Built by tool/build_web_client (browser player client for the host app)
+assets/generated/*
+!assets/generated/.gitkeep

@@ -17,6 +17,12 @@ import 'package:nico_shared/net/protocol.dart';
 
 const role = String.fromEnvironment('ROLE', defaultValue: 'host');
 const joinIp = String.fromEnvironment('JOIN_IP');
+
+/// `ttt` skips Color Clash (used when a person plays the other side).
+const games = String.fromEnvironment('GAMES', defaultValue: 'all');
+
+/// Host only: expect the other player to have joined from a browser.
+const expectWebPlayer = bool.fromEnvironment('EXPECT_WEB_PLAYER');
 const roomName = 'LAN Test';
 
 /// Pumps frames in real time until [condition] holds.
@@ -187,6 +193,9 @@ void main() {
         timeout: const Duration(minutes: 5),
         reason: 'a player to join',
       );
+      if (expectWebPlayer) {
+        expect(find.text('In a browser'), findsOneWidget);
+      }
       await tapText(tester, 'Start game');
 
       final round1 = await playTicTacToe(tester);
@@ -200,28 +209,30 @@ void main() {
         (round2['marks']! as Json)[myId],
         isNot((round1['marks']! as Json)[myId]),
       );
-      await tapText(tester, 'Back to lobby');
+      if (games != 'ttt') {
+        await tapText(tester, 'Back to lobby');
 
-      await pumpUntil(
-        tester,
-        () => present(find.byIcon(Icons.swap_horiz)),
-        reason: 'lobby',
-      );
-      await tester.tap(find.byIcon(Icons.swap_horiz));
-      await tester.pump(const Duration(milliseconds: 500));
-      await tapText(tester, 'Color Clash (2–4 players)');
-      await pumpUntil(
-        tester,
-        () => present(find.text('Players 2/4')),
-        reason: 'room resized to 4',
-      );
-      await tapText(tester, 'Start game');
-      await playColorClash(tester);
-      await pumpUntil(
-        tester,
-        () => present(find.text('Back to lobby')),
-        reason: 'clash result',
-      );
+        await pumpUntil(
+          tester,
+          () => present(find.byIcon(Icons.swap_horiz)),
+          reason: 'lobby',
+        );
+        await tester.tap(find.byIcon(Icons.swap_horiz));
+        await tester.pump(const Duration(milliseconds: 500));
+        await tapText(tester, 'Color Clash (2–4 players)');
+        await pumpUntil(
+          tester,
+          () => present(find.text('Players 2/4')),
+          reason: 'room resized to 4',
+        );
+        await tapText(tester, 'Start game');
+        await playColorClash(tester);
+        await pumpUntil(
+          tester,
+          () => present(find.text('Back to lobby')),
+          reason: 'clash result',
+        );
+      }
 
       await tester.tap(find.byTooltip('Host controls'));
       await tester.pump(const Duration(milliseconds: 500));
