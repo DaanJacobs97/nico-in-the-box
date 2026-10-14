@@ -5,6 +5,7 @@ import '../games/game_session.dart';
 import 'discovery.dart';
 import 'game_client.dart';
 import 'game_server.dart';
+import 'protocol.dart';
 
 /// Everything the host device runs for a room: the server, the LAN
 /// announcer, and the host's own (auto-joined) client connection.
@@ -68,9 +69,12 @@ class HostedRoom {
     }
   }
 
+  /// Closes the room for everyone. The server goes first so guests are told
+  /// the host closed it; dropping the host's own connection first would make
+  /// the server report that the host left instead.
   Future<void> close() async {
     _broadcaster?.stop();
+    await server.close(reason: CloseReason.hostClosed);
     await client.leave();
-    await server.close();
   }
 }
