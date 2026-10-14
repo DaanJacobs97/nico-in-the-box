@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:nico_shared/net/protocol.dart';
+import 'package:nico_shared/widgets/display_settings_editor.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 
 import '../net/hosted_room.dart';
@@ -13,6 +14,11 @@ class JoinInfo extends StatelessWidget {
   final HostedRoom room;
 
   String _playUrl(String address) => 'http://$address:${room.port}/play';
+
+  bool get _showScreenAddress =>
+      room.hasScreenPage &&
+      room.server.display.enabled &&
+      ScreenChoice.of(room.server.display) == ScreenChoice.browser;
 
   @override
   Widget build(BuildContext context) {
@@ -42,6 +48,23 @@ class JoinInfo extends StatelessWidget {
                     fontFamily: 'monospace',
                   ),
                 ),
+            if (_showScreenAddress && addresses.isNotEmpty) ...[
+              const Divider(height: 32),
+              Text('Shared screen', style: theme.textTheme.titleSmall),
+              const SizedBox(height: 4),
+              const Text(
+                'On the TV or computer everyone watches, open this address '
+                'in a browser:',
+              ),
+              const SizedBox(height: 8),
+              for (final address in addresses)
+                SelectableText(
+                  'http://$address:${room.port}/screen',
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontFamily: 'monospace',
+                  ),
+                ),
+            ],
             if (room.hasWebClient && addresses.isNotEmpty) ...[
               const Divider(height: 32),
               Text(

@@ -4,6 +4,7 @@ import 'dart:typed_data';
 
 import 'package:archive/archive.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:nico_in_the_box/net/display_frontend.dart';
 import 'package:nico_in_the_box/net/game_server.dart';
 import 'package:nico_in_the_box/net/web_files.dart';
 import 'package:nico_shared/games/tictactoe/tictactoe_game.dart';
@@ -151,6 +152,86 @@ void main() {
     expect(players.single.nickname, 'Browser');
     expect(players.single.isWeb, isTrue);
     await socket.close();
+  });
+
+  group('shared screen page', () {
+    // The real bundled files, read from the repo.
+    MemoryWebFiles screenFiles() {
+      final dir = Directory('assets/display');
+      return MemoryWebFiles({
+        for (final f in dir.listSync(recursive: true).whereType<File>())
+          f.path.substring(dir.path.length + 1).replaceAll(r'\', '/'): f
+              .readAsBytesSync(),
+      });
+    }
+
+    Future<void> withScreen() async {
+      await server.close();
+      server = GameServer(
+        roomName: 'Screen room',
+        game: ticTacToeDefinition,
+        webClient: _clientFiles,
+        screenPage: HtmlDisplayFrontend(screenFiles()),
+      );
+      await server.start(port: 0, address: InternetAddress.loopbackIPv4);
+    }
+
+    test('/screen redirects and serves the page and its scripts', () async {
+      await withScreen();
+      final redirect = await request('/screen', followRedirects: false);
+      expect(redirect.statusCode, HttpStatus.movedPermanently);
+      expect(redirect.headers.value(HttpHeaders.locationHeader), '/screen/');
+      await redirect.drain<void>();
+
+      final index = await request('/screen/');
+      expect(index.headers.contentType?.mimeType, 'text/html');
+      final html = await utf8.decodeStream(index);
+
+      // Every script and stylesheet the page references is served.
+      final refs = RegExp(r'(?:src|href)="([^"]+)"')
+          .allMatches(html)
+          .map((m) => m.group(1)!)
+          .toList();
+      expect(refs, containsAll(['app.js', 'style.css', 'games/colorclash.js']));
+      for (final ref in refs) {
+        final res = await request('/screen/$ref');
+        expect(res.statusCode, HttpStatus.ok, reason: ref);
+        expect(
+          res.headers.contentType?.mimeType,
+          ref.endsWith('.js') ? 'text/javascript' : 'text/css',
+          reason: ref,
+        );
+        await res.drain<void>();
+      }
+    });
+
+    test('landing page offers the shared screen too', () async {
+      await withScreen();
+      final body = await utf8.decodeStream(await request('/'));
+      expect(body, contains('href="/play/"'));
+      expect(body, contains('href="/screen/"'));
+    });
+
+    test('without the page bundled, /screen/ explains', () async {
+      final res = await request('/screen/');
+      expect(res.statusCode, HttpStatus.serviceUnavailable);
+      expect(await utf8.decodeStream(res), contains('shared screen page'));
+      final landing = await utf8.decodeStream(await request('/'));
+      expect(landing, isNot(contains('/screen/')));
+    });
+
+    test('scripts build the page with textContent, never innerHTML', () {
+      // Nicknames reach the screen; innerHTML would let them inject markup.
+      for (final f in Directory('assets/display').listSync(recursive: true)) {
+        if (f is File && f.path.endsWith('.js')) {
+          expect(
+            f.readAsStringSync(),
+            isNot(contains('innerHTML')),
+            reason: f.path,
+          );
+        }
+      }
+    });
   });
 
   group('MemoryWebFiles.fromZip', () {
