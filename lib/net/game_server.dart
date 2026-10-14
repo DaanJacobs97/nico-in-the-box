@@ -19,8 +19,11 @@ class _Connection {
   Timer? helloTimeout;
 
   void send(String type, [Json body = const {}]) {
-    if (socket.readyState == WebSocket.open) {
+    if (socket.readyState != WebSocket.open) return;
+    try {
       socket.add(encodeMessage(type, body));
+    } on StateError {
+      // Closing concurrently; the disconnect handler cleans up.
     }
   }
 }
@@ -97,7 +100,12 @@ class GameServer extends ChangeNotifier {
       await request.response.close();
       return;
     }
-    final socket = await WebSocketTransformer.upgrade(request);
+    final WebSocket socket;
+    try {
+      socket = await WebSocketTransformer.upgrade(request);
+    } on Object {
+      return; // Client went away mid-handshake.
+    }
     if (_closed) {
       await socket.close();
       return;
@@ -106,7 +114,7 @@ class GameServer extends ChangeNotifier {
     final conn = _Connection(socket);
     _connections.add(conn);
     conn.helloTimeout = Timer(const Duration(seconds: 10), () {
-      if (conn.player == null) _drop(conn);
+      if (conn.player == null) unawaited(_drop(conn));
     });
     conn.subscription = socket.listen(
       (raw) => _onMessage(conn, raw),
@@ -319,7 +327,7 @@ class GameServer extends ChangeNotifier {
 
   void _reject(_Connection conn, String code, String message) {
     conn.send(Msg.error, {'code': code, 'msg': message});
-    _drop(conn);
+    unawaited(_drop(conn));
   }
 
   void _error(_Connection conn, String code, String message) =>
@@ -329,9 +337,9 @@ class GameServer extends ChangeNotifier {
     if (!_connections.contains(conn)) return;
     final player = conn.player;
     if (player == null) {
-      _drop(conn);
+      unawaited(_drop(conn));
     } else if (player.id == _hostId) {
-      _drop(conn);
+      unawaited(_drop(conn));
       unawaited(close(reason: CloseReason.hostLeft));
     } else {
       _removePlayer(conn, '${player.nickname} left.');
@@ -340,7 +348,7 @@ class GameServer extends ChangeNotifier {
 
   /// Removes a joined player; a running game cannot continue without them.
   void _removePlayer(_Connection conn, String notice) {
-    _drop(conn);
+    unawaited(_drop(conn));
     if (_closed) return;
     if (_phase != RoomPhase.lobby) {
       _returnToLobby(notice: '$notice The game was ended.');
@@ -350,11 +358,17 @@ class GameServer extends ChangeNotifier {
     }
   }
 
-  void _drop(_Connection conn) {
+  /// Closes the WebSocket gracefully so queued messages (an error or the
+  /// closed notice) are delivered before the connection goes away.
+  Future<void> _drop(_Connection conn) async {
     _connections.remove(conn);
     conn.helloTimeout?.cancel();
-    unawaited(conn.subscription?.cancel());
-    unawaited(conn.socket.close());
+    try {
+      await conn.socket.close().timeout(const Duration(seconds: 2));
+    } on Object {
+      // Peer vanished or never answered the close handshake.
+    }
+    await conn.subscription?.cancel();
   }
 
   LobbyState get lobbyState => LobbyState(
@@ -395,10 +409,13 @@ class GameServer extends ChangeNotifier {
   Future<void> close({String reason = CloseReason.hostClosed}) async {
     if (_closed) return;
     _closed = true;
-    for (final conn in List.of(_connections)) {
-      conn.send(Msg.closed, {'reason': reason});
-      _drop(conn);
-    }
+    await Future.wait([
+      for (final conn in List.of(_connections))
+        () {
+          conn.send(Msg.closed, {'reason': reason});
+          return _drop(conn);
+        }(),
+    ]);
     await _http?.close(force: true);
     notifyListeners();
   }
