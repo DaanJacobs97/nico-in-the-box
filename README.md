@@ -68,10 +68,24 @@ flutter test
 
 ## Contributing
 
-- `main` should always build. Do your work on a feature branch, e.g. `feature/color-clash-ui`, and open a pull
-  request.
-- Before you push, run `dart format .`, `flutter analyze` and `flutter test`. CI runs the same checks on every pull
-  request.
+### `main` is protected
+
+**Don't commit or push directly to `main`.** This applies to human contributors and to AI coding assistants
+(Claude, Copilot, Cursor, Codex, etc.).
+
+- All changes go through a **pull request** from a feature branch. Name branches
+  `feature/<short-description>`, `fix/<short-description>` or `chore/<short-description>`.
+- A pull request can only be merged when **CI passes** (formatting, `flutter analyze`, `flutter test`).
+- Never force-push to `main`, rewrite its history or delete it.
+- AI assistants: create a branch, commit there, push the branch and open a pull request. Leave the merge to a human
+  unless one explicitly tells you to merge.
+
+### Before opening a pull request
+
+- Run `dart format .`, `flutter analyze` and `flutter test` locally. CI runs the same checks on every pull request.
+- Keep each pull request focused on one feature or fix, and describe what changed and how you tested it.
+- If you change the network protocol (`lib/net/protocol.dart`), bump the protocol version so old and new app builds
+  refuse to talk to each other instead of misbehaving.
 
 ## License
 
