@@ -3,11 +3,11 @@ import 'dart:isolate';
 import 'dart:math';
 
 import 'package:flutter/services.dart';
+import 'package:nico_native/discovery.dart';
 import 'package:nico_shared/games/game_session.dart';
 import 'package:nico_shared/net/game_client.dart';
 import 'package:nico_shared/net/protocol.dart';
 
-import 'discovery.dart';
 import 'display_frontend.dart';
 import 'game_server.dart';
 import 'web_files.dart';

@@ -108,6 +108,52 @@ void main() {
     );
   });
 
+  testWidgets('on a TV-sized screen the player chips never overlap', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1920, 1080);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    const cat = PlayerInfo(id: 'c', nickname: 'Catherine');
+    final session = ColorClashSession(const [ann, bob, cat], random: Random(2));
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: ColorClashTable(
+            ctx: TableContext(
+              table: session.tableView(),
+              lobby: const LobbyState(
+                roomName: 'Party',
+                gameId: 'colorclash',
+                players: [ann, bob, cat],
+                minPlayers: 2,
+                maxPlayers: 4,
+                hostId: 'a',
+                phase: RoomPhase.playing,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+    expect(tester.takeException(), isNull);
+    final rects = [
+      for (final id in ['a', 'b', 'c'])
+        tester.getRect(find.byKey(ValueKey('player-chip-$id'))),
+    ];
+    for (var i = 0; i < rects.length; i++) {
+      for (var j = i + 1; j < rects.length; j++) {
+        expect(
+          rects[i].overlaps(rects[j]),
+          isFalse,
+          reason: 'chip $i overlaps chip $j',
+        );
+      }
+    }
+    // Scaled up for the big screen, not left at phone size.
+    expect(rects.first.height, greaterThan(50));
+  });
+
   testWidgets('Tic Tac Toe table names X and O and the winner', (tester) async {
     final game = TicTacToeSession(const [ann, bob]);
     for (final (who, cell) in [

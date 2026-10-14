@@ -73,6 +73,8 @@ hides the QR code.
 |---|---|
 | `lib/` | The host/join app: server, LAN discovery, hosting and joining screens. Native-only code (`dart:io`) belongs here |
 | `packages/nico_shared/` | Protocol, client, game engines, game widgets and session screens, shared by every app. **Web-safe:** no `dart:io` imports, so it also runs in browsers |
+| `packages/nico_native/` | Native-only LAN code (`dart:io`): UDP announcements and scanning, shared by the app and the Caster |
+| `caster/` | **Nico Caster**: a separate app that turns any Windows PC, Android tablet or Android TV into the shared screen. The host picks it from a list (see PLAN.md) |
 | `web_client/` | Flutter **web** app for players without the app. The host serves it at `/play/` |
 | `tool/` | `build_web_client` scripts: build `web_client/` and pack it into `assets/generated/web_client.zip` (git-ignored) |
 | `integration_test/` | The end-to-end LAN test on real devices |
@@ -125,7 +127,8 @@ Any device can take either role.
    with a phone camera (or typing it into any browser on the same network) opens the browser version: pick a
    nickname and play like everyone else. Browser players are marked with a globe icon in the lobby.
 
-**Ports used:** TCP 47800 for the game connection, UDP 47801 for room discovery.
+**Ports used:** TCP 47800 for the game connection, UDP 47801 for room discovery. The Caster uses UDP 47802 to announce
+itself and TCP 47803 for the host's connection.
 
 > The Android emulator sits behind NAT and can't see LAN broadcasts. To test discovery, use a physical device.
 

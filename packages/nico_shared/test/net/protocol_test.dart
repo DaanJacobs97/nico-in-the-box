@@ -54,6 +54,32 @@ void main() {
     expect(decoded.nicknameOf('p2'), 'Guest');
   });
 
+  test('Caster announcement round trip and rejects foreign packets', () {
+    const announcement = CasterAnnouncement(
+      id: 'c1',
+      name: 'Living room TV',
+      port: kCasterPort,
+      busy: true,
+    );
+    final parsed = CasterAnnouncement.tryParse(
+      decodeMessage(encodeMessage('x', announcement.toJson())),
+    )!;
+    expect(parsed.name, 'Living room TV');
+    expect(parsed.port, kCasterPort);
+    expect(parsed.busy, isTrue);
+
+    expect(CasterAnnouncement.tryParse({'app': 'other'}), isNull);
+    expect(
+      CasterAnnouncement.tryParse({...announcement.toJson(), 'v': -1}),
+      isNull,
+    );
+    expect(
+      CasterAnnouncement.tryParse({...announcement.toJson(), 'port': 'x'}),
+      isNull,
+    );
+    expect(CasterAnnouncement.tryParse('nope'), isNull);
+  });
+
   group('shared screen', () {
     const settings = DisplaySettings(
       enabled: true,
