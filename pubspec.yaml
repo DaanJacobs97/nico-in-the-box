@@ -9,7 +9,8 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  shared_preferences: ^2.3.2
+  nico_shared:
+    path: packages/nico_shared
 
 dev_dependencies:
   flutter_test:

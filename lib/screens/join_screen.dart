@@ -1,14 +1,14 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:nico_shared/app/prefs.dart';
+import 'package:nico_shared/net/game_client.dart';
+import 'package:nico_shared/net/protocol.dart';
+import 'package:nico_shared/screens/session_screen.dart';
+import 'package:nico_shared/widgets/nickname_dialog.dart';
 
-import '../app/prefs.dart';
 import '../net/discovery.dart';
-import '../net/game_client.dart';
 import '../net/multicast_lock.dart';
-import '../net/protocol.dart';
-import '../widgets/nickname_dialog.dart';
-import 'session_screen.dart';
 
 /// Parses "host" or "host:port" typed by the user. Returns null if invalid.
 (String, int)? parseManualAddress(String input) {

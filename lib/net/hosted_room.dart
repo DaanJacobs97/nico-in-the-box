@@ -1,11 +1,12 @@
 import 'dart:async';
 import 'dart:math';
 
-import '../games/game_session.dart';
+import 'package:nico_shared/games/game_session.dart';
+import 'package:nico_shared/net/game_client.dart';
+import 'package:nico_shared/net/protocol.dart';
+
 import 'discovery.dart';
-import 'game_client.dart';
 import 'game_server.dart';
-import 'protocol.dart';
 
 /// Everything the host device runs for a room: the server, the LAN
 /// announcer, and the host's own (auto-joined) client connection.

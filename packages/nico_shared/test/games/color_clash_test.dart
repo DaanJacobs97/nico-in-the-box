@@ -1,10 +1,10 @@
 import 'dart:math';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:nico_in_the_box/games/color_clash/clash_card.dart';
-import 'package:nico_in_the_box/games/color_clash/color_clash_game.dart';
-import 'package:nico_in_the_box/games/game_session.dart';
-import 'package:nico_in_the_box/net/protocol.dart';
+import 'package:nico_shared/games/color_clash/clash_card.dart';
+import 'package:nico_shared/games/color_clash/color_clash_game.dart';
+import 'package:nico_shared/games/game_session.dart';
+import 'package:nico_shared/net/protocol.dart';
 
 const a = PlayerInfo(id: 'a', nickname: 'Ann');
 const b = PlayerInfo(id: 'b', nickname: 'Bob');

@@ -3,11 +3,11 @@ import 'dart:io';
 import 'dart:math';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:nico_in_the_box/games/game_session.dart';
-import 'package:nico_in_the_box/games/tictactoe/tictactoe_game.dart';
-import 'package:nico_in_the_box/net/game_client.dart';
 import 'package:nico_in_the_box/net/game_server.dart';
-import 'package:nico_in_the_box/net/protocol.dart';
+import 'package:nico_shared/games/game_session.dart';
+import 'package:nico_shared/games/tictactoe/tictactoe_game.dart';
+import 'package:nico_shared/net/game_client.dart';
+import 'package:nico_shared/net/protocol.dart';
 
 class _IdleSession implements GameSession {
   @override

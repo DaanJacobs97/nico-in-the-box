@@ -1,8 +1,9 @@
 import 'dart:async';
-import 'dart:io';
 
 import 'package:flutter/foundation.dart';
+import 'package:web_socket_channel/web_socket_channel.dart';
 
+import 'channel/connect.dart';
 import 'protocol.dart';
 
 /// Thrown by [GameClient.connect] when the room refuses or can't be reached.
@@ -25,9 +26,9 @@ enum DisconnectReason { left, kicked, hostClosed, hostLeft, connectionLost }
 /// A player's connection to a room. Exposes the latest lobby and game state
 /// as a [ChangeNotifier] for the UI.
 class GameClient extends ChangeNotifier {
-  GameClient._(this._socket, this.playerId, this.isHost);
+  GameClient._(this._channel, this.playerId, this.isHost);
 
-  final WebSocket _socket;
+  final WebSocketChannel _channel;
   final String playerId;
   final bool isHost;
 
@@ -59,24 +60,25 @@ class GameClient extends ChangeNotifier {
     String? hostToken,
     Duration timeout = const Duration(seconds: 5),
   }) async {
-    final WebSocket socket;
+    final channel = connectChannel(
+      Uri(scheme: 'ws', host: host, port: port, path: kWebSocketPath),
+    );
     try {
-      socket = await WebSocket.connect('ws://$host:$port$kWebSocketPath')
-          .timeout(timeout);
+      await channel.ready.timeout(timeout);
     } on Object {
+      unawaited(channel.sink.close());
       throw JoinException(
         JoinException.unreachable,
         'Could not reach a room at $host:$port.',
       );
     }
-    socket.pingInterval = const Duration(seconds: 5);
 
     // Messages that arrive right after the welcome (the first lobby update)
     // must not be lost, so a single subscription serves both phases.
     final welcome = Completer<GameClient>();
     GameClient? client;
     late final StreamSubscription<Object?> sub;
-    sub = socket.listen(
+    sub = channel.stream.listen(
       (raw) {
         final Json msg;
         try {
@@ -91,7 +93,7 @@ class GameClient extends ChangeNotifier {
         switch (msg['type']) {
           case Msg.welcome:
             client = GameClient._(
-              socket,
+              channel,
               msg['playerId']! as String,
               msg['isHost'] == true,
             ).._subscription = sub;
@@ -120,7 +122,7 @@ class GameClient extends ChangeNotifier {
       onError: (Object _) {},
     );
 
-    socket.add(
+    channel.sink.add(
       encodeMessage(Msg.hello, {
         'nickname': nickname,
         'protocol': kProtocolVersion,
@@ -132,7 +134,7 @@ class GameClient extends ChangeNotifier {
       return await welcome.future.timeout(timeout);
     } on Object catch (e) {
       await sub.cancel();
-      await socket.close();
+      await channel.sink.close();
       if (e is JoinException) rethrow;
       throw const JoinException(
         JoinException.unreachable,
@@ -183,7 +185,7 @@ class GameClient extends ChangeNotifier {
   void _send(String type, [Json body = const {}]) {
     if (!isConnected) return;
     try {
-      _socket.add(encodeMessage(type, body));
+      _channel.sink.add(encodeMessage(type, body));
     } on StateError {
       // The socket closed before onDone was delivered.
       _onConnectionClosed();
@@ -203,7 +205,7 @@ class GameClient extends ChangeNotifier {
   Future<void> leave() async {
     disconnectReason ??= DisconnectReason.left;
     await _subscription?.cancel();
-    await _socket.close();
+    await _channel.sink.close();
   }
 
   @override

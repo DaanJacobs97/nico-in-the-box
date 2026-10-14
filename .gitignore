@@ -32,7 +32,7 @@ Thumbs.db
 .flutter-plugins-dependencies
 .pub-cache/
 .pub/
-/build/
+build/
 /coverage/
 
 # Symbolication / obfuscation
@@ -88,3 +88,6 @@ app.*.map.json
 
 # Claude Code local settings
 .claude/settings.local.json
+
+# Local packages: the app's pubspec.lock pins versions for everything
+packages/*/pubspec.lock

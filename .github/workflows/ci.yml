@@ -11,30 +11,39 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # Skips the Flutter steps until the app has been scaffolded.
-      - name: Check for Flutter project
-        id: detect
-        run: |
-          if [ -f pubspec.yaml ]; then echo "present=true" >> "$GITHUB_OUTPUT"; else echo "present=false" >> "$GITHUB_OUTPUT"; fi
-
       - uses: subosito/flutter-action@v2
-        if: steps.detect.outputs.present == 'true'
         with:
           channel: stable
           cache: true
 
       - name: Install dependencies
-        if: steps.detect.outputs.present == 'true'
-        run: flutter pub get
+        run: |
+          flutter pub get
+          (cd packages/nico_shared && flutter pub get)
 
       - name: Check formatting
-        if: steps.detect.outputs.present == 'true'
         run: dart format --output=none --set-exit-if-changed .
 
+      # Analyzes the app and packages/nico_shared (it lives inside the repo root).
       - name: Analyze
-        if: steps.detect.outputs.present == 'true'
         run: flutter analyze
 
-      - name: Test
-        if: steps.detect.outputs.present == 'true'
+      # The shared package must compile for browsers: only the native half of
+      # the connection code may import dart:io.
+      - name: Shared package stays web-safe
+        run: |
+          if grep -rln "import 'dart:io'" packages/nico_shared/lib | grep -v "net/channel/connect_io.dart"; then
+            echo "dart:io imported in packages/nico_shared (see files above)"; exit 1
+          fi
+
+      - name: Test app
         run: flutter test
+
+      - name: Test shared package
+        working-directory: packages/nico_shared
+        run: flutter test
+
+      - name: Test shared package in a browser
+        working-directory: packages/nico_shared
+        timeout-minutes: 10
+        run: flutter test --platform chrome
