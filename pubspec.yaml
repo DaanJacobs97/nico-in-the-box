@@ -10,6 +10,8 @@ dependencies:
   archive: ^4.5.2
   flutter:
     sdk: flutter
+  nico_native:
+    path: packages/nico_native
   nico_shared:
     path: packages/nico_shared
   qr_flutter: ^4.1.0

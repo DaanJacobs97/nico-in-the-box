@@ -1,13 +1,13 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:nico_native/discovery.dart';
 import 'package:nico_shared/app/prefs.dart';
 import 'package:nico_shared/net/game_client.dart';
 import 'package:nico_shared/net/protocol.dart';
 import 'package:nico_shared/screens/session_screen.dart';
 import 'package:nico_shared/widgets/nickname_dialog.dart';
 
-import '../net/discovery.dart';
 import '../net/multicast_lock.dart';
 
 /// Parses "host" or "host:port" typed by the user. Returns null if invalid.

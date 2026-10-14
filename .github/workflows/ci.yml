@@ -20,12 +20,15 @@ jobs:
         run: |
           flutter pub get
           (cd packages/nico_shared && flutter pub get)
+          (cd packages/nico_native && flutter pub get)
           (cd web_client && flutter pub get)
+          (cd caster && flutter pub get)
 
       - name: Check formatting
         run: dart format --output=none --set-exit-if-changed .
 
-      # Analyzes the app and packages/nico_shared (it lives inside the repo root).
+      # Analyzes everything in the repo: the app, both packages, the web client
+      # and the Caster (they all live under the repo root).
       - name: Analyze
         run: flutter analyze
 
@@ -42,6 +45,14 @@ jobs:
 
       - name: Test shared package
         working-directory: packages/nico_shared
+        run: flutter test
+
+      - name: Test native package
+        working-directory: packages/nico_native
+        run: flutter test
+
+      - name: Test Caster app
+        working-directory: caster
         run: flutter test
 
       - name: Test browser client

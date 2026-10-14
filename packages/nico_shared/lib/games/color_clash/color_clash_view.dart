@@ -226,14 +226,13 @@ class ClashTableArea extends StatelessWidget {
             alignment: WrapAlignment.center,
             children: [
               for (final p in players)
-                Transform.scale(
+                _PlayerChip(
+                  key: ValueKey('player-chip-${p['id']}'),
+                  name: nameOf(p['id']! as String),
+                  cards: p['cards']! as int,
+                  calledLast: p['calledLast'] == true,
+                  isTurn: p['id'] == turn,
                   scale: scale,
-                  child: _PlayerChip(
-                    name: nameOf(p['id']! as String),
-                    cards: p['cards']! as int,
-                    calledLast: p['calledLast'] == true,
-                    isTurn: p['id'] == turn,
-                  ),
                 ),
             ],
           ),
@@ -328,10 +327,12 @@ class ColorClashTable extends StatelessWidget {
 
 class _PlayerChip extends StatelessWidget {
   const _PlayerChip({
+    super.key,
     required this.name,
     required this.cards,
     required this.calledLast,
     required this.isTurn,
+    this.scale = 1,
   });
 
   final String name;
@@ -339,11 +340,20 @@ class _PlayerChip extends StatelessWidget {
   final bool calledLast;
   final bool isTurn;
 
+  /// Grows the real font, icon and padding (not a paint-only transform),
+  /// so neighbouring chips make room on big screens.
+  final double scale;
+
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
     return Chip(
-      avatar: Icon(isTurn ? Icons.play_arrow : Icons.person, size: 18),
+      padding: EdgeInsets.all(4 * scale),
+      avatar: Icon(isTurn ? Icons.play_arrow : Icons.person, size: 18 * scale),
+      labelStyle: theme.textTheme.labelLarge?.copyWith(
+        fontSize: (theme.textTheme.labelLarge?.fontSize ?? 14) * scale,
+      ),
       label: Text('$name · $cards${calledLast ? ' · LAST!' : ''}'),
       backgroundColor: isTurn ? scheme.primaryContainer : null,
       side: isTurn ? BorderSide(color: scheme.primary, width: 2) : null,

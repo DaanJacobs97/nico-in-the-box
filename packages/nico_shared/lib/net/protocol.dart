@@ -17,6 +17,17 @@ const String kWebSocketPath = '/ws';
 /// Read-only WebSocket for shared screens (browser displays).
 const String kDisplayPath = '/display';
 
+/// UDP port Caster apps announce themselves on.
+const int kCasterDiscoveryPort = 47802;
+
+/// TCP port of a Caster's WebSocket server (at [kCastPath]).
+const int kCasterPort = 47803;
+
+const String kCastPath = '/cast';
+
+/// Identifier in Caster announcements.
+const String kCasterAppId = 'nicobox-caster';
+
 const int kMaxNicknameLength = 16;
 
 typedef Json = Map<String, Object?>;
@@ -48,6 +59,10 @@ abstract final class Msg {
 
   // server -> shared screens (and the host's device when it is the screen)
   static const display = 'display';
+
+  // host -> Caster, then Caster -> host
+  static const castHello = 'castHello';
+  static const castWelcome = 'castWelcome';
 }
 
 /// `code` values carried by [Msg.error].
@@ -63,6 +78,7 @@ abstract final class ErrorCode {
   static const tooManyPlayers = 'tooManyPlayers';
   static const unknownGame = 'unknownGame';
   static const badMessage = 'badMessage';
+  static const casterBusy = 'casterBusy';
 }
 
 /// `reason` values carried by [Msg.closed].
@@ -307,4 +323,50 @@ class DisplayState {
     table: json['table'] as Json?,
     result: json['result'] as Json?,
   );
+}
+
+/// What a Caster app broadcasts so hosts can list it.
+class CasterAnnouncement {
+  const CasterAnnouncement({
+    required this.id,
+    required this.name,
+    required this.port,
+    required this.busy,
+  });
+
+  /// Random per-Caster id, so one Caster heard on several addresses shows once.
+  final String id;
+  final String name;
+  final int port;
+
+  /// Already showing another host's room.
+  final bool busy;
+
+  Json toJson() => {
+    'app': kCasterAppId,
+    'v': kProtocolVersion,
+    'id': id,
+    'name': name,
+    'port': port,
+    'busy': busy,
+  };
+
+  /// Parses an announcement, or returns null for anything that isn't a
+  /// Caster announcement of this protocol version.
+  static CasterAnnouncement? tryParse(Object? json) {
+    if (json is! Map<String, Object?>) return null;
+    if (json['app'] != kCasterAppId || json['v'] != kProtocolVersion) {
+      return null;
+    }
+    final id = json['id'];
+    final name = json['name'];
+    final port = json['port'];
+    if (id is! String || name is! String || port is! int) return null;
+    return CasterAnnouncement(
+      id: id,
+      name: name,
+      port: port,
+      busy: json['busy'] == true,
+    );
+  }
 }

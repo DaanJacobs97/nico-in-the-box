@@ -3,7 +3,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:nico_in_the_box/net/discovery.dart';
+import 'package:nico_native/discovery.dart';
 import 'package:nico_shared/net/protocol.dart';
 
 const _lobby = LobbyState(
