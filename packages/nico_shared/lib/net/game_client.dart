@@ -127,6 +127,7 @@ class GameClient extends ChangeNotifier {
         'nickname': nickname,
         'protocol': kProtocolVersion,
         'hostToken': ?hostToken,
+        'client': kIsWeb ? 'web' : 'app',
       }),
     );
 

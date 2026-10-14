@@ -1,12 +1,18 @@
 import 'dart:async';
+import 'dart:isolate';
 import 'dart:math';
 
+import 'package:flutter/services.dart';
 import 'package:nico_shared/games/game_session.dart';
 import 'package:nico_shared/net/game_client.dart';
 import 'package:nico_shared/net/protocol.dart';
 
 import 'discovery.dart';
 import 'game_server.dart';
+import 'web_files.dart';
+
+/// Asset built by tool/build_web_client; absent in builds made without it.
+const webClientAsset = 'assets/generated/web_client.zip';
 
 /// Everything the host device runs for a room: the server, the LAN
 /// announcer, and the host's own (auto-joined) client connection.
@@ -22,13 +28,20 @@ class HostedRoom {
 
   int get port => server.port;
 
+  /// Whether players without the app can join from a browser at `/play/`.
+  bool get hasWebClient => server.webClient != null;
+
   /// Starts the server, begins announcing it, and joins it as the host.
   static Future<HostedRoom> create({
     required String roomName,
     required GameDefinition game,
     required String nickname,
   }) async {
-    final server = GameServer(roomName: roomName, game: game);
+    final server = GameServer(
+      roomName: roomName,
+      game: game,
+      webClient: await _loadWebClient(),
+    );
     await server.start();
 
     final serverId = List.generate(
@@ -77,5 +90,22 @@ class HostedRoom {
     _broadcaster?.stop();
     await server.close(reason: CloseReason.hostClosed);
     await client.leave();
+  }
+
+  /// Unpacks the bundled browser client, or returns null when this build
+  /// doesn't include it.
+  static Future<WebFiles?> _loadWebClient() async {
+    final ByteData data;
+    try {
+      data = await rootBundle.load(webClientAsset);
+    } on Object {
+      return null;
+    }
+    final bytes = data.buffer.asUint8List(
+      data.offsetInBytes,
+      data.lengthInBytes,
+    );
+    // A few MB of zip: unpack off the UI thread.
+    return Isolate.run(() => MemoryWebFiles.fromZip(bytes));
   }
 }

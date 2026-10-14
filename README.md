@@ -14,6 +14,8 @@ automatically and join with a nickname. No internet connection and no accounts a
   type in the host's IP address instead.
 - **The game sets the room size.** The host picks a game, and that decides how many players can join.
 - **Private views.** Each player only receives the state they're allowed to see, so nobody can peek at other hands.
+- **No app? Use a browser.** The host also serves a browser version of the game, so anyone on the network can join
+  by scanning a QR code. It works without internet.
 
 ### Games
 
@@ -51,12 +53,26 @@ flutter run -d windows     # or: flutter run -d <android-device-id>
 
 `flutter pub get` also resolves the local `packages/nico_shared` dependency.
 
+To let players without the app **join from a browser**, build the web client into the host app first, and again
+whenever `web_client/` or `packages/nico_shared` changes (the host app carries a copy, so a stale copy means a
+stale browser client):
+
+```bash
+powershell -ExecutionPolicy Bypass -File tool/build_web_client.ps1   # Windows
+tool/build_web_client.sh                                            # macOS / Linux
+```
+
+Without that step the app still works; browser join then shows a *not included in this build* page and the lobby
+hides the QR code.
+
 ### Project layout
 
 | Path | What lives there |
 |---|---|
 | `lib/` | The host/join app: server, LAN discovery, hosting and joining screens. Native-only code (`dart:io`) belongs here |
 | `packages/nico_shared/` | Protocol, client, game engines, game widgets and session screens, shared by every app. **Web-safe:** no `dart:io` imports, so it also runs in browsers |
+| `web_client/` | Flutter **web** app for players without the app. The host serves it at `/play/` |
+| `tool/` | `build_web_client` scripts: build `web_client/` and pack it into `assets/generated/web_client.zip` (git-ignored) |
 | `integration_test/` | The end-to-end LAN test on real devices |
 
 ### Test
@@ -103,6 +119,9 @@ Any device can take either role.
 4. Players tap **Join**. The room should appear in the list; if it doesn't, enter the IP address shown in the host's
    lobby.
 5. Each player picks a nickname. When enough players have joined, the host starts the game.
+6. **No app?** The host's lobby shows a QR code and a link like `http://192.168.0.156:47800/play`. Scanning it
+   with a phone camera (or typing it into any browser on the same network) opens the browser version: pick a
+   nickname and play like everyone else. Browser players are marked with a globe icon in the lobby.
 
 **Ports used:** TCP 47800 for the game connection, UDP 47801 for room discovery.
 

@@ -57,7 +57,11 @@ class LobbyView extends StatelessWidget {
           Card(
             child: ListTile(
               leading: Icon(
-                player.id == lobby.hostId ? Icons.emoji_events : Icons.person,
+                player.id == lobby.hostId
+                    ? Icons.emoji_events
+                    : player.isWeb
+                    ? Icons.language
+                    : Icons.person,
                 color: player.id == lobby.hostId ? Colors.amber : null,
               ),
               title: Text(
@@ -65,7 +69,11 @@ class LobbyView extends StatelessWidget {
                     ? '${player.nickname} (you)'
                     : player.nickname,
               ),
-              subtitle: player.id == lobby.hostId ? const Text('Host') : null,
+              subtitle: player.id == lobby.hostId
+                  ? const Text('Host')
+                  : player.isWeb
+                  ? const Text('In a browser')
+                  : null,
               trailing: isHost && player.id != client.playerId
                   ? IconButton(
                       tooltip: 'Kick',

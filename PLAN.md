@@ -317,7 +317,7 @@ lib/                           main app (host/join): native-only code stays here
   net/caster_link.dart           NEW host → Caster outbound connection
   net/caster_scanner.dart        NEW listens for Caster announcements
   screens/...                    + single-screen options, screen picker, host display mode (B), QR code
-assets/landing/index.html      NEW tiny page at /: "Join as player" / "Show the shared screen"
+lib/net/web_pages.dart         NEW tiny pages generated in code: landing at / and "not included" fallback
 assets/display/                NEW HTML/JS shared screen, served at /screen
   index.html, app.js, style.css
   games/tictactoe.js, games/colorclash.js   one small renderer per game
@@ -372,7 +372,10 @@ caster/                        NEW separate Flutter app (Windows, Android incl. 
 - It's built with `flutter build web --release --base-href /play/ --no-web-resources-cdn`, so it works without
   internet. `tool/build_web_client` copies the output into `assets/web_client/`. The native host app must be built
   after this step. The generated folder is git-ignored, and CI builds it before analyzing and testing the main app.
-- **Size budget:** at most 4 MB in the host app. CI fails if the build gets larger.
+- **Size budget:** at most **8 MB** zipped in the host app; CI fails if it grows past that. (The plan first said
+  4 MB, but a real build is 40 MB raw: Flutter's web engine alone is 2–3 MB compressed per variant. The build
+  script keeps only the two engine variants a non-wasm build can load, CanvasKit full and chromium, and drops
+  debug symbols. That gives about 5.8 MB zipped. The host also gzips responses.)
 - **Protocol:** the hello message gets an optional `client: "app"|"web"`, used only for the lobby's browser icon.
   Browser players follow exactly the same rules as app players.
 
@@ -447,7 +450,7 @@ caster/                        NEW separate Flutter app (Windows, Android incl. 
 ## Verification
 - `flutter analyze` is clean and `flutter test` passes in the root app, `packages/nico_shared`, `web_client/` and
   `caster/`.
-- The web client builds with `--no-web-resources-cdn`, stays under the 4 MB budget, and loads on a host with no
+- The web client builds with `--no-web-resources-cdn`, stays under the 8 MB budget, and loads on a host with no
   internet connection. To check this, unplug the router's internet uplink during the device test.
 - Privacy test: for every game and every state reached by the random computer-played games, `tableView()` contains
   no card IDs from anyone's hand.

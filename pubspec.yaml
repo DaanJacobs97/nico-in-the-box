@@ -7,10 +7,12 @@ environment:
   sdk: ^3.13.5
 
 dependencies:
+  archive: ^4.5.2
   flutter:
     sdk: flutter
   nico_shared:
     path: packages/nico_shared
+  qr_flutter: ^4.1.0
 
 dev_dependencies:
   flutter_test:
@@ -21,3 +23,6 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+  assets:
+    # Browser player client, built by tool/build_web_client (git-ignored).
+    - assets/generated/

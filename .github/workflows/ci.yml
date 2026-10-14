@@ -20,6 +20,7 @@ jobs:
         run: |
           flutter pub get
           (cd packages/nico_shared && flutter pub get)
+          (cd web_client && flutter pub get)
 
       - name: Check formatting
         run: dart format --output=none --set-exit-if-changed .
@@ -42,6 +43,22 @@ jobs:
       - name: Test shared package
         working-directory: packages/nico_shared
         run: flutter test
+
+      - name: Test browser client
+        working-directory: web_client
+        run: flutter test
+
+      # The browser player client the host app serves at /play/. Built here so a
+      # broken web build fails the PR, and kept under a size budget because every
+      # host app carries it.
+      - name: Build browser client
+        run: tool/build_web_client.sh
+
+      - name: Browser client size budget (8 MB zipped)
+        run: |
+          size=$(stat -c%s assets/generated/web_client.zip)
+          echo "web_client.zip: $size bytes"
+          test "$size" -le 8388608 || { echo 'Over the 8 MB budget'; exit 1; }
 
       - name: Test shared package in a browser
         working-directory: packages/nico_shared

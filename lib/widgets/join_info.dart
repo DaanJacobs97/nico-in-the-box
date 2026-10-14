@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:nico_shared/net/protocol.dart';
+import 'package:qr_flutter/qr_flutter.dart';
 
 import '../net/hosted_room.dart';
 
@@ -10,6 +11,8 @@ class JoinInfo extends StatelessWidget {
   const JoinInfo({super.key, required this.room});
 
   final HostedRoom room;
+
+  String _playUrl(String address) => 'http://$address:${room.port}/play';
 
   @override
   Widget build(BuildContext context) {
@@ -39,6 +42,40 @@ class JoinInfo extends StatelessWidget {
                     fontFamily: 'monospace',
                   ),
                 ),
+            if (room.hasWebClient && addresses.isNotEmpty) ...[
+              const Divider(height: 32),
+              Text(
+                'No app? Join in a browser',
+                style: theme.textTheme.titleSmall,
+              ),
+              const SizedBox(height: 4),
+              const Text(
+                'Scan the code with a phone camera, or open the address in '
+                'any browser on the same network:',
+              ),
+              const SizedBox(height: 12),
+              Center(
+                child: Container(
+                  // QR codes need a light background and a quiet zone to scan.
+                  color: Colors.white,
+                  padding: const EdgeInsets.all(12),
+                  child: QrImageView(
+                    data: _playUrl(addresses.first),
+                    size: 180,
+                    backgroundColor: Colors.white,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 8),
+              for (final address in addresses)
+                SelectableText(
+                  _playUrl(address),
+                  textAlign: TextAlign.center,
+                  style: theme.textTheme.titleSmall?.copyWith(
+                    fontFamily: 'monospace',
+                  ),
+                ),
+            ],
             if (Platform.isWindows) ...[
               const SizedBox(height: 12),
               Text(

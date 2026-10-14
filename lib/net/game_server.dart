@@ -3,10 +3,12 @@ import 'dart:io';
 import 'dart:math';
 
 import 'package:flutter/foundation.dart';
-
 import 'package:nico_shared/games/game_session.dart';
 import 'package:nico_shared/games/registry.dart';
 import 'package:nico_shared/net/protocol.dart';
+
+import 'web_files.dart';
+import 'web_pages.dart';
 
 class _Connection {
   _Connection(this.socket);
@@ -34,11 +36,19 @@ class _Connection {
 /// The host proves who they are by sending [hostToken] in their hello, so
 /// host-only commands cannot be issued by anyone else.
 class GameServer extends ChangeNotifier {
-  GameServer({required this.roomName, required this._game, Random? random})
-    : _random = random ?? Random.secure(),
-      hostToken = _randomToken(random ?? Random.secure());
+  GameServer({
+    required this.roomName,
+    required this._game,
+    this.webClient,
+    Random? random,
+  }) : _random = random ?? Random.secure(),
+       hostToken = _randomToken(random ?? Random.secure());
 
   final String roomName;
+
+  /// The browser player client served at `/play/`; null if this build of
+  /// the app doesn't include it.
+  final WebFiles? webClient;
   final String hostToken;
   final Random _random;
   GameDefinition _game;
@@ -90,16 +100,76 @@ class GameServer extends ChangeNotifier {
       }
     }
     if (_http == null) throw lastError!;
+    // Gzip responses for browsers that accept it (the web client is large).
+    _http!.autoCompress = true;
     _http!.listen(_handleRequest);
   }
 
   Future<void> _handleRequest(HttpRequest request) async {
-    if (request.uri.path != kWebSocketPath ||
-        !WebSocketTransformer.isUpgradeRequest(request)) {
-      request.response.statusCode = HttpStatus.notFound;
-      await request.response.close();
+    final path = request.uri.path;
+    if (path == kWebSocketPath &&
+        WebSocketTransformer.isUpgradeRequest(request)) {
+      await _upgradeToPlayer(request);
       return;
     }
+    try {
+      await _serveWeb(request, path);
+    } on Object {
+      // The browser went away mid-response; nothing to clean up.
+    }
+  }
+
+  /// Plain HTTP: the landing page and the browser player client.
+  Future<void> _serveWeb(HttpRequest request, String path) async {
+    final response = request.response;
+    if (request.method != 'GET' && request.method != 'HEAD') {
+      response.statusCode = HttpStatus.methodNotAllowed;
+      await response.close();
+      return;
+    }
+    // Files can change between app versions under the same name.
+    response.headers.set(HttpHeaders.cacheControlHeader, 'no-cache');
+
+    if (path == '/' || path == '/index.html') {
+      await _sendHtml(
+        response,
+        landingPage(roomName: roomName, hasWebClient: webClient != null),
+      );
+    } else if (path == '/play') {
+      // The client's base href is /play/, so relative URLs need the slash.
+      await response.redirect(
+        Uri(path: '/play/'),
+        status: HttpStatus.movedPermanently,
+      );
+    } else if (path.startsWith('/play/')) {
+      final files = webClient;
+      if (files == null) {
+        response.statusCode = HttpStatus.serviceUnavailable;
+        await _sendHtml(response, webClientMissingPage());
+        return;
+      }
+      final file = files.lookup(path.substring('/play/'.length));
+      if (file == null) {
+        response.statusCode = HttpStatus.notFound;
+        await response.close();
+        return;
+      }
+      response.headers.contentType = ContentType.parse(file.contentType);
+      if (request.method == 'GET') response.add(file.bytes);
+      await response.close();
+    } else {
+      response.statusCode = HttpStatus.notFound;
+      await response.close();
+    }
+  }
+
+  Future<void> _sendHtml(HttpResponse response, String html) async {
+    response.headers.contentType = ContentType.html;
+    response.write(html);
+    await response.close();
+  }
+
+  Future<void> _upgradeToPlayer(HttpRequest request) async {
     final WebSocket socket;
     try {
       socket = await WebSocketTransformer.upgrade(request);
@@ -232,7 +302,11 @@ class GameServer extends ChangeNotifier {
     }
 
     conn.helloTimeout?.cancel();
-    final player = PlayerInfo(id: 'p${_nextPlayerId++}', nickname: nickname);
+    final player = PlayerInfo(
+      id: 'p${_nextPlayerId++}',
+      nickname: nickname,
+      isWeb: msg['client'] == 'web',
+    );
     conn.player = player;
     if (isHost) _hostId = player.id;
     conn.send(Msg.welcome, {'playerId': player.id, 'isHost': isHost});
