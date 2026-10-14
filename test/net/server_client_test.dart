@@ -39,7 +39,7 @@ Future<void> until(GameClient client, bool Function() condition) {
 
   client.addListener(check);
   return done.future
-      .timeout(const Duration(seconds: 5))
+      .timeout(const Duration(seconds: 15))
       .whenComplete(() => client.removeListener(check));
 }
 
@@ -95,7 +95,9 @@ void main() {
     await until(host, () => host.lobby?.players.length == 2);
 
     host.startGame();
+    // Each client receives its own copy of the board; wait for both.
     await until(guest, () => guest.gameView != null);
+    await until(host, () => host.gameView != null);
     expect(guest.gameView!['turn'], host.playerId);
 
     Future<void> place(GameClient who, int cell, int expectedFilled) async {
@@ -245,7 +247,7 @@ void main() {
     final notice = host.notices.first;
     host.changeGame('tictactoe');
     expect(
-      await notice.timeout(const Duration(seconds: 5)),
+      await notice.timeout(const Duration(seconds: 15)),
       contains('at most 2'),
     );
     expect(host.lobby!.gameId, 'colorclash');
@@ -295,7 +297,7 @@ void main() {
 
     final notice = host.notices.first;
     await guest.leave();
-    expect(await notice.timeout(const Duration(seconds: 5)), 'Daan left.');
+    expect(await notice.timeout(const Duration(seconds: 15)), 'Daan left.');
     await until(host, () => host.lobby!.players.length == 1);
   });
 

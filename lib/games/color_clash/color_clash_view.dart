@@ -80,6 +80,7 @@ class ColorClashView extends StatelessWidget {
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       _DrawPile(
+                        key: const ValueKey('draw-pile'),
                         count: view['drawPile']! as int,
                         onTap: myTurn && pendingDrawn == null
                             ? () => ctx.sendAction({'type': 'draw'})
@@ -174,6 +175,7 @@ class ColorClashView extends StatelessWidget {
                 child: Opacity(
                   opacity: myTurn && !canPlay ? 0.55 : 1,
                   child: _CardFace(
+                    key: ValueKey('hand-card-${card.id}'),
                     card: card,
                     width: 76,
                     onTap: canPlay ? () => playCard(card) : null,
@@ -198,6 +200,7 @@ class ColorClashView extends StatelessWidget {
           children: [
             for (final color in playableColors)
               InkWell(
+                key: ValueKey('pick-${color.name}'),
                 customBorder: const CircleBorder(),
                 onTap: () => Navigator.of(context).pop(color),
                 child: CircleAvatar(
@@ -245,7 +248,7 @@ class _PlayerChip extends StatelessWidget {
 }
 
 class _DrawPile extends StatelessWidget {
-  const _DrawPile({required this.count, this.onTap});
+  const _DrawPile({super.key, required this.count, this.onTap});
 
   final int count;
   final VoidCallback? onTap;
@@ -279,6 +282,7 @@ class _DrawPile extends StatelessWidget {
 
 class _CardFace extends StatelessWidget {
   const _CardFace({
+    super.key,
     required this.card,
     required this.width,
     this.activeColor,
