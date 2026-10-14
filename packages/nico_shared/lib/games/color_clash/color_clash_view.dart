@@ -24,16 +24,20 @@ class ColorClashView extends StatelessWidget {
       for (final c in view['hand']! as List<Object?>)
         ClashCard.fromJson(c! as Json),
     ];
-    final players = (view['players']! as List<Object?>).cast<Json>();
     final turn = view['turn'] as String?;
-    final top = ClashCard.fromJson(view['top']! as Json);
-    final color = CardColor.values.byName(view['color']! as String);
     final playable = (view['playable']! as List<Object?>).cast<int>().toSet();
     final pendingDrawn = view['pendingDrawn'] as int?;
     final vulnerable = view['vulnerable'] as String?;
-    final log = (view['log']! as List<Object?>).cast<String>();
     final myTurn = turn == ctx.myId;
+    final canDraw = myTurn && pendingDrawn == null;
     final theme = Theme.of(context);
+    final status = turn == null
+        ? ''
+        : myTurn
+        ? (pendingDrawn != null
+              ? 'Play the card you drew, or pass'
+              : 'Your turn!')
+        : "${ctx.nicknameOf(turn)}'s turn";
 
     Future<void> playCard(ClashCard card) async {
       if (!card.isWild) {
@@ -50,81 +54,30 @@ class ColorClashView extends StatelessWidget {
       }
     }
 
+    void draw() => ctx.sendAction({'type': 'draw'});
+
     return Column(
       children: [
-        // Everyone at the table, in turn order.
-        Padding(
-          padding: const EdgeInsets.fromLTRB(8, 8, 8, 0),
-          child: Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            alignment: WrapAlignment.center,
-            children: [
-              for (final p in players)
-                _PlayerChip(
-                  name: ctx.nicknameOf(p['id']! as String),
-                  cards: p['cards']! as int,
-                  calledLast: p['calledLast'] == true,
-                  isTurn: p['id'] == turn,
-                ),
-            ],
-          ),
-        ),
-        Expanded(
-          child: Center(
-            child: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      _DrawPile(
-                        key: const ValueKey('draw-pile'),
-                        count: view['drawPile']! as int,
-                        onTap: myTurn && pendingDrawn == null
-                            ? () => ctx.sendAction({'type': 'draw'})
-                            : null,
-                      ),
-                      const SizedBox(width: 24),
-                      _CardFace(card: top, width: 96, activeColor: color),
-                      const SizedBox(width: 16),
-                      Column(
-                        children: [
-                          Icon(
-                            view['direction'] == 1
-                                ? Icons.rotate_right
-                                : Icons.rotate_left,
-                            size: 32,
-                          ),
-                          const SizedBox(height: 8),
-                          CircleAvatar(
-                            radius: 12,
-                            backgroundColor: colorOf(color),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    turn == null
-                        ? ''
-                        : myTurn
-                        ? (pendingDrawn != null
-                              ? 'Play the card you drew, or pass'
-                              : 'Your turn!')
-                        : "${ctx.nicknameOf(turn)}'s turn",
-                    style: theme.textTheme.titleLarge,
-                  ),
-                  const SizedBox(height: 8),
-                  for (final entry in log.reversed.take(3))
-                    Text(entry, style: theme.textTheme.bodySmall),
-                ],
-              ),
+        if (ctx.compact) ...[
+          // The table is on the shared screen; keep just a status line.
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Text(
+              status,
+              key: const ValueKey('compact-status'),
+              style: theme.textTheme.headlineSmall,
             ),
           ),
-        ),
+          const Spacer(),
+        ] else
+          Expanded(
+            child: ClashTableArea(
+              table: view,
+              nameOf: ctx.nicknameOf,
+              status: status,
+              onDraw: canDraw ? draw : null,
+            ),
+          ),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 8),
           child: Wrap(
@@ -132,6 +85,13 @@ class ColorClashView extends StatelessWidget {
             runSpacing: 8,
             alignment: WrapAlignment.center,
             children: [
+              if (ctx.compact)
+                FilledButton.icon(
+                  key: const ValueKey('draw-button'),
+                  icon: const Icon(Icons.style),
+                  label: const Text('Draw'),
+                  onPressed: canDraw ? draw : null,
+                ),
               FilledButton.tonalIcon(
                 icon: const Icon(Icons.campaign),
                 label: const Text('Last card!'),
@@ -222,6 +182,149 @@ class ColorClashView extends StatelessWidget {
   }
 }
 
+/// The public part of the table: everyone's card counts in turn order, the
+/// draw and discard piles, the active color, direction, status and log.
+/// Used inside a player's full view and, scaled up, on the shared screen.
+class ClashTableArea extends StatelessWidget {
+  const ClashTableArea({
+    super.key,
+    required this.table,
+    required this.nameOf,
+    required this.status,
+    this.onDraw,
+    this.scale = 1,
+    this.logLines = 3,
+  });
+
+  /// A table view (or a player view, which contains one).
+  final Json table;
+  final String Function(String playerId) nameOf;
+  final String status;
+
+  /// Set when the viewer may draw now; null makes the pile read-only.
+  final VoidCallback? onDraw;
+  final double scale;
+  final int logLines;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final players = (table['players']! as List<Object?>).cast<Json>();
+    final turn = table['turn'] as String?;
+    final top = ClashCard.fromJson(table['top']! as Json);
+    final color = CardColor.values.byName(table['color']! as String);
+    final log = (table['log']! as List<Object?>).cast<String>();
+
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(8, 8, 8, 0),
+          child: Wrap(
+            spacing: 8 * scale,
+            runSpacing: 8 * scale,
+            alignment: WrapAlignment.center,
+            children: [
+              for (final p in players)
+                Transform.scale(
+                  scale: scale,
+                  child: _PlayerChip(
+                    name: nameOf(p['id']! as String),
+                    cards: p['cards']! as int,
+                    calledLast: p['calledLast'] == true,
+                    isTurn: p['id'] == turn,
+                  ),
+                ),
+            ],
+          ),
+        ),
+        Expanded(
+          child: Center(
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      _DrawPile(
+                        key: const ValueKey('draw-pile'),
+                        count: table['drawPile']! as int,
+                        onTap: onDraw,
+                        scale: scale,
+                      ),
+                      SizedBox(width: 24 * scale),
+                      _CardFace(
+                        card: top,
+                        width: 96 * scale,
+                        activeColor: color,
+                      ),
+                      SizedBox(width: 16 * scale),
+                      Column(
+                        children: [
+                          Icon(
+                            table['direction'] == 1
+                                ? Icons.rotate_right
+                                : Icons.rotate_left,
+                            size: 32 * scale,
+                          ),
+                          SizedBox(height: 8 * scale),
+                          CircleAvatar(
+                            radius: 12 * scale,
+                            backgroundColor: colorOf(color),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                  SizedBox(height: 16 * scale),
+                  Text(
+                    status,
+                    style: theme.textTheme.titleLarge?.copyWith(
+                      fontSize:
+                          (theme.textTheme.titleLarge?.fontSize ?? 22) * scale,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  for (final entry in log.reversed.take(logLines))
+                    Text(
+                      entry,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        fontSize:
+                            (theme.textTheme.bodySmall?.fontSize ?? 12) * scale,
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// Color Clash on the shared screen: the table, large, without any hand.
+class ColorClashTable extends StatelessWidget {
+  const ColorClashTable({super.key, required this.ctx});
+
+  final TableContext ctx;
+
+  @override
+  Widget build(BuildContext context) {
+    final turn = ctx.table['turn'] as String?;
+    return LayoutBuilder(
+      builder: (context, constraints) => ClashTableArea(
+        table: ctx.table,
+        nameOf: ctx.nicknameOf,
+        status: turn == null ? '' : "${ctx.nicknameOf(turn)}'s turn",
+        // Grow with the screen; a TV gets roughly double size.
+        scale: (constraints.biggest.shortestSide / 450).clamp(1.0, 2.5),
+        logLines: 5,
+      ),
+    );
+  }
+}
+
 class _PlayerChip extends StatelessWidget {
   const _PlayerChip({
     required this.name,
@@ -248,10 +351,11 @@ class _PlayerChip extends StatelessWidget {
 }
 
 class _DrawPile extends StatelessWidget {
-  const _DrawPile({super.key, required this.count, this.onTap});
+  const _DrawPile({super.key, required this.count, this.onTap, this.scale = 1});
 
   final int count;
   final VoidCallback? onTap;
+  final double scale;
 
   @override
   Widget build(BuildContext context) {
@@ -264,11 +368,11 @@ class _DrawPile extends StatelessWidget {
           child: InkWell(
             borderRadius: BorderRadius.circular(10),
             onTap: onTap,
-            child: const SizedBox(
-              width: 72,
-              height: 108,
+            child: SizedBox(
+              width: 72 * scale,
+              height: 108 * scale,
               child: Center(
-                child: Icon(Icons.style, color: Colors.white, size: 36),
+                child: Icon(Icons.style, color: Colors.white, size: 36 * scale),
               ),
             ),
           ),
