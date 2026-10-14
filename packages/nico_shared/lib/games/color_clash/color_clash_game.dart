@@ -307,25 +307,36 @@ class ColorClashSession implements GameSession {
       return (a.value ?? 0).compareTo(b.value ?? 0);
     });
 
+  /// Public state for a shared screen: card counts, never cards.
+  @override
+  Json tableView() => {
+    'players': [
+      for (final p in _players)
+        {
+          'id': p.id,
+          'cards': _hands[p.id]!.length,
+          'calledLast': _calledLast.contains(p.id),
+        },
+    ],
+    'turn': isOver ? null : _currentId,
+    'direction': _direction,
+    'top': _top.toJson(),
+    'color': _color.name,
+    'drawPile': _drawPile.length,
+    'vulnerable': _vulnerable,
+    'winner': _winner,
+    'log': List.of(_log),
+  };
+
+  /// The table view plus what only [playerId] may see: their hand and the
+  /// moves available to them.
   @override
   Json viewFor(String playerId) {
     final hand = _hands[playerId] ?? const [];
     final myTurn = playerId == _currentId && !isOver;
     return {
+      ...tableView(),
       'hand': [for (final c in _sorted(hand)) c.toJson()],
-      'players': [
-        for (final p in _players)
-          {
-            'id': p.id,
-            'cards': _hands[p.id]!.length,
-            'calledLast': _calledLast.contains(p.id),
-          },
-      ],
-      'turn': isOver ? null : _currentId,
-      'direction': _direction,
-      'top': _top.toJson(),
-      'color': _color.name,
-      'drawPile': _drawPile.length,
       'pendingDrawn': myTurn ? _pendingDrawnId : null,
       'playable': [
         if (myTurn)
@@ -335,9 +346,6 @@ class ColorClashSession implements GameSession {
               c.id,
       ],
       'canCallLast': _hands.containsKey(playerId) && _canCallLast(playerId),
-      'vulnerable': _vulnerable,
-      'winner': _winner,
-      'log': List.of(_log),
     };
   }
 

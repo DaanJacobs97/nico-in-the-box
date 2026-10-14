@@ -15,6 +15,8 @@ class _IdleSession implements GameSession {
   @override
   Json viewFor(String playerId) => {};
   @override
+  Json tableView() => {};
+  @override
   bool get isOver => false;
   @override
   Json? get result => null;

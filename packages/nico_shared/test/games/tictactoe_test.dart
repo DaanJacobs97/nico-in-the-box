@@ -85,6 +85,13 @@ void main() {
     expect(game.result!['winnerIds'], isEmpty);
   });
 
+  test('table view shows the same board as the players see', () {
+    final game = TicTacToeSession([host, guest]);
+    place(game, 'h', 4);
+    expect(game.tableView(), game.viewFor('h'));
+    expect((game.tableView()['board']! as List<Object?>)[4], 'X');
+  });
+
   test('definition creates a session that honours the round', () {
     final game = ticTacToeDefinition.createSession([host, guest], 3, Random(1));
     expect(game.viewFor('h')['turn'], 'g');

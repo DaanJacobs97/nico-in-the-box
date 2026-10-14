@@ -196,7 +196,7 @@ animations beyond the basics.
 
 # Feature: Single game screen & browser join
 
-**Status:** planned, not started.
+**Status:** milestones 1–2 merged; milestone 3 (table views and display feed) in review.
 
 The host can turn on a *shared screen*. The game table moves to one big screen everyone watches, and each player's
 device only shows their own hand plus the buttons they need, Jackbox style.
@@ -335,8 +335,11 @@ caster/                        NEW separate Flutter app (Windows, Android incl. 
   a hand.
 - The server keeps **room display settings**: `{enabled, target: browser|caster, hostPlays: bool}`, sent in every
   `lobby` message along with `displays: [{kind, name}]`.
-- **Host without a seat (option B):** the host's hello includes `seat: false`. The connection keeps host rights but
-  isn't a player. Room size and the reserved host seat then follow `hostPlays`.
+- **Host without a seat (option B):** this is the room setting `hostPlays: false`, which the host changes with
+  `setDisplay` in the lobby or passes when creating the room. The plan first had a `seat: false` field in the
+  hello, but a room setting can be changed later. The host's connection keeps host rights but isn't seated. Room size
+  and the reserved host seat follow `hostPlays`, and taking a seat back is refused when the room is full. The host's
+  nickname still counts for uniqueness and is sent as `hostName`.
 - **Display feed:** after every lobby or game change, the server builds one
   `display{lobby, game, table, result}` message and sends it to every display: browser sockets on `/display`, the
   connected Caster, and the host's own client in option B.
