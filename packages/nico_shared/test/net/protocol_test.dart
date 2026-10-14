@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:nico_in_the_box/net/protocol.dart';
+import 'package:nico_shared/net/protocol.dart';
 
 void main() {
   test('encode/decode round trip keeps type and body', () {

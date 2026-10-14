@@ -49,6 +49,16 @@ flutter pub get
 flutter run -d windows     # or: flutter run -d <android-device-id>
 ```
 
+`flutter pub get` also resolves the local `packages/nico_shared` dependency.
+
+### Project layout
+
+| Path | What lives there |
+|---|---|
+| `lib/` | The host/join app: server, LAN discovery, hosting and joining screens. Native-only code (`dart:io`) belongs here |
+| `packages/nico_shared/` | Protocol, client, game engines, game widgets and session screens, shared by every app. **Web-safe:** no `dart:io` imports, so it also runs in browsers |
+| `integration_test/` | The end-to-end LAN test on real devices |
+
 ### Test
 
 ```bash
@@ -56,7 +66,16 @@ flutter analyze
 flutter test
 ```
 
-`flutter test` runs the game engines, the protocol, and in-process server/client tests over real loopback sockets.
+```bash
+cd packages/nico_shared
+flutter test
+flutter test --platform chrome
+```
+
+The root `flutter test` runs the server, discovery and in-process server/client tests over real loopback sockets.
+The shared package's tests cover the game engines and protocol. `--platform chrome` runs them compiled for the web,
+which proves the package stays browser-safe; on Windows without Chrome, set `CHROME_EXECUTABLE` to Edge's
+`msedge.exe`.
 
 ### End-to-end test on two devices
 

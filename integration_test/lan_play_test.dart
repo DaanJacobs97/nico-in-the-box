@@ -10,10 +10,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
-import 'package:nico_in_the_box/games/color_clash/color_clash_view.dart';
-import 'package:nico_in_the_box/games/tictactoe/tictactoe_view.dart';
 import 'package:nico_in_the_box/main.dart';
-import 'package:nico_in_the_box/net/protocol.dart';
+import 'package:nico_shared/games/color_clash/color_clash_view.dart';
+import 'package:nico_shared/games/tictactoe/tictactoe_view.dart';
+import 'package:nico_shared/net/protocol.dart';
 
 const role = String.fromEnvironment('ROLE', defaultValue: 'host');
 const joinIp = String.fromEnvironment('JOIN_IP');

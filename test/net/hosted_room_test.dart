@@ -1,9 +1,9 @@
 import 'dart:async';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:nico_in_the_box/games/tictactoe/tictactoe_game.dart';
-import 'package:nico_in_the_box/net/game_client.dart';
 import 'package:nico_in_the_box/net/hosted_room.dart';
+import 'package:nico_shared/games/tictactoe/tictactoe_game.dart';
+import 'package:nico_shared/net/game_client.dart';
 
 void main() {
   test('closing a hosted room tells guests the host closed it', () async {

@@ -2,14 +2,14 @@ import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:nico_in_the_box/games/color_clash/color_clash_game.dart';
-import 'package:nico_in_the_box/games/color_clash/color_clash_view.dart';
-import 'package:nico_in_the_box/games/game_views.dart';
-import 'package:nico_in_the_box/games/tictactoe/tictactoe_view.dart';
 import 'package:nico_in_the_box/main.dart';
-import 'package:nico_in_the_box/net/protocol.dart';
 import 'package:nico_in_the_box/screens/join_screen.dart';
-import 'package:nico_in_the_box/widgets/nickname_dialog.dart';
+import 'package:nico_shared/games/color_clash/color_clash_game.dart';
+import 'package:nico_shared/games/color_clash/color_clash_view.dart';
+import 'package:nico_shared/games/game_views.dart';
+import 'package:nico_shared/games/tictactoe/tictactoe_view.dart';
+import 'package:nico_shared/net/protocol.dart';
+import 'package:nico_shared/widgets/nickname_dialog.dart';
 
 const _lobby = LobbyState(
   roomName: 'r',

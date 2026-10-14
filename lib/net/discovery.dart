@@ -4,7 +4,7 @@ import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 
-import 'protocol.dart';
+import 'package:nico_shared/net/protocol.dart';
 
 /// A room heard on the network.
 class DiscoveredRoom {

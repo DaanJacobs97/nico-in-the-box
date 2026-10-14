@@ -4,9 +4,9 @@ import 'dart:math';
 
 import 'package:flutter/foundation.dart';
 
-import '../games/game_session.dart';
-import '../games/registry.dart';
-import 'protocol.dart';
+import 'package:nico_shared/games/game_session.dart';
+import 'package:nico_shared/games/registry.dart';
+import 'package:nico_shared/net/protocol.dart';
 
 class _Connection {
   _Connection(this.socket);

@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:nico_shared/app/prefs.dart';
+import 'package:nico_shared/games/game_session.dart';
+import 'package:nico_shared/games/registry.dart';
+import 'package:nico_shared/net/protocol.dart';
+import 'package:nico_shared/screens/session_screen.dart';
 
-import '../app/prefs.dart';
-import '../games/game_session.dart';
-import '../games/registry.dart';
 import '../net/hosted_room.dart';
-import '../net/protocol.dart';
-import 'session_screen.dart';
+import '../widgets/join_info.dart';
 
 class HostSetupScreen extends StatefulWidget {
   const HostSetupScreen({super.key});
@@ -57,7 +58,11 @@ class _HostSetupScreenState extends State<HostSetupScreen> {
       }
       await Navigator.of(context).pushReplacement(
         MaterialPageRoute<void>(
-          builder: (_) => SessionScreen(client: room.client, hostedRoom: room),
+          builder: (_) => SessionScreen(
+            client: room.client,
+            onClose: room.close,
+            hostFooter: JoinInfo(room: room),
+          ),
         ),
       );
     } on Object catch (e) {

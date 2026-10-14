@@ -5,7 +5,6 @@ import 'package:flutter/material.dart';
 import '../games/game_views.dart';
 import '../games/registry.dart';
 import '../net/game_client.dart';
-import '../net/hosted_room.dart';
 import '../net/protocol.dart';
 import '../widgets/confirm_dialog.dart';
 import '../widgets/host_controls.dart';
@@ -14,12 +13,21 @@ import 'lobby_view.dart';
 /// The room a player is in: the lobby, then the game. The host gets the
 /// session controls on top of the same view everyone else sees.
 class SessionScreen extends StatefulWidget {
-  const SessionScreen({super.key, required this.client, this.hostedRoom});
+  const SessionScreen({
+    super.key,
+    required this.client,
+    this.onClose,
+    this.hostFooter,
+  });
 
   final GameClient client;
 
-  /// Set on the host's device; owns the server and must be closed on exit.
-  final HostedRoom? hostedRoom;
+  /// Set on the host's device: shuts the room down (server included) when
+  /// the host leaves. Without it, leaving just disconnects this client.
+  final Future<void> Function()? onClose;
+
+  /// Extra lobby content for the host, e.g. how to join.
+  final Widget? hostFooter;
 
   @override
   State<SessionScreen> createState() => _SessionScreenState();
@@ -69,8 +77,8 @@ class _SessionScreenState extends State<SessionScreen> {
     _exiting = true;
     final messenger = ScaffoldMessenger.of(context);
     final navigator = Navigator.of(context);
-    if (widget.hostedRoom != null) {
-      await widget.hostedRoom!.close();
+    if (widget.onClose != null) {
+      await widget.onClose!();
     } else {
       await _client.leave();
     }
@@ -82,7 +90,7 @@ class _SessionScreenState extends State<SessionScreen> {
   }
 
   Future<void> _confirmLeave() async {
-    final isHost = widget.hostedRoom != null;
+    final isHost = widget.onClose != null;
     final ok = await confirm(
       context,
       title: isHost ? 'Close room?' : 'Leave room?',
@@ -116,7 +124,7 @@ class _SessionScreenState extends State<SessionScreen> {
             body: lobby == null
                 ? const Center(child: CircularProgressIndicator())
                 : lobby.phase == RoomPhase.lobby
-                ? LobbyView(client: _client, hostedRoom: widget.hostedRoom)
+                ? LobbyView(client: _client, hostFooter: widget.hostFooter)
                 : _GameArea(client: _client),
           );
         },
