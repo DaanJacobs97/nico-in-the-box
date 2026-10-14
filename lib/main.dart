@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import 'screens/home_screen.dart';
+
 void main() {
   runApp(const NicoInTheBoxApp());
 }
@@ -9,12 +11,24 @@ class NicoInTheBoxApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    ThemeData theme(Brightness brightness) => ThemeData(
+      colorScheme: ColorScheme.fromSeed(
+        seedColor: Colors.deepPurple,
+        brightness: brightness,
+      ),
+      filledButtonTheme: FilledButtonThemeData(
+        style: FilledButton.styleFrom(
+          minimumSize: const Size(0, 52),
+          textStyle: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+        ),
+      ),
+    );
+
     return MaterialApp(
       title: 'Nico in the Box',
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
-      ),
-      home: const Scaffold(body: Center(child: Text('Nico in the Box'))),
+      theme: theme(Brightness.light),
+      darkTheme: theme(Brightness.dark),
+      home: const HomeScreen(),
     );
   }
 }
