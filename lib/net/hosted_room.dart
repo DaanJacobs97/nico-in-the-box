@@ -8,11 +8,15 @@ import 'package:nico_shared/net/game_client.dart';
 import 'package:nico_shared/net/protocol.dart';
 
 import 'discovery.dart';
+import 'display_frontend.dart';
 import 'game_server.dart';
 import 'web_files.dart';
 
 /// Asset built by tool/build_web_client; absent in builds made without it.
 const webClientAsset = 'assets/generated/web_client.zip';
+
+/// Folder of the HTML/JS shared screen page served at `/screen/`.
+const screenAssetDir = 'assets/display/';
 
 /// Everything the host device runs for a room: the server, the LAN
 /// announcer, and the host's own (auto-joined) client connection.
@@ -28,6 +32,9 @@ class HostedRoom {
 
   int get port => server.port;
 
+  /// Whether a browser can show the shared screen at `/screen/`.
+  bool get hasScreenPage => server.screenPage != null;
+
   /// Whether players without the app can join from a browser at `/play/`.
   bool get hasWebClient => server.webClient != null;
 
@@ -42,6 +49,7 @@ class HostedRoom {
       roomName: roomName,
       game: game,
       webClient: await _loadWebClient(),
+      screenPage: await _loadScreenPage(),
       display: display,
     );
     await server.start();
@@ -109,5 +117,25 @@ class HostedRoom {
     );
     // A few MB of zip: unpack off the UI thread.
     return Isolate.run(() => MemoryWebFiles.fromZip(bytes));
+  }
+
+  /// Loads the shared screen page's files from the app's assets.
+  static Future<DisplayFrontend?> _loadScreenPage() async {
+    try {
+      final manifest = await AssetManifest.loadFromAssetBundle(rootBundle);
+      final files = <String, List<int>>{};
+      for (final asset in manifest.listAssets()) {
+        if (!asset.startsWith(screenAssetDir)) continue;
+        final data = await rootBundle.load(asset);
+        files[asset.substring(screenAssetDir.length)] = data.buffer.asUint8List(
+          data.offsetInBytes,
+          data.lengthInBytes,
+        );
+      }
+      if (!files.containsKey('index.html')) return null;
+      return HtmlDisplayFrontend(MemoryWebFiles(files));
+    } on Object {
+      return null;
+    }
   }
 }

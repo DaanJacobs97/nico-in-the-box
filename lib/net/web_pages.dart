@@ -19,6 +19,8 @@ String _page(String title, String body) =>
   a.button { display: block; margin: 24px 0 8px; padding: 16px; border-radius: 16px;
              background: var(--accent); color: #fff; font-size: 1.2rem;
              font-weight: 600; text-decoration: none; }
+  a.button.secondary { background: transparent; color: inherit;
+                       border: 2px solid var(--accent); }
 </style>
 </head>
 <body><main>$body</main></body>
@@ -26,7 +28,11 @@ String _page(String title, String body) =>
 ''';
 
 /// Landing page at `/`, so typing just the host's address leads somewhere.
-String landingPage({required String roomName, required bool hasWebClient}) {
+String landingPage({
+  required String roomName,
+  required bool hasWebClient,
+  bool hasScreen = false,
+}) {
   final room = _escape(roomName);
   return _page(
     'Nico in the Box',
@@ -36,15 +42,28 @@ String landingPage({required String roomName, required bool hasWebClient}) {
 <p>Room: <strong>$room</strong></p>
 <a class="button" href="/play/">Join as player</a>
 <p>Have the app? Open it and use <em>Join a game</em> instead.</p>
+${hasScreen ? _screenLink : ''}
 '''
         : '''
 <h1>Nico in the Box</h1>
 <p>Room: <strong>$room</strong></p>
 <p>Joining from a browser isn't included in this build of the host app.
 Open the <em>Nico in the Box</em> app and use <em>Join a game</em>.</p>
+${hasScreen ? _screenLink : ''}
 ''',
   );
 }
+
+const _screenLink = '''
+<a class="button secondary" href="/screen/">Show the shared screen</a>
+<p>For a TV or a big monitor everyone can see.</p>
+''';
+
+/// Shown at `/screen/` when the shared screen page isn't bundled.
+String screenMissingPage() => _page('Not available', '''
+<h1>Not available</h1>
+<p>This host app was built without the shared screen page.</p>
+''');
 
 /// Shown at `/play/` when the host app was built without the web client.
 String webClientMissingPage() => _page('Not available', '''

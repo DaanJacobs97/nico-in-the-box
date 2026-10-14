@@ -122,6 +122,7 @@ class ColorClashView extends StatelessWidget {
         SizedBox(
           height: 150,
           child: ListView.separated(
+            key: const ValueKey('hand-list'),
             scrollDirection: Axis.horizontal,
             padding: const EdgeInsets.fromLTRB(12, 16, 12, 12),
             itemCount: hand.length,

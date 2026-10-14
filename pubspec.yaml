@@ -26,3 +26,6 @@ flutter:
   assets:
     # Browser player client, built by tool/build_web_client (git-ignored).
     - assets/generated/
+    # Shared screen page served at /screen/ (lightweight HTML/JS).
+    - assets/display/
+    - assets/display/games/

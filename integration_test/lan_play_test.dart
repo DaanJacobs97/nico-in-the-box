@@ -158,8 +158,7 @@ Future<void> playColorClash(WidgetTester tester) async {
       final playable = (view['playable']! as List<Object?>).cast<int>();
       if (playable.isNotEmpty) {
         final cardFinder = find.byKey(ValueKey('hand-card-${playable.first}'));
-        await tester.ensureVisible(cardFinder);
-        await tester.pump();
+        await _revealHandCard(tester, cardFinder);
         await tester.tap(cardFinder);
         await tester.pump(const Duration(milliseconds: 300));
         if (present(find.byKey(const ValueKey('pick-red')))) {
@@ -392,6 +391,22 @@ void main() {
     skip: role != 'join',
     timeout: const Timeout(Duration(minutes: 20)),
   );
+}
+
+/// The hand is a lazily built horizontal list, so a card far along it may not
+/// exist yet: jump to the start, then scroll until it is built and visible.
+Future<void> _revealHandCard(WidgetTester tester, Finder card) async {
+  if (!present(card)) {
+    final hand = find.descendant(
+      of: find.byKey(const ValueKey('hand-list')),
+      matching: find.byType(Scrollable),
+    );
+    await tester.drag(hand, const Offset(10000, 0));
+    await tester.pump();
+    await tester.scrollUntilVisible(card, 150, scrollable: hand);
+  }
+  await tester.ensureVisible(card);
+  await tester.pump();
 }
 
 Future<void> _closeRoomAsHost(WidgetTester tester) async {

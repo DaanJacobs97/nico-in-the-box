@@ -7,6 +7,7 @@ import 'package:nico_shared/games/game_session.dart';
 import 'package:nico_shared/games/registry.dart';
 import 'package:nico_shared/net/protocol.dart';
 
+import 'display_frontend.dart';
 import 'web_files.dart';
 import 'web_pages.dart';
 
@@ -40,6 +41,7 @@ class GameServer extends ChangeNotifier {
     required this.roomName,
     required this._game,
     this.webClient,
+    this.screenPage,
     this._display = DisplaySettings.off,
     Random? random,
   }) : _random = random ?? Random.secure(),
@@ -50,6 +52,9 @@ class GameServer extends ChangeNotifier {
   /// The browser player client served at `/play/`; null if this build of
   /// the app doesn't include it.
   final WebFiles? webClient;
+
+  /// The shared screen page served at `/screen/`; null if not bundled.
+  final DisplayFrontend? screenPage;
   final String hostToken;
   final Random _random;
   GameDefinition _game;
@@ -155,7 +160,11 @@ class GameServer extends ChangeNotifier {
     if (path == '/' || path == '/index.html') {
       await _sendHtml(
         response,
-        landingPage(roomName: roomName, hasWebClient: webClient != null),
+        landingPage(
+          roomName: roomName,
+          hasWebClient: webClient != null,
+          hasScreen: screenPage != null,
+        ),
       );
     } else if (path == '/play') {
       // The client's base href is /play/, so relative URLs need the slash.
@@ -163,26 +172,52 @@ class GameServer extends ChangeNotifier {
         Uri(path: '/play/'),
         status: HttpStatus.movedPermanently,
       );
+    } else if (path == '/screen') {
+      await response.redirect(
+        Uri(path: '/screen/'),
+        status: HttpStatus.movedPermanently,
+      );
+    } else if (path.startsWith('/screen/')) {
+      await _serveFile(
+        request,
+        screenPage,
+        path.substring('/screen/'.length),
+        missingPage: screenMissingPage,
+      );
     } else if (path.startsWith('/play/')) {
-      final files = webClient;
-      if (files == null) {
-        response.statusCode = HttpStatus.serviceUnavailable;
-        await _sendHtml(response, webClientMissingPage());
-        return;
-      }
-      final file = files.lookup(path.substring('/play/'.length));
-      if (file == null) {
-        response.statusCode = HttpStatus.notFound;
-        await response.close();
-        return;
-      }
-      response.headers.contentType = ContentType.parse(file.contentType);
-      if (request.method == 'GET') response.add(file.bytes);
-      await response.close();
+      await _serveFile(
+        request,
+        webClient,
+        path.substring('/play/'.length),
+        missingPage: webClientMissingPage,
+      );
     } else {
       response.statusCode = HttpStatus.notFound;
       await response.close();
     }
+  }
+
+  Future<void> _serveFile(
+    HttpRequest request,
+    WebFiles? files,
+    String path, {
+    required String Function() missingPage,
+  }) async {
+    final response = request.response;
+    if (files == null) {
+      response.statusCode = HttpStatus.serviceUnavailable;
+      await _sendHtml(response, missingPage());
+      return;
+    }
+    final file = files.lookup(path);
+    if (file == null) {
+      response.statusCode = HttpStatus.notFound;
+      await response.close();
+      return;
+    }
+    response.headers.contentType = ContentType.parse(file.contentType);
+    if (request.method == 'GET') response.add(file.bytes);
+    await response.close();
   }
 
   Future<void> _sendHtml(HttpResponse response, String html) async {
