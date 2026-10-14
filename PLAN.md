@@ -189,17 +189,23 @@ Two app bugs found this way and fixed:
 - The closed notice could be lost because the server shut down before it was delivered.
 
 ## Out of scope for v1
-Reconnecting after a drop, a browser join client, more than one room per host, a polished iOS build, sound and
+Reconnecting after a drop, a browser join client (now planned below), more than one room per host, a polished iOS build, sound and
 animations beyond the basics.
 
 ---
 
-# Feature: Single game screen
+# Feature: Single game screen & browser join
 
 **Status:** planned, not started.
 
 The host can turn on a *shared screen*. The game table moves to one big screen everyone watches, and each player's
 device only shows their own hand plus the buttons they need, Jackbox style.
+
+As a fallback, someone who can't install or run either app can **join as a player from a regular browser**. They get
+the same player screens, served by the host.
+
+> **Note:** Flutter does *not* use a webview; native builds are compiled code that draws its own UI. Browser support
+> therefore comes from a separate **Flutter web build** of the player screens, which the host serves as files.
 
 ## Decisions (confirmed)
 
@@ -208,16 +214,22 @@ device only shows their own hand plus the buttons they need, Jackbox style.
 | Where the shared screen runs | The host picks one of two sub-options: **Browser**, where the host serves a web page any browser can open, or **Caster**, a separate app the host connects to |
 | Caster | A **separate Flutter app** (`caster/`) for Windows and Android (Android TV included), with an iOS stub |
 | How the host finds a Caster | **The host picks a Caster**: Casters announce themselves on the LAN, and the host chooses one from a list or types its IP |
-| Web page | **Lightweight HTML/JS** first, plus a **stub for a later Flutter web build** that uses the same data feed |
+| Shared screen web page | **Lightweight HTML/JS** (best for smart-TV browsers), plus a **stub for a later Flutter web version** that uses the same data feed |
 | Host's own device | **Host chooses**: (A) the host plays on their device as usual, or (B) the host's device *is* the shared screen and the host doesn't take a seat. Host session controls stay available either way |
+| Browser players | Anyone can **join as a player from a browser**. The client is a **Flutter web build** (`web_client/`) that reuses the shared player widgets, so new games work in the browser automatically |
 
 ## Recommendations (defaults unless you object)
 
 1. **One "display feed" for every kind of screen.** The server produces a single `display` message type, and the
    browser page, the Caster app and option B all consume it. Each game gets a new `tableView()` that holds only public
    information (no hands), so a shared screen can never leak cards.
-2. **Reuse the existing server for the web page.** The game server on TCP 47800 already speaks HTTP. It also serves the
-   page at `http://<host-ip>:47800/` and a read-only display WebSocket at `/display`. No second server is needed.
+2. **Reuse the existing server for everything web.** The game server on TCP 47800 already speaks HTTP. It also serves:
+   - `/`: a tiny landing page with two big buttons, *Join as player* and *Show the shared screen*, so typing just the
+     address always leads somewhere useful
+   - `/play`: the Flutter web player client
+   - `/screen`: the HTML/JS shared screen, with its read-only WebSocket at `/display`
+
+   No second server is needed. Players' WebSocket stays at `/ws`, used by the apps and browser players alike.
 3. **Extract shared code into a package first.** The protocol, game engines, display widgets and discovery code move
    to `packages/nico_shared`, which both apps depend on. Doing this first, as its own pull request, keeps the move
    reviewable and limits merge conflicts with your friend's work.
@@ -232,6 +244,17 @@ device only shows their own hand plus the buttons they need, Jackbox style.
    disconnect it from the lobby. The Caster keeps the screen awake (`wakelock_plus`).
 8. **Protocol version 2.** All message changes ship together, so old app builds refuse new rooms with the existing
    "different app version" error.
+9. **Keep the shared package web-safe.** `packages/nico_shared` must not import `dart:io`, because browsers don't have
+   it. The client connects through `web_socket_channel`, which works on native platforms and the web. Hosting, the
+   server, UDP discovery and the Caster stay in native-only code.
+10. **Make the web build work without internet.** By default, Flutter web downloads its rendering engine (CanvasKit)
+    from Google's CDN, which fails on an offline LAN. The client is built with `--no-web-resources-cdn` so everything
+    is served by the host.
+11. **QR code in the lobby.** Next to the host's addresses, the lobby shows a QR code for `http://<host-ip>:47800/play`.
+    Someone without the app scans it with their phone camera and is in the nickname screen straight away.
+12. **Browser players are full players.** They pick a nickname, take a seat, can be kicked, and get the compact view
+    when a shared screen is on. The lobby marks them with a small browser icon. Host controls exist only in the native
+    app, since a browser can't host.
 
 ## User flows
 
@@ -241,8 +264,10 @@ device only shows their own hand plus the buttons they need, Jackbox style.
   - **Screen:** *Browser* or *Caster*.
   - **Host's device:** *I'm playing* (A) or *This device is the screen* (B). In B the host takes no seat, so Tic Tac
     Toe would need two other players.
-- **Browser:** the lobby shows `http://192.168.0.156:47800/` (one line per LAN address) and how many browsers are
-  connected.
+- **Browser:** the lobby shows `http://192.168.0.156:47800/screen` (one line per LAN address) and how many browsers
+  are connected.
+- **Always shown, even with the shared screen off:** "No app? Join in a browser" with
+  `http://192.168.0.156:47800/play` and its QR code.
 - **Caster:** the lobby has a *Choose screen* list of Casters found on the network (name, IP, *Available*/*In use*),
   plus *Enter IP* as a fallback. When one is connected, it shows with a *Disconnect* button.
 - *Start game* shows a warning (but still works) when the shared screen is on and no screen is connected yet.
@@ -261,6 +286,16 @@ device only shows their own hand plus the buttons they need, Jackbox style.
 - Tic Tac Toe: status line plus the board.
 - Color Clash: status line, the hand (playable cards lifted), and the *Draw*, *Pass*, *Last card!* and *Catch* buttons.
 
+**Browser player (fallback):**
+1. They scan the QR code or type `http://<host-ip>:47800`, then tap *Join as player*. Scanning for rooms isn't
+   possible in a browser, so the address is how they find it.
+2. They choose a nickname. The last one used is remembered in the browser, and a taken name asks again, exactly like
+   the app.
+3. They see the same lobby, game and result screens as app players. With the shared screen on, they get the compact
+   view.
+4. If the room is full, a game is running, or the host closes the room, they see the same message as app players and a
+   *Try again* button.
+
 **Caster app:**
 - **Idle screen:** large text "Waiting for a host", the Caster's name (editable and remembered, defaulting to the
   device name), and its IP address(es).
@@ -270,21 +305,27 @@ device only shows their own hand plus the buttons they need, Jackbox style.
 ## Architecture
 
 ```
-packages/nico_shared/          shared Flutter package (both apps depend on it)
+packages/nico_shared/          shared Flutter package (all three apps), WEB-SAFE: no dart:io
   lib/net/protocol.dart          (moved) + display/cast messages, protocol v2
-  lib/net/discovery.dart         (moved) generalized: room AND caster announcements
+  lib/net/game_client.dart       (moved) now on web_socket_channel (native + web)
   lib/games/...                  (moved) engines + player views
   lib/games/*/..._table.dart     NEW Flutter table widgets (used by Caster and option B)
-lib/                           main app (host/join), as today
-  net/game_server.dart           + display feed, /display WebSocket, static web files
+  lib/screens/...                (moved) nickname dialog, lobby, session/game screens
+lib/                           main app (host/join): native-only code stays here
+  net/game_server.dart           + display feed, /display, static files for /, /play, /screen
+  net/discovery.dart             (stays: UDP) generalized: room AND caster announcements
   net/caster_link.dart           NEW host → Caster outbound connection
   net/caster_scanner.dart        NEW listens for Caster announcements
-  screens/...                    + single-screen options, screen picker, host display mode (B)
-assets/display/                NEW lightweight web page served by the host
+  screens/...                    + single-screen options, screen picker, host display mode (B), QR code
+assets/landing/index.html      NEW tiny page at /: "Join as player" / "Show the shared screen"
+assets/display/                NEW HTML/JS shared screen, served at /screen
   index.html, app.js, style.css
   games/tictactoe.js, games/colorclash.js   one small renderer per game
-display_web/                   STUB: placeholder for a future Flutter web build of the display
-  README.md                      the contract it must follow (same /display feed)
+assets/web_client/             GENERATED: copy of web_client's release build, served at /play (not committed)
+web_client/                    NEW Flutter web app: browser player client
+  lib/main.dart                  join by current URL → nickname → shared session screens
+  README.md                      also holds the stub contract for a future Flutter web shared screen
+tool/build_web_client.ps1|.sh  NEW builds web_client and copies the output into assets/web_client/
 caster/                        NEW separate Flutter app (Windows, Android incl. TV, iOS stub)
   lib/main.dart, idle_screen.dart, display_screen.dart, cast_server.dart
 ```
@@ -302,15 +343,38 @@ caster/                        NEW separate Flutter app (Windows, Android incl. 
 - **Player views:** `GameViewContext` gets a `sharedScreen` flag, which is true only while a display is connected.
   Each game's player widget then switches to its compact layout.
 
-### Browser page
-- `GET /` serves `index.html`, and `GET /app.js`, `/style.css` and `/games/*.js` serve the other files, all from
-  Flutter assets. Every other path returns 404. `/display` is read-only: the server ignores anything a browser sends.
+### Web routes on the host
+
+| Path | Serves |
+|---|---|
+| `/` | Landing page with two buttons |
+| `/play`, `/play/**` | Flutter web player client (`assets/web_client/`) |
+| `/screen`, `/screen/**` | HTML/JS shared screen (`assets/display/`) |
+| `/ws` | Player WebSocket (apps and browser players) |
+| `/display` | Read-only shared-screen WebSocket |
+
+- Every file comes from Flutter assets with the right content type, including `application/wasm` for the web
+  engine. Every other path returns 404.
+- The server ignores anything a browser sends on `/display`.
+
+### Shared screen page
 - `app.js` connects to `ws://<same host>/display`, draws the lobby, the table or the result from each `display`
   message, and reconnects every 2 s if the connection drops. Each game registers a renderer with
   `NicoDisplay.register('colorclash', render)`.
-- **Flutter web stub:** the server's static files come through a small `DisplayFrontend` interface.
-  `HtmlDisplayFrontend` is the only implementation for now. `display_web/README.md` describes the `/display` contract
-  a later Flutter web build must follow and how it would plug in as `FlutterWebDisplayFrontend`. Nothing is built yet.
+- **Flutter web stub:** the server's static files for the shared screen come through a small `DisplayFrontend`
+  interface. `HtmlDisplayFrontend` is the only implementation for now. `web_client/README.md` describes the
+  `/display` contract and how a `/screen` route inside the web client would later plug in as
+  `FlutterWebDisplayFrontend`. Nothing is built yet.
+
+### Browser player client
+- `web_client/` is a Flutter web app that depends on `packages/nico_shared`. It reads the host from its own URL, so
+  it needs no scanning or IP entry, then shows the shared nickname dialog, lobby and game screens.
+- It's built with `flutter build web --release --base-href /play/ --no-web-resources-cdn`, so it works without
+  internet. `tool/build_web_client` copies the output into `assets/web_client/`. The native host app must be built
+  after this step. The generated folder is git-ignored, and CI builds it before analyzing and testing the main app.
+- **Size budget:** at most 4 MB in the host app. CI fails if the build gets larger.
+- **Protocol:** the hello message gets an optional `client: "app"|"web"`, used only for the lobby's browser icon.
+  Browser players follow exactly the same rules as app players.
 
 ### Caster connection
 - **Announcements:** the Caster broadcasts on UDP **47802** every second:
@@ -328,54 +392,73 @@ caster/                        NEW separate Flutter app (Windows, Android incl. 
 
 | Port | Use |
 |---|---|
-| TCP 47800 | Game server, web page `/`, display WebSocket `/display` |
+| TCP 47800 | Game server and all web routes (`/`, `/play`, `/screen`, `/ws`, `/display`) |
 | UDP 47801 | Room announcements (as today) |
 | UDP 47802 | Caster announcements (new) |
 | TCP 47803 | Caster WebSocket server (new) |
 
 ## Milestones (one stacked branch and pull request each)
 
-1. **Shared package:** move the protocol, engines, discovery and game widgets to `packages/nico_shared` without
-   changing any behaviour. Update CI to analyze and test both packages. All existing tests pass unchanged.
-2. **Table views and display feed:**
+1. **Shared package:** move the protocol, client, engines, game widgets and session screens to
+   `packages/nico_shared` without changing any behaviour. Switch the client to `web_socket_channel` so the package
+   is web-safe, and add a CI check that it compiles for the web. Update CI to analyze and test both packages. All
+   existing tests pass unchanged.
+2. **Browser join:** it doesn't depend on the shared screen, so the fallback ships early.
+   - The `web_client/` app and the build script.
+   - The `/`, `/play` and `/ws` routes, and the browser icon in the lobby.
+   - The QR code and link in the host's lobby.
+   - CI builds the web client and checks the size budget.
+   - Tests: a server test that fetches `/play` assets with the right content types, plus a browser-player client test
+     on the web platform.
+3. **Table views and display feed:**
    - `tableView()` for both games, with privacy tests.
    - Protocol v2, the room display settings, and the host-without-seat option.
    - The `display` feed and `/display` socket.
    - Server tests covering browser displays, option B and the fallback when no display is connected.
-3. **Player UI and host options:**
-   - The compact player layouts and the status line.
+4. **Player UI and host options:**
+   - The compact player layouts and the status line, which browser players get automatically.
    - The single-screen switches in host setup and the lobby.
    - Option B: the host device shows the table using new shared table widgets.
-4. **Browser display:**
-   - Static file serving, `index.html`, `app.js` and `style.css`, and both JS game renderers.
+5. **Browser shared screen:**
+   - The `/screen` route, `index.html`, `app.js` and `style.css`, and both JS game renderers.
    - The URL and browser count in the lobby.
-   - The `DisplayFrontend` interface and the `display_web/` stub.
+   - The `DisplayFrontend` interface and the stub contract in `web_client/README.md`.
    - A Dart test that fetches the page and reads the `/display` feed.
-5. **Caster app:**
+6. **Caster app:**
    - A `caster/` Flutter app for Windows, Android (with the TV launcher) and iOS stub.
    - Announcements, the `/cast` server, the idle and display screens, the name setting and the wakelock.
    - Tests for the handshake and the busy state.
-6. **Host ↔ Caster:**
+7. **Host ↔ Caster:**
    - Caster scanner, *Choose screen* list, manual IP, connect and disconnect.
    - A notice when a Caster drops, with the automatic fall back to full player views.
    - Integration tests with a fake Caster.
-7. **Verification on devices:**
-   - **Browser:** Windows hosts with the browser screen on the tablet's browser, while Windows and the tablet play.
+8. **Verification on devices:**
+   - **Browser player:** Windows hosts, the tablet's Chrome joins via the QR code, and a full Tic Tac Toe and Color
+     Clash session is played with no app on the tablet. Then a mixed room: an app player plus a browser player in
+     Edge on Windows.
+   - **Browser screen:** Windows hosts with the shared screen in the tablet's browser, while Windows and the tablet
+     play.
    - **Caster:** Windows hosts, the tablet runs the Caster, and the players are Windows plus a second device. Your
      phone can be the second device, or the Windows host in option A.
    - **Option B:** the tablet hosts as the screen and two Windows instances play.
-   - The device test script gets a `SCREEN=browser|caster|host` setting.
+   - The device test script gets a `SCREEN=browser|caster|host` setting. Browser players are driven with a small
+     browser-automation script run against the tablet's Chrome.
 
 ## Verification
-- `flutter analyze` is clean and `flutter test` passes in the root app, `packages/nico_shared` and `caster/`.
+- `flutter analyze` is clean and `flutter test` passes in the root app, `packages/nico_shared`, `web_client/` and
+  `caster/`.
+- The web client builds with `--no-web-resources-cdn`, stays under the 4 MB budget, and loads on a host with no
+  internet connection. To check this, unplug the router's internet uplink during the device test.
 - Privacy test: for every game and every state reached by the random computer-played games, `tableView()` contains
   no card IDs from anyone's hand.
-- Device runs for all three screen types, as in milestone 7. Each plays Tic Tac Toe and Color Clash to the end, checks
+- Device runs for browser players and all three screen types, as in milestone 8. Each plays Tic Tac Toe and Color Clash to the end, checks
   that players get the compact view while a screen is connected, and pulls the screen mid-game to confirm the fall
   back to the full view.
 
 ## Out of scope for this feature
-- Playing *from* the browser, which would be a browser player client.
+- Hosting from a browser. Browsers can't open server sockets, so the host is always a native app.
+- Finding rooms by scanning from a browser. Browser players use the address or the QR code.
+- Installing the web client as an offline app (PWA) or serving it over HTTPS.
 - Google Cast / Chromecast and AirPlay.
 - More than one Caster per room. (Browsers can be several, since they're read-only.)
 - Sound on the shared screen.
