@@ -36,11 +36,13 @@ class HostedRoom {
     required String roomName,
     required GameDefinition game,
     required String nickname,
+    DisplaySettings display = DisplaySettings.off,
   }) async {
     final server = GameServer(
       roomName: roomName,
       game: game,
       webClient: await _loadWebClient(),
+      display: display,
     );
     await server.start();
 

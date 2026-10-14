@@ -82,10 +82,10 @@ class GameServer extends ChangeNotifier {
   /// the shared screen.
   List<PlayerInfo> get players => [
     for (final p in _everyone)
-      if (p.id != _hostId || _display.hostPlays) p,
+      if (p.id != _hostId || !_display.hostIsScreen) p,
   ];
 
-  bool get _hostIsScreen => _hostId != null && !_display.hostPlays;
+  bool get _hostIsScreen => _hostId != null && _display.hostIsScreen;
 
   /// Whether a new (non-host) player could join right now.
   bool get acceptingPlayers =>
@@ -94,7 +94,7 @@ class GameServer extends ChangeNotifier {
   /// Seats in use, counting one reserved for a playing host until they
   /// connect.
   int get _seatsTaken =>
-      players.length + (_hostId == null && _display.hostPlays ? 1 : 0);
+      players.length + (_hostId == null && !_display.hostIsScreen ? 1 : 0);
 
   static String _randomToken(Random random) =>
       List.generate(16, (_) => random.nextInt(256).toRadixString(16)).join();
@@ -359,8 +359,8 @@ class GameServer extends ChangeNotifier {
       return;
     }
     // The host taking a seat again needs a free one.
-    if (next.hostPlays &&
-        !_display.hostPlays &&
+    if (_hostIsScreen &&
+        !next.hostIsScreen &&
         players.length >= _game.maxPlayers) {
       _error(
         conn,

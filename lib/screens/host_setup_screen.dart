@@ -4,6 +4,7 @@ import 'package:nico_shared/games/game_session.dart';
 import 'package:nico_shared/games/registry.dart';
 import 'package:nico_shared/net/protocol.dart';
 import 'package:nico_shared/screens/session_screen.dart';
+import 'package:nico_shared/widgets/display_settings_editor.dart';
 
 import '../net/hosted_room.dart';
 import '../widgets/join_info.dart';
@@ -20,6 +21,7 @@ class _HostSetupScreenState extends State<HostSetupScreen> {
   final _nickname = TextEditingController();
   final _roomName = TextEditingController();
   GameDefinition _game = availableGames.first;
+  DisplaySettings _display = DisplaySettings.off;
   bool _creating = false;
 
   @override
@@ -50,6 +52,7 @@ class _HostSetupScreenState extends State<HostSetupScreen> {
         roomName: roomName,
         game: _game,
         nickname: nickname,
+        display: _display,
       );
       await Prefs.saveNickname(nickname);
       if (!mounted) {
@@ -124,6 +127,11 @@ class _HostSetupScreenState extends State<HostSetupScreen> {
                     ),
                 ],
               ),
+            ),
+            const SizedBox(height: 16),
+            DisplaySettingsEditor(
+              value: _display,
+              onChanged: (value) => setState(() => _display = value),
             ),
             const SizedBox(height: 24),
             FilledButton.icon(

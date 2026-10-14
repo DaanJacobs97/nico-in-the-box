@@ -7,11 +7,15 @@
 // The joiner finds the room through Scan (or set JOIN_IP=<host ip> to use
 // manual entry). Both sides are driven through the UI: two rounds of Tic
 // Tac Toe, then Color Clash to a winner, then the host closes the room.
+//
+// SCREEN=browser (with a client holding /display open) or SCREEN=host
+// (host device is the screen; pair with GAMES=ttt) test Single game screen.
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:nico_in_the_box/main.dart';
 import 'package:nico_shared/games/color_clash/color_clash_view.dart';
+import 'package:nico_shared/games/game_views.dart';
 import 'package:nico_shared/games/tictactoe/tictactoe_view.dart';
 import 'package:nico_shared/net/protocol.dart';
 
@@ -23,6 +27,13 @@ const games = String.fromEnvironment('GAMES', defaultValue: 'all');
 
 /// Host only: expect the other player to have joined from a browser.
 const expectWebPlayer = bool.fromEnvironment('EXPECT_WEB_PLAYER');
+
+/// Single game screen: `none`, `browser` (a screen connects to /display)
+/// or `host` (the host's device is the screen and doesn't play).
+const screen = String.fromEnvironment('SCREEN', defaultValue: 'none');
+
+/// Players get the compact view whenever a shared screen is in use.
+const expectCompact = screen != 'none';
 const roomName = 'LAN Test';
 
 /// Pumps frames in real time until [condition] holds.
@@ -73,6 +84,7 @@ Future<Json> playTicTacToe(WidgetTester tester) async {
     reason: 'a running tic tac toe game',
   );
   final myId = _myTttId();
+  expect(_tttCtx().compact, expectCompact, reason: 'compact view');
   var last = tttView()!;
   while (true) {
     // The host may leave the finished game before we see the final board,
@@ -114,6 +126,8 @@ ColorClashView? clashWidget() => present(find.byType(ColorClashView))
 /// Plays Color Clash through the UI until someone wins.
 Future<void> playColorClash(WidgetTester tester) async {
   await pumpUntil(tester, () => clashWidget() != null, reason: 'color clash');
+  expect(clashWidget()!.ctx.compact, expectCompact, reason: 'compact view');
+  expect(present(find.byKey(const ValueKey('compact-status'))), expectCompact);
   var moves = 0;
   while (true) {
     await pumpUntil(
@@ -154,7 +168,13 @@ Future<void> playColorClash(WidgetTester tester) async {
       } else if (view['pendingDrawn'] != null) {
         await tester.tap(find.text('Pass'));
       } else {
-        await tester.tap(find.byKey(const ValueKey('draw-pile')));
+        // Compact view has a Draw button instead of the draw pile.
+        final drawButton = find.byKey(const ValueKey('draw-button'));
+        await tester.tap(
+          present(drawButton)
+              ? drawButton
+              : find.byKey(const ValueKey('draw-pile')),
+        );
       }
     }
     moves++;
@@ -185,6 +205,13 @@ void main() {
       await tester.pump(const Duration(milliseconds: 500));
       await tester.enterText(find.byType(TextFormField).at(0), 'Host');
       await tester.enterText(find.byType(TextFormField).at(1), roomName);
+      if (screen != 'none') {
+        final toggle = find.byKey(const ValueKey('single-screen-switch'));
+        await tester.ensureVisible(toggle);
+        await tester.tap(toggle);
+        await tester.pump(const Duration(milliseconds: 300));
+        if (screen == 'host') await tapText(tester, 'This device');
+      }
       await tapText(tester, 'Create room');
 
       await pumpUntil(
@@ -196,7 +223,45 @@ void main() {
       if (expectWebPlayer) {
         expect(find.text('In a browser'), findsOneWidget);
       }
+      if (screen == 'browser') {
+        await pumpUntil(
+          tester,
+          () => present(find.text('Browser 1')),
+          timeout: const Duration(minutes: 2),
+          reason: 'a browser screen to connect',
+        );
+      }
       await tapText(tester, 'Start game');
+
+      if (screen == 'host') {
+        // This device shows the table; two guests play.
+        for (var round = 1; round <= 2; round++) {
+          await pumpUntil(
+            tester,
+            () =>
+                present(find.byType(TicTacToeTable)) &&
+                !present(find.text('Play again')),
+            timeout: const Duration(minutes: 2),
+            reason: 'round $round on the shared table',
+          );
+          expect(find.byType(TicTacToeView), findsNothing);
+          await pumpUntil(
+            tester,
+            () => present(find.text('Play again')),
+            timeout: const Duration(minutes: 3),
+            reason: 'round $round to finish',
+          );
+          expect(find.textContaining('wins!'), findsWidgets);
+          await tapText(tester, round == 1 ? 'Play again' : 'Back to lobby');
+        }
+        await pumpUntil(
+          tester,
+          () => present(find.text('Start game')),
+          reason: 'back in the lobby',
+        );
+        await _closeRoomAsHost(tester);
+        return;
+      }
 
       final round1 = await playTicTacToe(tester);
       final myId = _myTttId();
@@ -234,25 +299,7 @@ void main() {
         );
       }
 
-      await tester.tap(find.byTooltip('Host controls'));
-      await tester.pump(const Duration(milliseconds: 500));
-      await tapText(tester, 'Close room');
-      await pumpUntil(
-        tester,
-        () => present(find.byType(AlertDialog)),
-        reason: 'confirm dialog',
-      );
-      await tester.tap(
-        find.descendant(
-          of: find.byType(AlertDialog),
-          matching: find.text('Close room'),
-        ),
-      );
-      await pumpUntil(
-        tester,
-        () => present(find.text('Host a game')),
-        reason: 'back home',
-      );
+      await _closeRoomAsHost(tester);
     },
     skip: role != 'host',
     timeout: const Timeout(Duration(minutes: 20)),
@@ -340,12 +387,39 @@ void main() {
         reason: 'the "host closed the room" message',
       );
       expect(tttGames, 2);
-      expect(clashGames, 1);
+      expect(clashGames, games == 'ttt' ? 0 : 1);
     },
     skip: role != 'join',
     timeout: const Timeout(Duration(minutes: 20)),
   );
 }
+
+Future<void> _closeRoomAsHost(WidgetTester tester) async {
+  await tester.tap(find.byTooltip('Host controls'));
+  await tester.pump(const Duration(milliseconds: 500));
+  await tapText(tester, 'Close room');
+  await pumpUntil(
+    tester,
+    () => present(find.byType(AlertDialog)),
+    reason: 'confirm dialog',
+  );
+  await tester.tap(
+    find.descendant(
+      of: find.byType(AlertDialog),
+      matching: find.text('Close room'),
+    ),
+  );
+  await pumpUntil(
+    tester,
+    () => present(find.text('Host a game')),
+    reason: 'back home',
+  );
+}
+
+TicTacToeView _tttW() =>
+    find.byType(TicTacToeView).evaluate().first.widget as TicTacToeView;
+
+GameViewContext _tttCtx() => _tttW().ctx;
 
 String _myTttId() => find
     .byType(TicTacToeView)

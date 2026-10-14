@@ -136,6 +136,10 @@ class DisplaySettings {
   /// the session controls but takes no seat.
   final bool hostPlays;
 
+  /// The host's device is the screen right now, so the host takes no seat.
+  /// Only while the shared screen is on; switching it off seats the host.
+  bool get hostIsScreen => enabled && !hostPlays;
+
   DisplaySettings copyWith({
     bool? enabled,
     DisplayTarget? target,

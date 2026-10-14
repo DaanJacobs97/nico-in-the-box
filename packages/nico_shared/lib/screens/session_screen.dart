@@ -9,6 +9,7 @@ import '../net/protocol.dart';
 import '../widgets/confirm_dialog.dart';
 import '../widgets/host_controls.dart';
 import 'lobby_view.dart';
+import 'shared_screen_view.dart';
 
 /// The room a player is in: the lobby, then the game. The host gets the
 /// session controls on top of the same view everyone else sees.
@@ -125,6 +126,8 @@ class _SessionScreenState extends State<SessionScreen> {
                 ? const Center(child: CircularProgressIndicator())
                 : lobby.phase == RoomPhase.lobby
                 ? LobbyView(client: _client, hostFooter: widget.hostFooter)
+                : _client.isHost && lobby.display.hostIsScreen
+                ? _HostScreenArea(client: _client)
                 : _GameArea(client: _client),
           );
         },
@@ -157,10 +160,51 @@ class _GameArea extends StatelessWidget {
               myId: client.playerId,
               lobby: lobby,
               sendAction: client.sendAction,
+              compact: lobby.sharedScreenActive,
             ),
           ),
         ),
         if (result != null) _ResultBar(client: client, result: result),
+      ],
+    );
+  }
+}
+
+/// The host's device is the shared screen: it shows the table for everyone,
+/// and only the host's finished-game buttons on top.
+class _HostScreenArea extends StatelessWidget {
+  const _HostScreenArea({required this.client});
+
+  final GameClient client;
+
+  @override
+  Widget build(BuildContext context) {
+    final state = client.displayState;
+    final result = state?.result;
+    return Column(
+      children: [
+        Expanded(child: SharedScreenView(state: state)),
+        if (result != null)
+          Padding(
+            padding: const EdgeInsets.all(12),
+            child: Wrap(
+              spacing: 12,
+              runSpacing: 8,
+              alignment: WrapAlignment.center,
+              children: [
+                FilledButton.icon(
+                  icon: const Icon(Icons.replay),
+                  label: const Text('Play again'),
+                  onPressed: client.restartGame,
+                ),
+                OutlinedButton.icon(
+                  icon: const Icon(Icons.people),
+                  label: const Text('Back to lobby'),
+                  onPressed: client.endGame,
+                ),
+              ],
+            ),
+          ),
       ],
     );
   }

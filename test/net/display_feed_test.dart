@@ -277,6 +277,22 @@ void main() {
     });
   });
 
+  test(
+    '"this device is the screen" only applies while the screen is on',
+    () async {
+      await startServer(
+        display: const DisplaySettings(enabled: false, hostPlays: false),
+      );
+      final host = await join('Nico', asHost: true);
+      await until(host, () => host.lobby?.players.length == 1);
+      expect(host.lobby!.players.single.nickname, 'Nico');
+
+      host.setDisplay(const DisplaySettings(enabled: true, hostPlays: false));
+      await until(host, () => host.lobby?.players.isEmpty ?? false);
+      expect(host.lobby!.displays.single.kind, DisplayKind.host);
+    },
+  );
+
   test('closing the room tells screens', () async {
     await startServer();
     final host = await join('Nico', asHost: true);

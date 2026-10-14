@@ -71,6 +71,74 @@ class TicTacToeView extends StatelessWidget {
   }
 }
 
+/// Tic Tac Toe on the shared screen: who is X and O, whose turn it is, and
+/// a large read-only board.
+class TicTacToeTable extends StatelessWidget {
+  const TicTacToeTable({super.key, required this.ctx});
+
+  final TableContext ctx;
+
+  @override
+  Widget build(BuildContext context) {
+    final table = ctx.table;
+    final board = (table['board']! as List<Object?>).cast<String?>();
+    final marks = (table['marks']! as Json).cast<String, String>();
+    final turn = table['turn'] as String?;
+    final winner = table['winner'] as String?;
+    final winLine = (table['winLine'] as List<Object?>?)?.cast<int>() ?? [];
+    String playerWith(String mark) =>
+        ctx.nicknameOf(marks.entries.firstWhere((e) => e.value == mark).key);
+
+    final String status;
+    if (winner != null) {
+      status = '${ctx.nicknameOf(winner)} wins!';
+    } else if (table['draw'] == true) {
+      status = "It's a draw!";
+    } else {
+      status = "${ctx.nicknameOf(turn!)}'s turn (${marks[turn]})";
+    }
+
+    final theme = Theme.of(context);
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            children: [
+              Text(
+                'X  ${playerWith('X')}   vs   ${playerWith('O')}  O',
+                style: theme.textTheme.headlineMedium,
+              ),
+              const SizedBox(height: 8),
+              Text(status, style: theme.textTheme.headlineSmall),
+            ],
+          ),
+        ),
+        Expanded(
+          child: Center(
+            child: AspectRatio(
+              aspectRatio: 1,
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: GridView.count(
+                  crossAxisCount: 3,
+                  mainAxisSpacing: 12,
+                  crossAxisSpacing: 12,
+                  physics: const NeverScrollableScrollPhysics(),
+                  children: [
+                    for (var i = 0; i < 9; i++)
+                      _Cell(mark: board[i], highlighted: winLine.contains(i)),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
 class _Cell extends StatelessWidget {
   const _Cell({
     super.key,

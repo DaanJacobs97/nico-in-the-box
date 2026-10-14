@@ -196,7 +196,15 @@ animations beyond the basics.
 
 # Feature: Single game screen & browser join
 
-**Status:** milestones 1–2 merged; milestone 3 (table views and display feed) in review.
+**Status:** milestones 1–3 merged; milestone 4 (player UI and host options) in review.
+
+**Changes made during milestone 4:**
+- **One 3-way choice instead of two.** The host picks "Where is the shared screen?": *This device*, *A browser* or
+  *Caster app*. *This device* is option B (the host takes no seat).
+- **The host only sits out while the screen is on.** If the host switches Single game screen off, they get their seat
+  back (`DisplaySettings.hostIsScreen` = enabled && !hostPlays).
+- **The host's Start button is pinned to the bottom of the lobby.** The new settings card made the lobby long enough
+  to push it off-screen.
 
 The host can turn on a *shared screen*. The game table moves to one big screen everyone watches, and each player's
 device only shows their own hand plus the buttons they need, Jackbox style.
