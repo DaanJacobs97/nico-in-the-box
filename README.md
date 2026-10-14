@@ -34,7 +34,9 @@ automatically and join with a nickname. No internet connection and no accounts a
 ### Requirements
 
 - [Flutter SDK](https://docs.flutter.dev/get-started/install) (stable channel)
-- **Windows builds:** Visual Studio 2022 with the *Desktop development with C++* workload
+- **Windows builds:** Visual Studio 2022 with the *Desktop development with C++* workload, and Windows
+  **Developer Mode** turned on (Flutter plugins need its symlink support). You'll find it under Settings → System →
+  For developers.
 - **Android builds:** the Android SDK, through Android Studio or the command-line tools
 
 Run `flutter doctor` to check your setup.
