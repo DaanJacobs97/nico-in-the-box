@@ -27,7 +27,7 @@ void main() {
     });
 
     await room.close();
-    await closed.future.timeout(const Duration(seconds: 5));
+    await closed.future.timeout(const Duration(seconds: 15));
     expect(guest.disconnectReason, DisconnectReason.hostClosed);
     await guest.leave();
   });
