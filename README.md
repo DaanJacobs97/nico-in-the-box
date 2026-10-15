@@ -116,6 +116,25 @@ flutter test integration_test/lan_play_test.dart -d <android-id> --dart-define=R
 The joiner finds the room by scanning. Add `--dart-define=JOIN_IP=<host ip>` to test manual IP entry instead.
 Any device can take either role.
 
+Other options:
+- `SCREEN=browser|caster|host` tests Single game screen:
+  - `browser`: the host waits for a browser at `/screen`
+  - `caster`: the host connects the first Nico Caster it finds
+  - `host`: the host's device is the screen and doesn't play
+- `GAMES=ttt` skips Color Clash.
+- `EXPECT_WEB_PLAYER=true` makes the host expect a browser player.
+
+Keep the host's test window visible. Flutter stops drawing a minimized window, which stalls the test.
+
+**Only one device free?** Use the scripted player as the other seat. It joins over the real protocol and plays Tic
+Tac Toe and Color Clash until the room closes:
+
+```bash
+flutter test tool/bot/lan_bot_test.dart --dart-define=HOST=<host ip>
+```
+
+Add `--dart-define=MOVE_DELAY_MS=1000` to slow it down, for example while watching a shared screen.
+
 ## Playing on a LAN
 
 1. All devices must be on the **same network**. Guest Wi-Fi networks often block traffic between devices.

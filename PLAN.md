@@ -196,8 +196,9 @@ animations beyond the basics.
 
 # Feature: Single game screen & browser join
 
-**Status:** milestones 1–6 merged; milestone 7 (host ↔ Caster) in review. Native-only LAN code moved to
-`packages/nico_native` so the host app and the Caster can share it.
+**Status:** milestones 1–7 merged; milestone 8 (device verification) in review. The results are in the
+*Verification* section below. Native-only LAN code moved to `packages/nico_native` so the host app and the Caster
+can share it.
 
 **Changes made during milestone 4:**
 - **One 3-way choice instead of two.** The host picks "Where is the shared screen?": *This device*, *A browser* or
@@ -466,9 +467,24 @@ caster/                        NEW separate Flutter app (Windows, Android incl. 
   internet connection. To check this, unplug the router's internet uplink during the device test.
 - Privacy test: for every game and every state reached by the random computer-played games, `tableView()` contains
   no card IDs from anyone's hand.
-- Device runs for browser players and all three screen types, as in milestone 8. Each plays Tic Tac Toe and Color Clash to the end, checks
-  that players get the compact view while a screen is connected, and pulls the screen mid-game to confirm the fall
-  back to the full view.
+- Device runs for browser players and all three screen types, as in milestone 8. Each plays Tic Tac Toe and Color
+  Clash to the end, checks that players get the compact view while a screen is connected, and pulls the screen
+  mid-game to confirm the fall back to the full view.
+
+**Result (2026-10-15).** The devices were a Windows PC and an Android 10 tablet on the same Wi-Fi. The second player
+was the scripted bot in `tool/bot/lan_bot_test.dart`, which joins over the real protocol. All runs passed:
+
+| Run | Host | Shared screen | Players | Games | Checked |
+|---|---|---|---|---|---|
+| R1 Browser player | Windows | none | Windows + **tablet Chrome** (web client) | Tic Tac Toe ×2 | Host saw an "In a browser" player; the browser got "host closed the room" |
+| R2 Browser screen | Windows | **tablet Chrome at /screen** | Windows + bot | Tic Tac Toe ×2 + Color Clash | Host waited for the screen; both players in compact view; the table was live on the page (screenshot) |
+| R3 Caster | Windows | **tablet Caster** | Windows + bot | Tic Tac Toe ×2 + Color Clash | Picked from *Choose screen*. **The Caster was force-stopped mid-Clash:** in the same second players got the notice and the full view, and the game finished |
+| R4 Host is screen | **tablet** | the tablet itself | Windows app (joined by scan) + bot | Tic Tac Toe ×2 + Color Clash | The tablet showed the shared tables (screenshots) and kept the host controls; players were compact |
+
+Offline loading was checked in milestone 2 through the browser's network log (every request went to the host) rather
+than by unplugging the internet. **Not done on devices:** Color Clash *played from a browser*. The browser client
+uses the same widgets as the app, which the widget tests cover, and its Tic Tac Toe sessions passed on desktop and
+tablet browsers.
 
 ## Out of scope for this feature
 - Hosting from a browser. Browsers can't open server sockets, so the host is always a native app.

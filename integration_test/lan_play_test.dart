@@ -275,6 +275,31 @@ void main() {
           () => present(find.text('Start game')),
           reason: 'back in the lobby',
         );
+        if (games != 'ttt') {
+          await tester.tap(find.byIcon(Icons.swap_horiz));
+          await tester.pump(const Duration(milliseconds: 500));
+          await tapText(tester, 'Color Clash (2–4 players)');
+          await pumpUntil(
+            tester,
+            () => present(find.text('Players 2/4')),
+            reason: 'room resized to 4',
+          );
+          await tapText(tester, 'Start game');
+          await pumpUntil(
+            tester,
+            () => present(find.byType(ColorClashTable)),
+            timeout: const Duration(minutes: 1),
+            reason: 'Color Clash on the shared table',
+          );
+          expect(find.byType(ColorClashView), findsNothing);
+          await pumpUntil(
+            tester,
+            () => present(find.text('Play again')),
+            timeout: const Duration(minutes: 10),
+            reason: 'Color Clash to finish',
+          );
+          expect(find.textContaining('wins the round'), findsWidgets);
+        }
         await _closeRoomAsHost(tester);
         return;
       }
