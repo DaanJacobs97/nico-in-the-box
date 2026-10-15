@@ -126,6 +126,13 @@ Lines are approximate, so you can tell big files from small ones.
 | `tool/build_web_client.ps1`, `tool/build_web_client.sh` | Build `web_client/` into `assets/generated/web_client.zip` (git-ignored) |
 | `tool/bot/lan_bot_test.dart` | Scripted LAN player: `flutter test tool/bot/lan_bot_test.dart --dart-define=HOST=<ip>` |
 
+### `.github/`: CI and pull requests
+
+| File | What it does |
+|---|---|
+| `.github/workflows/ci.yml` | CI on every PR: format, analyze, `dart:io` grep, all test suites, web client build + size budget, shared tests in Chrome |
+| `.github/pull_request_template.md` | PR description sections: what and why, changes, checks, device tests |
+
 ---
 
 ## 3. Where to change what

@@ -18,6 +18,8 @@ or scaffolding.
 
 - **Never commit or push to `main`.** Work on a branch (`feature/…`, `fix/…`, `chore/…`, `docs/…`), push it and
   open a pull request. Leave merging to a human unless one explicitly asks you to merge.
+- **Write the pull request description from [.github/pull_request_template.md](.github/pull_request_template.md).**
+  `gh pr create --body-file` does not apply it for you, so copy its sections. Report only checks you actually ran.
 - **Before opening a pull request, run the full check:** it formats-checks, analyzes and runs all five test suites.
 
   ```bash

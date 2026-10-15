@@ -181,12 +181,14 @@ is fully wired in.
 
 - Run the full check (format, analyze, all five test suites):
   `powershell -ExecutionPolicy Bypass -File tool/check.ps1 -Fix` on Windows, `tool/check.sh --fix` elsewhere.
+  CI runs the same checks on every pull request.
 - Added, moved or deleted a source file? Update [docs/CODE_MAP.md](docs/CODE_MAP.md). A test checks it.
-
-- Run `dart format .`, `flutter analyze` and `flutter test` locally. CI runs the same checks on every pull request.
-- Keep each pull request focused on one feature or fix, and describe what changed and how you tested it.
-- If you change the network protocol (`lib/net/protocol.dart`), bump the protocol version so old and new app builds
-  refuse to talk to each other instead of misbehaving.
+- Keep each pull request focused on one feature or fix. New pull requests start from
+  [the template](.github/pull_request_template.md): fill in what changed, which checks ran and what you tested on
+  devices.
+- If you change a message shape or add a game, bump `kProtocolVersion` in
+  `packages/nico_shared/lib/net/protocol.dart` so old and new app builds refuse to talk to each other instead of
+  misbehaving.
 
 ## License
 
