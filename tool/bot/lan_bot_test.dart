@@ -1,6 +1,7 @@
 // A scripted player for LAN testing: joins a room over the real protocol and
-// plays whatever game is running (Tic Tac Toe or Color Clash) until the room
-// closes. Handy as the "other player" when only one device is free.
+// plays whatever game is running (Tic Tac Toe, Color Clash or Sea Siege)
+// until the room closes. Handy as the "other player" when only one device
+// is free.
 //
 //   flutter test tool/bot/lan_bot_test.dart --dart-define=HOST=192.168.0.156
 //
@@ -8,6 +9,7 @@
 // MOVE_DELAY_MS (0; slow it down to watch a shared screen).
 import 'dart:async';
 import 'dart:io';
+import 'dart:math';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nico_shared/games/color_clash/clash_card.dart';
@@ -71,6 +73,7 @@ void main() {
           final action = switch (me.gameId) {
             'tictactoe' => _ticTacToeMove(view, me.playerId),
             'colorclash' => _colorClashMove(view, me.playerId),
+            'seasiege' => _seaSiegeMove(view, me.playerId),
             _ => null,
           };
           if (action == null) {
@@ -144,4 +147,30 @@ Json? _colorClashMove(Json view, String me) {
   }
   if (view['pendingDrawn'] != null) return {'type': 'pass'};
   return {'type': 'draw'};
+}
+
+final _random = Random();
+
+/// Readies the fleet it was dealt, then fires at random untried squares.
+Json? _seaSiegeMove(Json view, String me) {
+  if (view['phase'] == 'placing') {
+    return (view['ready']! as Json)[me] == true ? null : {'type': 'ready'};
+  }
+  if (view['turn'] != me) return null;
+  final boards = view['boards']! as Json;
+  final target = boards.keys.firstWhere((id) => id != me);
+  final board = boards[target]! as Json;
+  final tried = {
+    ...board['hits']! as List<Object?>,
+    ...board['misses']! as List<Object?>,
+  };
+  final open = [
+    for (var cell = 0; cell < 100; cell++)
+      if (!tried.contains(cell)) cell,
+  ];
+  return {
+    'type': 'fire',
+    'target': target,
+    'cell': open[_random.nextInt(open.length)],
+  };
 }
