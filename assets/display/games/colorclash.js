@@ -18,7 +18,8 @@ NicoDisplay.register('colorclash', (table, lobby, { el, nameOf }) => {
       el(
         'span',
         { class: `chip${p.id === table.turn ? ' turn' : ''}` },
-        p.id === table.turn ? '▶ ' : '',
+        // U+FE0E asks for the plain glyph; Android otherwise draws an emoji.
+        p.id === table.turn ? '▶︎ ' : '',
         nameOf(lobby, p.id),
         ` · ${p.cards}`,
         p.calledLast ? el('span', { class: 'badge' }, 'LAST!') : ''
