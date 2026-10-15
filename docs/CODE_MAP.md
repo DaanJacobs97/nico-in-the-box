@@ -137,6 +137,7 @@ Lines are approximate, so you can tell big files from small ones.
 | `tool/build_web_client.ps1`, `tool/build_web_client.sh` | Build `web_client/` into `assets/generated/web_client.zip` (git-ignored) |
 | `tool/release/package_windows.ps1`, `tool/release/package_android.sh` | Build the release files into `build/release/`: Windows zips (with the Visual C++ runtime DLLs) and release-signed APKs (fails on a debug-signed APK) |
 | `tool/bot/lan_bot_test.dart` | Scripted LAN player (all three games): `flutter test tool/bot/lan_bot_test.dart --dart-define=HOST=<ip>` |
+| `tool/icons/draw_icons_test.dart` | Draws the app, Caster and browser-client icons into `icons/` (`flutter test tool/icons/draw_icons_test.dart`, then `dart run flutter_launcher_icons` in each app) |
 
 ### `.github/`: CI and pull requests
 

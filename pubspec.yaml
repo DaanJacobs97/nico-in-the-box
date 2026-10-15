@@ -23,6 +23,7 @@ dev_dependencies:
   integration_test:
     sdk: flutter
   flutter_lints: ^6.0.0
+  flutter_launcher_icons: ^0.14.4
 
 flutter:
   uses-material-design: true
@@ -32,3 +33,17 @@ flutter:
     # Shared screen page served at /screen/ (lightweight HTML/JS).
     - assets/display/
     - assets/display/games/
+
+# App icons, drawn by tool/icons/draw_icons_test.dart. Regenerate with
+# `dart run flutter_launcher_icons` after redrawing.
+flutter_launcher_icons:
+  image_path: icons/app_icon.png
+  android: true
+  adaptive_icon_background: "#5A3FC0"
+  adaptive_icon_foreground: icons/app_icon_foreground.png
+  ios: true
+  remove_alpha_ios: true
+  windows:
+    generate: true
+    image_path: icons/app_icon.png
+    icon_size: 256
