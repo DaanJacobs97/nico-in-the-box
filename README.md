@@ -149,6 +149,35 @@ flutter test tool/bot/lan_bot_test.dart --dart-define=HOST=<host ip>
 
 Add `--dart-define=MOVE_DELAY_MS=1000` to slow it down, for example while watching a shared screen.
 
+### Release builds
+
+Android release builds of the app and the Caster are signed with the project's release key. Its owner keeps the key
+outside the repository; CI gets it from the `ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYSTORE_PASSWORD` and
+`ANDROID_KEY_ALIAS` repository secrets.
+
+To sign locally, create `key.properties` in the repository root. It's git-ignored, so it is never committed:
+
+```properties
+storeFile=C:/Users/<you>/keys/nico-release.jks
+storePassword=<password>
+keyAlias=nico
+```
+
+Without it, release builds are signed with the debug key and Gradle prints a warning. That's fine for testing, but
+don't hand those builds out: a build signed with another key can't be installed over them as an update.
+
+**Making a release** (the downloads go to a draft GitHub Release, which only collaborators can see):
+
+1. On a branch, bump `version:` in every `pubspec.yaml` and add a section to `CHANGELOG.md`; merge it.
+2. Optionally do a dry run first: tag `vX.Y.Z-rc1` and push it. It builds a draft pre-release.
+3. Tag the merge commit `vX.Y.Z` and push the tag. `.github/workflows/release.yml` checks the tag matches
+   `pubspec.yaml`, builds the four files with `tool/release/package_windows.ps1` and `package_android.sh`, and
+   drafts the release with the changelog section and the install notes from `.github/release_install_notes.md`.
+4. Download and try the files, then publish the draft.
+
+The packaging scripts also run locally (output in `build/release/`), which is handy for checking a build before
+tagging.
+
 ## Playing on a LAN
 
 1. All devices must be on the **same network**. Guest Wi-Fi networks often block traffic between devices.
