@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../net/protocol.dart';
+import 'color_clash/color_clash_table.dart';
 import 'color_clash/color_clash_view.dart';
 import 'tictactoe/tictactoe_view.dart';
 

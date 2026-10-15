@@ -9,7 +9,9 @@ import 'package:nico_shared/net/protocol.dart';
 
 import 'display_frontend.dart';
 import 'web_files.dart';
-import 'web_pages.dart';
+import 'web_routes.dart';
+
+part 'display_handle.dart';
 
 class _Connection {
   _Connection(this.socket);
@@ -140,90 +142,15 @@ class GameServer extends ChangeNotifier {
       return;
     }
     try {
-      await _serveWeb(request, path);
+      await serveWebRequest(
+        request,
+        roomName: roomName,
+        webClient: webClient,
+        screenPage: screenPage,
+      );
     } on Object {
       // The browser went away mid-response; nothing to clean up.
     }
-  }
-
-  /// Plain HTTP: the landing page and the browser player client.
-  Future<void> _serveWeb(HttpRequest request, String path) async {
-    final response = request.response;
-    if (request.method != 'GET' && request.method != 'HEAD') {
-      response.statusCode = HttpStatus.methodNotAllowed;
-      await response.close();
-      return;
-    }
-    // Files can change between app versions under the same name.
-    response.headers.set(HttpHeaders.cacheControlHeader, 'no-cache');
-
-    if (path == '/' || path == '/index.html') {
-      await _sendHtml(
-        response,
-        landingPage(
-          roomName: roomName,
-          hasWebClient: webClient != null,
-          hasScreen: screenPage != null,
-        ),
-      );
-    } else if (path == '/play') {
-      // The client's base href is /play/, so relative URLs need the slash.
-      await response.redirect(
-        Uri(path: '/play/'),
-        status: HttpStatus.movedPermanently,
-      );
-    } else if (path == '/screen') {
-      await response.redirect(
-        Uri(path: '/screen/'),
-        status: HttpStatus.movedPermanently,
-      );
-    } else if (path.startsWith('/screen/')) {
-      await _serveFile(
-        request,
-        screenPage,
-        path.substring('/screen/'.length),
-        missingPage: screenMissingPage,
-      );
-    } else if (path.startsWith('/play/')) {
-      await _serveFile(
-        request,
-        webClient,
-        path.substring('/play/'.length),
-        missingPage: webClientMissingPage,
-      );
-    } else {
-      response.statusCode = HttpStatus.notFound;
-      await response.close();
-    }
-  }
-
-  Future<void> _serveFile(
-    HttpRequest request,
-    WebFiles? files,
-    String path, {
-    required String Function() missingPage,
-  }) async {
-    final response = request.response;
-    if (files == null) {
-      response.statusCode = HttpStatus.serviceUnavailable;
-      await _sendHtml(response, missingPage());
-      return;
-    }
-    final file = files.lookup(path);
-    if (file == null) {
-      response.statusCode = HttpStatus.notFound;
-      await response.close();
-      return;
-    }
-    response.headers.contentType = ContentType.parse(file.contentType);
-    if (request.method == 'GET') response.add(file.bytes);
-    await response.close();
-  }
-
-  Future<void> _sendHtml(HttpResponse response, String html) async {
-    response.headers.contentType = ContentType.html;
-    response.write(html);
-    await response.close();
   }
 
   /// A browser shared screen: read-only, so anything it sends is ignored.
@@ -682,46 +609,5 @@ class GameServer extends ChangeNotifier {
     _displays.clear();
     await _http?.close(force: true);
     notifyListeners();
-  }
-}
-
-/// A connected shared screen. Call [detach] when it goes away.
-class DisplayHandle {
-  DisplayHandle._(
-    this.info,
-    this._sendFn,
-    this._closeFn, {
-    required this._onDetach,
-  });
-
-  final DisplayInfo info;
-  final void Function(String message) _sendFn;
-  final Future<void> Function()? _closeFn;
-  final void Function() _onDetach;
-  bool _detached = false;
-
-  void _send(String message) {
-    if (_detached) return;
-    try {
-      _sendFn(message);
-    } on Object {
-      // The screen is going away; its detach follows.
-    }
-  }
-
-  Future<void> _close() async {
-    _detached = true;
-    try {
-      await _closeFn?.call().timeout(const Duration(seconds: 2));
-    } on Object {
-      // Already gone.
-    }
-  }
-
-  /// Stops sending to this screen and removes it from the lobby.
-  void detach() {
-    if (_detached) return;
-    _detached = true;
-    _onDetach();
   }
 }

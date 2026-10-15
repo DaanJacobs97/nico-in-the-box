@@ -28,7 +28,7 @@ flowchart LR
 | 1 | Engine: rules and state (`GameSession`) | `packages/nico_shared/lib/games/<id>/<id>_game.dart` | Host only (pure Dart) |
 | 2 | Definition: name, player range, factory (`GameDefinition`) | same file | Host |
 | 3 | Player view: what a player sees and taps | `packages/nico_shared/lib/games/<id>/<id>_view.dart` | Apps and browser client |
-| 4 | Table: the shared-screen view in Flutter | same file as the player view | Host device as screen, Caster |
+| 4 | Table: the shared-screen view in Flutter | the player view file, or `<id>_table.dart` when that gets big (as Color Clash does) | Host device as screen, Caster |
 | 5 | Table: the shared-screen view in JavaScript | `assets/display/games/<id>.js` | Browser screen at `/screen` |
 | 6 | Registration in three lists | `registry.dart`, `game_views.dart`, `assets/display/index.html` | everywhere |
 
