@@ -49,8 +49,8 @@ const NicoDisplay = (() => {
   function renderLobby({ lobby, gameName, rules }) {
     const chips = el('div', { class: 'chips' });
     for (const p of lobby.players) {
-      const icon = p.id === lobby.hostId ? '🏆' : p.web ? '🌐' : '👤';
-      chips.append(el('span', { class: 'chip' }, icon, ' ', p.nickname));
+      const icon = p.away ? '📵' : p.id === lobby.hostId ? '🏆' : p.web ? '🌐' : '👤';
+      chips.append(el('span', { class: p.away ? 'chip away' : 'chip' }, icon, ' ', p.nickname));
     }
     for (let i = lobby.players.length; i < lobby.max; i++) {
       chips.append(el('span', { class: 'chip free' }, 'Free seat'));

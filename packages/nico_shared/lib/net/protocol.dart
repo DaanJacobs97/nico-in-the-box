@@ -1,7 +1,7 @@
 import 'dart:convert';
 
 /// Bump whenever a message shape changes so mismatched builds refuse to talk.
-const int kProtocolVersion = 4;
+const int kProtocolVersion = 5;
 
 /// TCP port the game server listens on (WebSocket at [kWebSocketPath]).
 const int kGamePort = 47800;
@@ -34,9 +34,13 @@ typedef Json = Map<String, Object?>;
 
 /// Message `type` values.
 abstract final class Msg {
-  // client -> server
+  // client -> server. A hello with `resume` (the `resumeToken` from an
+  // earlier welcome) takes back a seat kept after a dropped connection.
   static const hello = 'hello';
   static const action = 'action';
+
+  /// Leaving on purpose: the seat is freed at once instead of being kept.
+  static const leave = 'leave';
 
   // client -> server, host only
   static const start = 'start';
@@ -48,7 +52,8 @@ abstract final class Msg {
   static const setDisplay = 'setDisplay';
   static const setGameOptions = 'setGameOptions';
 
-  // server -> client
+  // server -> client. A welcome carries `playerId`, `isHost` and, for
+  // players who may reconnect, `resumeToken` and `graceMs`.
   static const welcome = 'welcome';
   static const lobby = 'lobby';
   static const gameState = 'gameState';
@@ -80,6 +85,10 @@ abstract final class ErrorCode {
   static const unknownGame = 'unknownGame';
   static const badMessage = 'badMessage';
   static const casterBusy = 'casterBusy';
+
+  /// A `hello` tried to take back a seat that is gone (expired, kicked or
+  /// never existed).
+  static const resumeFailed = 'resumeFailed';
 }
 
 /// `reason` values carried by [Msg.closed].
@@ -116,6 +125,7 @@ class PlayerInfo {
     required this.id,
     required this.nickname,
     this.isWeb = false,
+    this.away = false,
   });
 
   final String id;
@@ -124,12 +134,21 @@ class PlayerInfo {
   /// Playing from a browser rather than the app (shown as an icon).
   final bool isWeb;
 
-  Json toJson() => {'id': id, 'nickname': nickname, if (isWeb) 'web': true};
+  /// Lost the connection; the seat is kept while they reconnect.
+  final bool away;
+
+  Json toJson() => {
+    'id': id,
+    'nickname': nickname,
+    if (isWeb) 'web': true,
+    if (away) 'away': true,
+  };
 
   factory PlayerInfo.fromJson(Json json) => PlayerInfo(
     id: json['id']! as String,
     nickname: json['nickname']! as String,
     isWeb: json['web'] == true,
+    away: json['away'] == true,
   );
 }
 

@@ -120,7 +120,9 @@ class LobbyView extends StatelessWidget {
           Card(
             child: ListTile(
               leading: Icon(
-                player.id == lobby.hostId
+                player.away
+                    ? Icons.wifi_off
+                    : player.id == lobby.hostId
                     ? Icons.emoji_events
                     : player.isWeb
                     ? Icons.language
@@ -132,7 +134,9 @@ class LobbyView extends StatelessWidget {
                     ? '${player.nickname} (you)'
                     : player.nickname,
               ),
-              subtitle: player.id == lobby.hostId
+              subtitle: player.away
+                  ? const Text('Reconnecting…')
+                  : player.id == lobby.hostId
                   ? const Text('Host')
                   : player.isWeb
                   ? const Text('In a browser')

@@ -12,26 +12,7 @@ import 'web_files.dart';
 import 'web_routes.dart';
 
 part 'display_handle.dart';
-
-class _Connection {
-  _Connection(this.socket);
-
-  final WebSocket socket;
-  PlayerInfo? player;
-  // Cancelled in GameServer._drop.
-  // ignore: cancel_subscriptions
-  StreamSubscription<Object?>? subscription;
-  Timer? helloTimeout;
-
-  void send(String type, [Json body = const {}]) {
-    if (socket.readyState != WebSocket.open) return;
-    try {
-      socket.add(encodeMessage(type, body));
-    } on StateError {
-      // Closing concurrently; the disconnect handler cleans up.
-    }
-  }
-}
+part 'player_seats.dart';
 
 /// Host-authoritative room server. Runs on the host's device; every player
 /// (including the host, over loopback) connects as a WebSocket client.
@@ -45,6 +26,7 @@ class GameServer extends ChangeNotifier {
     this.webClient,
     this.screenPage,
     this._display = DisplaySettings.off,
+    this.reconnectGrace = const Duration(seconds: 60),
     Random? random,
   }) : _random = random ?? Random.secure(),
        hostToken = _randomToken(random ?? Random.secure());
@@ -58,6 +40,9 @@ class GameServer extends ChangeNotifier {
   /// The shared screen page served at `/screen/`; null if not bundled.
   final DisplayFrontend? screenPage;
   final String hostToken;
+
+  /// How long a player who lost the connection keeps their seat.
+  final Duration reconnectGrace;
   final Random _random;
   GameDefinition _game;
 
@@ -66,6 +51,7 @@ class GameServer extends ChangeNotifier {
 
   HttpServer? _http;
   final List<_Connection> _connections = [];
+  final List<_Seat> _seats = [];
   final List<DisplayHandle> _displays = [];
   DisplaySettings _display;
   String? _hostId;
@@ -85,10 +71,7 @@ class GameServer extends ChangeNotifier {
   GameOptions get gameOptions => Map.unmodifiable(_gameOptions);
 
   /// Everyone who said hello, including a host without a seat.
-  Iterable<PlayerInfo> get _everyone => [
-    for (final c in _connections)
-      if (c.player != null) c.player!,
-  ];
+  Iterable<PlayerInfo> get _everyone => [for (final s in _seats) s.info];
 
   /// Seated players, in join order. The host sits out when their device is
   /// the shared screen.
@@ -194,6 +177,13 @@ class GameServer extends ChangeNotifier {
   void broadcastNotice(String message) =>
       _broadcast(Msg.notice, {'msg': message});
 
+  /// Closes [playerId]'s connection without a goodbye, like a network drop.
+  @visibleForTesting
+  Future<void> dropConnectionOf(String playerId) async {
+    final seat = _seats.where((s) => s.player.id == playerId).firstOrNull;
+    await seat?.conn?.socket.close();
+  }
+
   /// Connects a shared screen. It immediately receives the current
   /// [Msg.display] state and every update after that until detached.
   DisplayHandle attachDisplay({
@@ -268,6 +258,10 @@ class GameServer extends ChangeNotifier {
     final playerId = conn.player!.id;
     if (type == Msg.action) {
       _onAction(conn, msg['action']);
+      return;
+    }
+    if (type == Msg.leave) {
+      _onDisconnect(conn, leaving: true);
       return;
     }
 
@@ -361,54 +355,6 @@ class GameServer extends ChangeNotifier {
     _broadcastLobby();
   }
 
-  void _onHello(_Connection conn, Json msg) {
-    if (msg['protocol'] != kProtocolVersion) {
-      _reject(
-        conn,
-        ErrorCode.protocolMismatch,
-        'This room runs a different app version.',
-      );
-      return;
-    }
-    final rawName = msg['nickname'];
-    final nickname = rawName is String ? normalizeNickname(rawName) : null;
-    if (nickname == null) {
-      _reject(
-        conn,
-        ErrorCode.invalidName,
-        'Nicknames must be 1–$kMaxNicknameLength characters.',
-      );
-      return;
-    }
-    final isHost = _hostId == null && msg['hostToken'] == hostToken;
-    if (!isHost) {
-      if (_phase != RoomPhase.lobby) {
-        _reject(conn, ErrorCode.gameInProgress, 'A game is in progress.');
-        return;
-      }
-      if (_seatsTaken >= _game.maxPlayers) {
-        _reject(conn, ErrorCode.roomFull, 'The room is full.');
-        return;
-      }
-    }
-    final lower = nickname.toLowerCase();
-    if (_everyone.any((p) => p.nickname.toLowerCase() == lower)) {
-      _reject(conn, ErrorCode.nameTaken, '"$nickname" is already taken.');
-      return;
-    }
-
-    conn.helloTimeout?.cancel();
-    final player = PlayerInfo(
-      id: 'p${_nextPlayerId++}',
-      nickname: nickname,
-      isWeb: msg['client'] == 'web',
-    );
-    conn.player = player;
-    if (isHost) _hostId = player.id;
-    conn.send(Msg.welcome, {'playerId': player.id, 'isHost': isHost});
-    _broadcastLobby();
-  }
-
   void _onAction(_Connection conn, Object? action) {
     final session = _session;
     if (session == null || _phase != RoomPhase.playing) {
@@ -465,18 +411,6 @@ class GameServer extends ChangeNotifier {
     if (notice != null) _broadcast(Msg.notice, {'msg': notice});
   }
 
-  void _kick(_Connection hostConn, Object? playerId) {
-    final target = _connections
-        .where((c) => c.player != null && c.player!.id == playerId)
-        .firstOrNull;
-    if (target == null || target == hostConn) {
-      _error(hostConn, ErrorCode.invalidAction, "You can't kick that player.");
-      return;
-    }
-    target.send(Msg.kicked);
-    _removePlayer(target, '${target.player!.nickname} was kicked.');
-  }
-
   void _changeGame(_Connection conn, Object? gameId) {
     final next = gameId is String ? gameById(gameId) : null;
     if (next == null) {
@@ -508,44 +442,6 @@ class GameServer extends ChangeNotifier {
 
   void _error(_Connection conn, String code, String message) =>
       conn.send(Msg.error, {'code': code, 'msg': message});
-
-  void _onDisconnect(_Connection conn) {
-    if (!_connections.contains(conn)) return;
-    final player = conn.player;
-    if (player == null) {
-      unawaited(_drop(conn));
-    } else if (player.id == _hostId) {
-      unawaited(_drop(conn));
-      unawaited(close(reason: CloseReason.hostLeft));
-    } else {
-      _removePlayer(conn, '${player.nickname} left.');
-    }
-  }
-
-  /// Removes a joined player; a running game cannot continue without them.
-  void _removePlayer(_Connection conn, String notice) {
-    unawaited(_drop(conn));
-    if (_closed) return;
-    if (_phase != RoomPhase.lobby) {
-      _returnToLobby(notice: '$notice The game was ended.');
-    } else {
-      _broadcastLobby();
-      _broadcast(Msg.notice, {'msg': notice});
-    }
-  }
-
-  /// Closes the WebSocket gracefully so queued messages (an error or the
-  /// closed notice) are delivered before the connection goes away.
-  Future<void> _drop(_Connection conn) async {
-    _connections.remove(conn);
-    conn.helloTimeout?.cancel();
-    try {
-      await conn.socket.close().timeout(const Duration(seconds: 2));
-    } on Object {
-      // Peer vanished or never answered the close handshake.
-    }
-    await conn.subscription?.cancel();
-  }
 
   String get _hostName =>
       _everyone.where((p) => p.id == _hostId).firstOrNull?.nickname ?? '';
@@ -624,6 +520,9 @@ class GameServer extends ChangeNotifier {
   Future<void> close({String reason = CloseReason.hostClosed}) async {
     if (_closed) return;
     _closed = true;
+    for (final seat in _seats) {
+      seat.expiry?.cancel();
+    }
     final closedMessage = encodeMessage(Msg.closed, {'reason': reason});
     await Future.wait([
       for (final conn in List.of(_connections))

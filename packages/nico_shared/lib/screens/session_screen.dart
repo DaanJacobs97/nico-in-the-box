@@ -130,18 +130,22 @@ class _SessionScreenState extends State<SessionScreen> {
                   HostControlsMenu(client: _client, onCloseRoom: _exit),
               ],
             ),
-            body: lobby == null
-                ? const Center(child: CircularProgressIndicator())
-                : lobby.phase == RoomPhase.lobby
-                ? LobbyView(
-                    client: _client,
-                    hostFooter: widget.hostFooter,
-                    hostScreenControls: widget.hostScreenControls,
-                    casterAvailable: widget.casterAvailable,
-                  )
-                : _client.isHost && lobby.display.hostIsScreen
-                ? _HostScreenArea(client: _client)
-                : _GameArea(client: _client),
+            body: _ReconnectingGuard(
+              reconnecting: _client.reconnecting,
+              onLeave: () => unawaited(_exit()),
+              child: lobby == null
+                  ? const Center(child: CircularProgressIndicator())
+                  : lobby.phase == RoomPhase.lobby
+                  ? LobbyView(
+                      client: _client,
+                      hostFooter: widget.hostFooter,
+                      hostScreenControls: widget.hostScreenControls,
+                      casterAvailable: widget.casterAvailable,
+                    )
+                  : _client.isHost && lobby.display.hostIsScreen
+                  ? _HostScreenArea(client: _client)
+                  : _GameArea(client: _client),
+            ),
           );
         },
       ),
@@ -277,6 +281,45 @@ class _ResultBar extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+/// While the connection is being restored: a banner on top, and the room
+/// greyed out and not tappable, so no move seems to go through.
+class _ReconnectingGuard extends StatelessWidget {
+  const _ReconnectingGuard({
+    required this.reconnecting,
+    required this.onLeave,
+    required this.child,
+  });
+
+  final bool reconnecting;
+  final VoidCallback onLeave;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        if (reconnecting)
+          MaterialBanner(
+            leading: const SizedBox.square(
+              dimension: 24,
+              child: CircularProgressIndicator(strokeWidth: 3),
+            ),
+            content: const Text('Connection lost. Reconnecting…'),
+            actions: [
+              TextButton(onPressed: onLeave, child: const Text('Leave')),
+            ],
+          ),
+        Expanded(
+          child: IgnorePointer(
+            ignoring: reconnecting,
+            child: Opacity(opacity: reconnecting ? 0.4 : 1, child: child),
+          ),
+        ),
+      ],
     );
   }
 }

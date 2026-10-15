@@ -98,7 +98,9 @@ class _ScreenLobby extends StatelessWidget {
                   for (final player in lobby.players)
                     Chip(
                       avatar: Icon(
-                        player.id == lobby.hostId
+                        player.away
+                            ? Icons.wifi_off
+                            : player.id == lobby.hostId
                             ? Icons.emoji_events
                             : player.isWeb
                             ? Icons.language

@@ -58,7 +58,8 @@ Platforms: Windows + Android first, with iOS as an untested stub.
 4. **Each player gets their own view of the game state.** The server never sends a player anyone else's cards.
 5. **Call the Uno-style game "Color Clash"**, which avoids the Uno trademark.
 6. **No reconnects in v1.** If a player drops mid-game, the game ends and everyone returns to the lobby.
-   If the host closes the room, every client goes back to the menu.
+   If the host closes the room, every client goes back to the menu. (Reconnects were added later; see
+   *Feature: Reconnect after a short drop*.)
 7. **State management:** `ChangeNotifier` + `ListenableBuilder` from Flutter itself; no state package needed at this size.
 8. **Git:** the repo is `github.com/DaanJacobs97/nico-in-the-box` (private). Each milestone is committed to `main`.
    After the skeleton is pushed, work happens on feature branches merged through pull requests, with CI running
@@ -660,29 +661,21 @@ on invalid squares.
 
 # Feature: Reconnect after a short drop
 
-**Status:** planned; waiting for answers to the open questions below.
+**Status:** built on `feature/reconnect` (milestones 1–3); device verification (milestone 4) still to do.
 
 During the Sea Siege device tests the tablet's Wi-Fi dropped every 10–30 seconds for about 4 seconds. Each drop
 ends the player's session for good: the 5 s WebSocket ping times out, `GameServer._onDisconnect` removes the player
 and a running game ends ("Ann left. The game was ended."). The goal: **a player (app or browser) who loses the
 connection briefly gets back into the same seat and the same running game, without doing anything.**
 
-## Open questions (my recommendation first)
+## Decisions (confirmed)
 
-1. **How long is a seat kept?** Recommended: **60 s.** A blip is about 4 s, plus up to 10 s before the ping notices,
-   so 30 s would do for Wi-Fi. 60 s also covers a phone screen that locks, or a browser tab switched away for a
-   moment. Alternative: 30 s, which ends a game sooner when someone really left.
-2. **Survive a browser page reload too?** Recommended: **not in this feature.** The resume token lives in memory, so
-   Wi-Fi drops and a backgrounded tab are covered, but a reload asks for a nickname again (and gets "name taken"
-   until the seat expires). Keeping the token in `sessionStorage` would cover reloads; it's a small follow-up.
-3. **What do the others see while someone is away?** Recommended: a notice ("Ann lost connection. Waiting up to
-   60 s…"), a "reconnecting" mark next to their name in the lobby and on the shared screen's lobby, a notice when
-   they're back, and today's notice when the seat expires. The game itself just waits: every game is turn-based or
-   waits for everyone (Sea Siege placing), so no game code changes. The host can still kick an away player or end
-   the game to stop waiting.
-4. **What does the player who dropped see?** Recommended: a **"Reconnecting…" banner** over the room, with the game
-   greyed out and not tappable (so no move seems to go through and then vanishes), and a **Leave** button. After the
-   seat expires it goes home with "Lost connection to the room.", as today.
+| Topic | Choice |
+|---|---|
+| How long a seat is kept | **60 s.** A blip is about 4 s, plus up to 10 s before the ping notices. 60 s also covers a phone screen that locks or a browser tab switched away for a moment |
+| Browser page reload | **Not in this feature.** The resume token lives in memory, so Wi-Fi drops and a backgrounded tab are covered, but a reload asks for a nickname again (and gets "name taken" until the seat expires). Keeping the token in `sessionStorage` is a small follow-up |
+| What the others see | A notice ("Ann lost connection. Waiting up to 60 s…"), a reconnecting mark next to their name in the lobby and on the shared screen's lobby, a notice when they're back, and today's notice when the seat expires. The game just waits: every game is turn-based or waits for everyone (Sea Siege placing), so no game code changes. The host can still kick an away player or end the game |
+| What the player who dropped sees | A **"Reconnecting…" banner** with a **Leave** button; the game is greyed out and not tappable, so no move seems to go through and then vanishes. After the seat expires: home with "Lost connection to the room.", as today |
 
 ## Recommendations (defaults unless you object)
 
@@ -692,10 +685,11 @@ connection briefly gets back into the same seat and the same running game, witho
    the room closes as today.
 3. **Resume tokens.**
    - `welcome` gives each player a random secret `resumeToken` (16 bytes, like `hostToken`) and the grace period
-     in seconds. Only that player ever receives it.
+     (`graceMs`, in milliseconds so tests can use short ones). Only that player ever receives it; the host gets
+     none.
    - `hello` may carry `resume: <token>` instead of a nickname. If a seat with that token is waiting (or still
-     looks connected, see 4), the server reattaches it: same player id, nickname and host status. It answers with
-     `welcome` (same id, a fresh token), the lobby, and, during a game, that player's own `gameState` (and
+     looks connected, see 4), the server reattaches it: same player id, nickname and token. It answers with
+     `welcome` (same id), the lobby, and, during a game, that player's own `gameState` (and
      `gameOver` if the game finished meanwhile).
    - Wrong or expired token, or a kicked player: `error{resumeFailed}`, and the client goes home.
    - Resuming skips the "game in progress" and "room full" checks, since the seat is already theirs.
@@ -715,7 +709,7 @@ connection briefly gets back into the same seat and the same running game, witho
    parameters, so tests run in milliseconds over real loopback sockets.
 9. **File size.** `game_server.dart` is at 591 of 600 non-blank lines, so seat bookkeeping (`_Connection`, seats,
    grace timers, resume) moves to a new part file `lib/net/player_seats.dart`.
-10. **Protocol:** `kProtocolVersion` becomes 5 (`welcome.resumeToken` and `graceSeconds`, `hello.resume`,
+10. **Protocol:** `kProtocolVersion` becomes 5 (`welcome.resumeToken` and `graceMs`, `hello.resume`,
     `PlayerInfo.away`, `Msg.leave`, `ErrorCode.resumeFailed`).
 
 ## Milestones
@@ -749,6 +743,6 @@ One branch and pull request, `feature/reconnect`, with the device results added 
 
 ## Out of scope for this feature
 
-- Surviving a browser reload or an app restart (question 2).
+- Surviving a browser reload or an app restart.
 - The host reconnecting, or handing the room to another player.
 - Continuing a game without a player whose seat expired.

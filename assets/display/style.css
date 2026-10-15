@@ -57,6 +57,7 @@ h2 { font-size: 1.6rem; margin: 0; font-weight: 500; color: var(--muted); }
   gap: 0.5rem;
 }
 .chip.free { color: var(--muted); border: 2px dashed var(--panel-2); background: none; }
+.chip.away { opacity: 0.5; }
 .chip.turn { background: var(--accent); color: #1b1235; font-weight: 700; }
 .badge { background: var(--gold); color: #000; border-radius: 0.4rem; padding: 0.1rem 0.5rem; font-size: 0.9rem; font-weight: 800; }
 
