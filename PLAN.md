@@ -196,7 +196,7 @@ animations beyond the basics.
 
 # Feature: Single game screen & browser join
 
-**Status:** milestones 1–5 merged; milestone 6 (Caster app) in review. Native-only LAN code moved to
+**Status:** milestones 1–6 merged; milestone 7 (host ↔ Caster) in review. Native-only LAN code moved to
 `packages/nico_native` so the host app and the Caster can share it.
 
 **Changes made during milestone 4:**

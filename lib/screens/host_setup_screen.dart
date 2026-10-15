@@ -7,6 +7,7 @@ import 'package:nico_shared/screens/session_screen.dart';
 import 'package:nico_shared/widgets/display_settings_editor.dart';
 
 import '../net/hosted_room.dart';
+import '../widgets/caster_picker.dart';
 import '../widgets/join_info.dart';
 
 class HostSetupScreen extends StatefulWidget {
@@ -65,6 +66,11 @@ class _HostSetupScreenState extends State<HostSetupScreen> {
             client: room.client,
             onClose: room.close,
             hostFooter: JoinInfo(room: room),
+            casterAvailable: true,
+            hostScreenControls: (lobby) =>
+                ScreenChoice.of(lobby.display) == ScreenChoice.caster
+                ? CasterPicker(room: room, lobby: lobby)
+                : null,
           ),
         ),
       );
@@ -132,6 +138,7 @@ class _HostSetupScreenState extends State<HostSetupScreen> {
             DisplaySettingsEditor(
               value: _display,
               onChanged: (value) => setState(() => _display = value),
+              casterAvailable: true,
             ),
             const SizedBox(height: 24),
             FilledButton.icon(

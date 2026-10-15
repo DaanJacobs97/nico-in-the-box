@@ -132,5 +132,10 @@ void main() {
     expect(parseManualAddress(''), isNull);
     expect(parseManualAddress('10.0.0.2:abc'), isNull);
     expect(parseManualAddress('10.0.0.2:70000'), isNull);
+    // The Caster's address defaults to the Caster port.
+    expect(parseManualAddress('10.0.0.5', defaultPort: kCasterPort), (
+      '10.0.0.5',
+      kCasterPort,
+    ));
   });
 }

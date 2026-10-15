@@ -258,6 +258,10 @@ class GameServer extends ChangeNotifier {
     );
   }
 
+  /// Shows [message] to every player as a notice.
+  void broadcastNotice(String message) =>
+      _broadcast(Msg.notice, {'msg': message});
+
   /// Connects a shared screen. It immediately receives the current
   /// [Msg.display] state and every update after that until detached.
   DisplayHandle attachDisplay({

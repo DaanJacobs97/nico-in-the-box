@@ -60,9 +60,15 @@ class _CasterAppState extends State<CasterApp> {
     try {
       final prefs = await SharedPreferences.getInstance();
       final saved = prefs.getString(_nameKey);
-      if (saved != null && saved.trim().isNotEmpty) _name = saved;
+      if (saved != null && saved.trim().isNotEmpty) {
+        _name = saved;
+      } else {
+        // Keep the generated default ("Caster 3fa1") from now on, so hosts
+        // see the same screen name every time the app starts.
+        await prefs.setString(_nameKey, _name);
+      }
     } on Object {
-      // Keep the default name.
+      // Keep the default name for this session.
     }
 
     try {
