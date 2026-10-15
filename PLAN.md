@@ -661,7 +661,7 @@ on invalid squares.
 
 # Feature: Reconnect after a short drop
 
-**Status:** built on `feature/reconnect` (milestones 1–3); device verification (milestone 4) still to do.
+**Status:** built on `feature/reconnect` (PR #29); a light device check passed (see *Verification*). Revisit after real games with people if reconnecting misbehaves.
 
 During the Sea Siege device tests the tablet's Wi-Fi dropped every 10–30 seconds for about 4 seconds. Each drop
 ends the player's session for good: the 5 s WebSocket ping times out, `GameServer._onDisconnect` removes the player
@@ -740,6 +740,19 @@ One branch and pull request, `feature/reconnect`, with the device results added 
   - the tablet app plays Tic Tac Toe and Sea Siege through several real drops
   - the same with the tablet's Chrome as a browser player
   - airplane mode on for longer than the grace period: the seat expires and the game ends cleanly
+
+**Result (2026-10-15).** Windows host app + the tablet (SM-T590) over its real Wi-Fi, no USB tunnel. A logcat watcher
+showed the tablet dropping Wi-Fi for about 4 s at a time, often switching between two access points.
+
+| Run | Result |
+|---|---|
+| Tablet app | No Wi-Fi drop happened during this run, so reconnecting was not exercised on the app (the loopback tests cover it) |
+| Tablet Chrome (`/play/`) | The log showed five drops in about 90 s around this run. One visibly broke the connection: the browser showed *Reconnecting…*, the host got the notice, and the player was back in the same game. The others went unnoticed (the connection seems to have survived them) |
+| Seat expiry, Leave | Not run on devices (covered by the server tests) |
+
+The user judged this enough for now and will revisit after playing real games with people. Found along the way:
+`flutter run --release` on Android fails because the `integration_test` plugin is registered but not packaged in
+release builds, so the device run used a debug build.
 
 ## Out of scope for this feature
 
