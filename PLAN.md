@@ -196,8 +196,8 @@ animations beyond the basics.
 
 # Feature: Single game screen & browser join
 
-**Status:** done; all 8 milestones merged. The device results are in the *Verification* section below. Native-only LAN code
-moved to `packages/nico_native` so the host app and the Caster can share it.
+**Status:** done; all 8 milestones merged. The device results are in the *Verification* section below.
+Native-only LAN code moved to `packages/nico_native` so the host app and the Caster can share it.
 
 **Changes made during milestone 4:**
 - **One 3-way choice instead of two.** The host picks "Where is the shared screen?": *This device*, *A browser* or
