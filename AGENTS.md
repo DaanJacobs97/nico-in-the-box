@@ -35,7 +35,8 @@ or scaffolding.
 
 ## Common tasks
 
-- **Adding a game:** follow [docs/ADDING_A_GAME.md](docs/ADDING_A_GAME.md).
+- **Adding a game:** run `dart run tool/new_game.dart <id> "<Name>" [min] [max]` to generate every piece with
+  placeholder rules, then follow [docs/ADDING_A_GAME.md](docs/ADDING_A_GAME.md) to replace them.
   `flutter test test/games/registry_consistency_test.dart` names any missing piece.
 - **Testing on devices without a second player:** `flutter test tool/bot/lan_bot_test.dart --dart-define=HOST=<ip>`.
 
