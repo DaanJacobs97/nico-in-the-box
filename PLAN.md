@@ -196,9 +196,8 @@ animations beyond the basics.
 
 # Feature: Single game screen & browser join
 
-**Status:** milestones 1–7 merged; milestone 8 (device verification) in review. The results are in the
-*Verification* section below. Native-only LAN code moved to `packages/nico_native` so the host app and the Caster
-can share it.
+**Status:** done; all 8 milestones merged. The device results are in the *Verification* section below.
+Native-only LAN code moved to `packages/nico_native` so the host app and the Caster can share it.
 
 **Changes made during milestone 4:**
 - **One 3-way choice instead of two.** The host picks "Where is the shared screen?": *This device*, *A browser* or
@@ -499,7 +498,8 @@ tablet browsers.
 
 # Feature: Sea Siege (Battleship) and host-chosen game options
 
-**Status:** milestones 1–3 in review; device verification passed (see *Verification* below).
+**Status:** done; milestones 1–3 merged (PRs #24, #25, #26), device verification passed (see *Verification*
+below).
 
 A Battleship-style game called **Sea Siege** (`seasiege`). Each player secretly places five ships on a 10×10 grid,
 then players take turns firing at each other's grids. The first to sink the whole enemy fleet wins.
@@ -624,7 +624,7 @@ window, so the *Create room* tap missed. The test's tap helper now scrolls its t
 
 ## Follow-up: easier ship placement
 
-**Status:** done, in review. Verified on the Windows PC and the tablet (both sides used tap-to-move, Rotate,
+**Status:** done, merged (PR #27). Verified on the Windows PC and the tablet (both sides used tap-to-move, Rotate,
 double-tap, drag, Shuffle and Ready, then played two games). Feedback from playing V3: placing and turning ships felt awkward, and moves often landed
 on invalid squares.
 
