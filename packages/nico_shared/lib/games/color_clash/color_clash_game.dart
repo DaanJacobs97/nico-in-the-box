@@ -13,8 +13,12 @@ const colorClashDefinition = GameDefinition(
   createSession: _create,
 );
 
-GameSession _create(List<PlayerInfo> players, int round, Random random) =>
-    ColorClashSession(players, random: random, round: round);
+GameSession _create(
+  List<PlayerInfo> players,
+  int round,
+  Random random,
+  GameOptions options,
+) => ColorClashSession(players, random: random, round: round);
 
 const handSize = 7;
 const lastCardPenalty = 2;

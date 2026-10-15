@@ -46,7 +46,7 @@ const NicoDisplay = (() => {
     show(el('div', { class: 'center' }, el('h1', {}, title), el('p', { class: 'muted big' }, text)));
   }
 
-  function renderLobby(lobby) {
+  function renderLobby({ lobby, gameName, rules }) {
     const chips = el('div', { class: 'chips' });
     for (const p of lobby.players) {
       const icon = p.id === lobby.hostId ? '🏆' : p.web ? '🌐' : '👤';
@@ -55,12 +55,12 @@ const NicoDisplay = (() => {
     for (let i = lobby.players.length; i < lobby.max; i++) {
       chips.append(el('span', { class: 'chip free' }, 'Free seat'));
     }
-    const game = GAME_NAMES[lobby.game] || lobby.game;
     return el(
       'div',
       { class: 'center' },
       el('h1', {}, lobby.room),
-      el('h2', {}, game),
+      el('h2', {}, gameName || lobby.game),
+      rules && rules.length ? el('p', { class: 'big' }, rules.join('  ·  ')) : '',
       chips,
       el(
         'p',
@@ -73,14 +73,12 @@ const NicoDisplay = (() => {
     );
   }
 
-  const GAME_NAMES = { tictactoe: 'Tic Tac Toe', colorclash: 'Color Clash' };
-
   function render() {
     if (!state) return;
     const { lobby, game, table, result } = state;
     const renderer = renderers[game];
     if (lobby.phase === 'lobby' || !table || !renderer) {
-      show(renderLobby(lobby));
+      show(renderLobby(state));
       return;
     }
     const view = renderer(table, lobby, ui);

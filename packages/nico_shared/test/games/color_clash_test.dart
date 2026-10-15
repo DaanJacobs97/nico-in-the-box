@@ -110,7 +110,12 @@ void main() {
     });
 
     test('starting player rotates with the round', () {
-      final game = colorClashDefinition.createSession([a, b, c], 1, Random(1));
+      final game = colorClashDefinition.createSession(
+        [a, b, c],
+        1,
+        Random(1),
+        const {},
+      );
       expect(game.viewFor('a')['turn'], 'b');
     });
 

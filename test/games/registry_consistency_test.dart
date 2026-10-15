@@ -36,6 +36,19 @@ void main() {
         expect(game.description.trim(), isNotEmpty);
       });
 
+      test('has unique, valid option ids', () {
+        final ids = game.options.map((o) => o.id).toList();
+        expect(ids.toSet(), hasLength(ids.length), reason: 'duplicate id');
+        for (final option in game.options) {
+          expect(
+            RegExp(r'^[a-z][a-zA-Z0-9]*$').hasMatch(option.id),
+            isTrue,
+            reason: '"${option.id}": start lowercase, letters and digits',
+          );
+          expect(option.label.trim(), isNotEmpty);
+        }
+      });
+
       test('has a player view and a shared-screen table', () {
         expect(gameViews, contains(game.id), reason: 'add it to gameViews');
         expect(gameTables, contains(game.id), reason: 'add it to gameTables');
@@ -64,7 +77,12 @@ void main() {
         for (final count in {game.minPlayers, game.maxPlayers}) {
           final players = _players(count);
           for (var round = 0; round < 3; round++) {
-            final session = game.createSession(players, round, Random(round));
+            final session = game.createSession(
+              players,
+              round,
+              Random(round),
+              game.defaultOptions,
+            );
             expect(session.isOver, isFalse, reason: 'starts finished');
             expect(session.result, isNull);
             // Everything sent over the network must be plain JSON.

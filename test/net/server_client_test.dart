@@ -28,7 +28,7 @@ final _threeSeatGame = GameDefinition(
   description: 'Test game with three seats.',
   minPlayers: 2,
   maxPlayers: 3,
-  createSession: (_, _, _) => _IdleSession(),
+  createSession: (_, _, _, _) => _IdleSession(),
 );
 
 /// Waits until [condition] holds after a change notification from [client].

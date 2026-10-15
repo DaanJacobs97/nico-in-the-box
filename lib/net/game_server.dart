@@ -61,6 +61,9 @@ class GameServer extends ChangeNotifier {
   final Random _random;
   GameDefinition _game;
 
+  /// The host's choices for [game]'s options; reset when the game changes.
+  late GameOptions _gameOptions = _game.defaultOptions;
+
   HttpServer? _http;
   final List<_Connection> _connections = [];
   final List<DisplayHandle> _displays = [];
@@ -78,6 +81,8 @@ class GameServer extends ChangeNotifier {
   bool get isRunning => _http != null && !_closed;
 
   DisplaySettings get display => _display;
+
+  GameOptions get gameOptions => Map.unmodifiable(_gameOptions);
 
   /// Everyone who said hello, including a host without a seat.
   Iterable<PlayerInfo> get _everyone => [
@@ -274,6 +279,7 @@ class GameServer extends ChangeNotifier {
       Msg.changeGame,
       Msg.closeRoom,
       Msg.setDisplay,
+      Msg.setGameOptions,
     };
     if (!hostCommands.contains(type)) {
       conn.send(Msg.error, {
@@ -309,7 +315,23 @@ class GameServer extends ChangeNotifier {
         unawaited(close(reason: CloseReason.hostClosed));
       case Msg.setDisplay:
         _setDisplay(conn, msg['display']);
+      case Msg.setGameOptions:
+        _setGameOptions(conn, msg['options']);
     }
+  }
+
+  void _setGameOptions(_Connection conn, Object? changes) {
+    if (_phase != RoomPhase.lobby) {
+      _error(conn, ErrorCode.invalidAction, 'End the current game first.');
+      return;
+    }
+    try {
+      _gameOptions = _game.updateOptions(_gameOptions, changes);
+    } on FormatException catch (e) {
+      _error(conn, ErrorCode.badMessage, e.message);
+      return;
+    }
+    _broadcastLobby();
   }
 
   void _setDisplay(_Connection conn, Object? raw) {
@@ -425,7 +447,12 @@ class GameServer extends ChangeNotifier {
       );
       return;
     }
-    _session = _game.createSession(current, _round, _random);
+    _session = _game.createSession(
+      current,
+      _round,
+      _random,
+      Map.of(_gameOptions),
+    );
     _phase = RoomPhase.playing;
     _broadcastLobby();
     _broadcastGameState();
@@ -470,6 +497,7 @@ class GameServer extends ChangeNotifier {
     }
     _game = next;
     _round = 0;
+    _gameOptions = next.defaultOptions;
     _broadcastLobby();
   }
 
@@ -532,6 +560,7 @@ class GameServer extends ChangeNotifier {
     hostName: _hostName,
     phase: _phase,
     display: _display,
+    gameOptions: Map.of(_gameOptions),
     displays: [
       for (final d in _displays) d.info,
       if (_hostIsScreen) DisplayInfo(kind: DisplayKind.host, name: _hostName),
@@ -543,6 +572,8 @@ class GameServer extends ChangeNotifier {
     final session = _session;
     return DisplayState(
       lobby: lobbyState,
+      gameName: _game.name,
+      rules: _game.describeOptions(_gameOptions),
       gameId: session == null ? null : _game.id,
       table: session?.tableView(),
       result: session?.result,

@@ -211,6 +211,10 @@ class GameClient extends ChangeNotifier {
   void setDisplay(DisplaySettings display) =>
       _send(Msg.setDisplay, {'display': display.toJson()});
 
+  /// Switches game options by id; options not named keep their value.
+  void setGameOptions(Map<String, bool> changes) =>
+      _send(Msg.setGameOptions, {'options': changes});
+
   Future<void> leave() async {
     disconnectReason ??= DisconnectReason.left;
     await _subscription?.cancel();

@@ -26,6 +26,7 @@ automatically and join with a nickname. No internet connection and no accounts a
 |---|---|---|
 | Tic Tac Toe | 2 | The classic game, with the host against one other player |
 | Color Clash | 2–4 | An Uno-style card game: match by color or number, with Skip, Reverse, Draw Two and Wild cards |
+| Sea Siege | 2 | Battleship-style: hide five ships, then take turns firing at the enemy grid. The host can let a hit earn another shot |
 
 ## Platforms
 
@@ -124,13 +125,23 @@ Other options:
   - `browser`: the host waits for a browser at `/screen`
   - `caster`: the host connects the first Nico Caster it finds
   - `host`: the host's device is the screen and doesn't play
-- `GAMES=ttt` skips Color Clash.
+- `GAMES=ttt` skips Color Clash. `GAMES=sea` plays only Sea Siege, twice: with "Hit = shoot again" off, then on.
+  Both sides use every placement control and check the turn rule after each shot.
 - `EXPECT_WEB_PLAYER=true` makes the host expect a browser player.
 
 Keep the host's test window visible. Flutter stops drawing a minimized window, which stalls the test.
 
+**Flaky Wi-Fi on an Android device?** Tunnel the game port over USB and join by IP instead of scanning:
+
+```bash
+adb reverse tcp:47800 tcp:47800
+```
+
+Then use `--dart-define=JOIN_IP=127.0.0.1` on that device, or open `http://127.0.0.1:47800/screen/` or `/play/` in
+its browser. Discovery doesn't go through the tunnel, so this tests everything except finding the room.
+
 **Only one device free?** Use the scripted player as the other seat. It joins over the real protocol and plays Tic
-Tac Toe and Color Clash until the room closes:
+Tac Toe, Color Clash and Sea Siege until the room closes:
 
 ```bash
 flutter test tool/bot/lan_bot_test.dart --dart-define=HOST=<host ip>

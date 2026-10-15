@@ -93,7 +93,12 @@ void main() {
   });
 
   test('definition creates a session that honours the round', () {
-    final game = ticTacToeDefinition.createSession([host, guest], 3, Random(1));
+    final game = ticTacToeDefinition.createSession(
+      [host, guest],
+      3,
+      Random(1),
+      const {},
+    );
     expect(game.viewFor('h')['turn'], 'g');
   });
 }

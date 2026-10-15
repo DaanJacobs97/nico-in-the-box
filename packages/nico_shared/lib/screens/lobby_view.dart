@@ -4,6 +4,7 @@ import '../games/registry.dart';
 import '../net/game_client.dart';
 import '../net/protocol.dart';
 import '../widgets/display_settings_editor.dart';
+import '../widgets/game_options_editor.dart';
 import '../widgets/host_controls.dart';
 
 /// Waiting room: who's here, which game, and (for the host) how to start.
@@ -62,6 +63,14 @@ class LobbyView extends StatelessWidget {
                 : null,
           ),
         ),
+        if (game != null && game.options.isNotEmpty)
+          Card(
+            child: GameOptionsEditor(
+              game: game,
+              values: lobby.gameOptions,
+              onChanged: isHost ? client.setGameOptions : null,
+            ),
+          ),
         if (isHost)
           Card(
             child: Padding(
