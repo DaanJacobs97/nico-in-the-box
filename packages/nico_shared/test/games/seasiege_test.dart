@@ -92,6 +92,48 @@ void main() {
       }
     });
 
+    test('turning keeps the pivot square in place', () {
+      const cruiser = Ship(ShipType.cruiser, row: 4, col: 2); // 42 43 44
+      final turned = cruiser.rotatedAround(43);
+      expect(turned.vertical, isTrue);
+      expect(turned.cells, [33, 43, 53]);
+      expect(turned.rotatedAround(43).cells, cruiser.cells);
+      // Around the bow, the bow stays put.
+      expect(cruiser.rotatedAround(42).cells, [42, 52, 62]);
+    });
+
+    test('nudging finds the nearest spot that fits', () {
+      const sub = Ship(ShipType.submarine, row: 0, col: 0);
+      expect(sub.nudgeToFit([]), same(sub), reason: 'already fits');
+      // Hanging off the right edge: shifted left by the overhang.
+      final over = sub.movedTo(row: 5, col: 9, vertical: false);
+      expect(over.nudgeToFit([])!.cells, [57, 58, 59]);
+      // On top of the cruiser (row 4, A-C): moved to a clear row nearby.
+      final onTop = sub.movedTo(row: 4, col: 0, vertical: false);
+      final nudged = onTop.nudgeToFit(rowsFleet)!;
+      expect(nudged.fitsAmong(rowsFleet), isTrue);
+      expect((nudged.row - 4).abs() + nudged.col, 1, reason: 'one step away');
+      // Nowhere to go within reach.
+      final crowded = [
+        for (var r = 0; r < kSeaSize; r++)
+          for (final type in [ShipType.carrier, ShipType.battleship])
+            Ship(type, row: r, col: type == ShipType.carrier ? 0 : 5),
+      ];
+      expect(
+        const Ship(ShipType.destroyer, row: 5, col: 5).nudgeToFit(crowded),
+        isNull,
+      );
+    });
+
+    test('preview cells stay on the board; JSON round trip', () {
+      const off = Ship(ShipType.carrier, row: 2, col: 8);
+      expect(off.cellsOnBoard, [28, 29]);
+      expect(off.inBounds, isFalse);
+      final back = Ship.fromJson(rowsFleet[2].toJson());
+      expect(back.cells, rowsFleet[2].cells);
+      expect(back.type, ShipType.cruiser);
+    });
+
     test('invalid fleets are caught', () {
       expect(isValidFleet(rowsFleet), isTrue);
       expect(isValidFleet(rowsFleet.sublist(1)), isFalse, reason: 'missing');

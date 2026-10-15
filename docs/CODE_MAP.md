@@ -81,10 +81,10 @@ Lines are approximate, so you can tell big files from small ones.
 | `packages/nico_shared/lib/games/color_clash/color_clash_game.dart` | 324 | Color Clash engine (Uno-style rules, last-card catch, `custom` test constructor) |
 | `packages/nico_shared/lib/games/color_clash/color_clash_view.dart` | 169 | Player view: hand, color picker, buttons (full/compact) |
 | `packages/nico_shared/lib/games/color_clash/color_clash_table.dart` | 267 | Public table: `ClashTableArea` (in the full player view and on the shared screen), `ColorClashTable`, `ClashCardFace`, `colorOf` |
-| `packages/nico_shared/lib/games/seasiege/seasiege_fleet.dart` | 86 | Sea Siege geometry: `ShipType`, `Ship`, `cellName` ("D4"), `isValidFleet`, `randomFleet` |
+| `packages/nico_shared/lib/games/seasiege/seasiege_fleet.dart` | 132 | Sea Siege geometry: `ShipType`, `Ship` (+ `rotatedAround`, `nudgeToFit`, `fitsAmong`), `cellName` ("D4"), `isValidFleet`, `randomFleet` |
 | `packages/nico_shared/lib/games/seasiege/seasiege_game.dart` | 249 | Sea Siege engine: placing (shuffle, move, ready) then battle; `shootAgain` option; free-for-all-ready (target per shot); `custom` test constructor |
-| `packages/nico_shared/lib/games/seasiege/seasiege_view.dart` | 201 | Sea Siege player view: placing (tap ship, tap square, Rotate, Shuffle, Ready), then enemy board above own board |
-| `packages/nico_shared/lib/games/seasiege/seasiege_table.dart` | 259 | `SeaGrid` (10×10 board used by both views), `SeaBoard`, `describeShot`, `SeaSiegeTable` (shared screen) |
+| `packages/nico_shared/lib/games/seasiege/seasiege_view.dart` | 290 | Sea Siege player view: placing (drag with preview, double-tap to turn, tap ship then square, Rotate, Shuffle, Ready; nudges to fit), then enemy board above own board |
+| `packages/nico_shared/lib/games/seasiege/seasiege_table.dart` | 316 | `SeaGrid` (10×10 board used by both views; whole-board tap, double-tap and drag, preview), `SeaBoard`, `describeShot`, `SeaSiegeTable` (shared screen) |
 | `packages/nico_shared/lib/screens/session_screen.dart` | 254 | **`SessionScreen`**: lobby → game → result, notices, leaving, host-as-screen area |
 | `packages/nico_shared/lib/screens/lobby_view.dart` | 209 | Lobby: game, players, Single game screen settings (host), pinned Start button |
 | `packages/nico_shared/lib/screens/shared_screen_view.dart` | 138 | `SharedScreenView`: draws a `DisplayState` (lobby / table / result) |
@@ -134,7 +134,7 @@ Lines are approximate, so you can tell big files from small ones.
 | `tool/check.ps1`, `tool/check.sh` | **Run before every PR**: format check, analyze, all five test suites (`-Fix`/`--fix` formats first) |
 | `tool/new_game.dart`, `tool/new_game_templates.dart` | `dart run tool/new_game.dart <id> "<Name>" [min] [max]`: generates a placeholder game (all six pieces, tests, an example option, code map rows, protocol bump). Templates live in the part file |
 | `tool/build_web_client.ps1`, `tool/build_web_client.sh` | Build `web_client/` into `assets/generated/web_client.zip` (git-ignored) |
-| `tool/bot/lan_bot_test.dart` | Scripted LAN player: `flutter test tool/bot/lan_bot_test.dart --dart-define=HOST=<ip>` |
+| `tool/bot/lan_bot_test.dart` | Scripted LAN player (all three games): `flutter test tool/bot/lan_bot_test.dart --dart-define=HOST=<ip>` |
 
 ---
 
@@ -180,7 +180,7 @@ Lines are approximate, so you can tell big files from small ones.
 | `packages/nico_native/test/` | that folder | `discovery_test.dart`, `caster_scanner_test.dart` |
 | `caster/test/` | that folder | `cast_server_test.dart`, `idle_screen_test.dart` |
 | `web_client/test/` | that folder | `web_join_test.dart` |
-| `integration_test/lan_play_test.dart` | repo root, on devices | Real app on two devices (options: `ROLE`, `SCREEN`, `GAMES`, `JOIN_IP`, `EXPECT_WEB_PLAYER`) |
+| `integration_test/lan_play_test.dart` | repo root, on devices | Real app on two devices (options: `ROLE`, `SCREEN`, `GAMES` (`all`, `ttt`, `sea`), `JOIN_IP`, `EXPECT_WEB_PLAYER`) |
 
 ## 6. Folders to skip
 

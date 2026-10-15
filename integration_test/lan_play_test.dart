@@ -17,13 +17,16 @@ import 'package:nico_in_the_box/main.dart';
 import 'package:nico_shared/games/color_clash/color_clash_table.dart';
 import 'package:nico_shared/games/color_clash/color_clash_view.dart';
 import 'package:nico_shared/games/game_views.dart';
+import 'package:nico_shared/games/seasiege/seasiege_fleet.dart';
+import 'package:nico_shared/games/seasiege/seasiege_view.dart';
 import 'package:nico_shared/games/tictactoe/tictactoe_view.dart';
 import 'package:nico_shared/net/protocol.dart';
 
 const role = String.fromEnvironment('ROLE', defaultValue: 'host');
 const joinIp = String.fromEnvironment('JOIN_IP');
 
-/// `ttt` skips Color Clash (used when a person plays the other side).
+/// `ttt` skips Color Clash (used when a person plays the other side); `sea`
+/// plays only Sea Siege, once with "Hit = shoot again" off and once on.
 const games = String.fromEnvironment('GAMES', defaultValue: 'all');
 
 /// Host only: expect the other player to have joined from a browser.
@@ -188,9 +191,223 @@ Future<void> playColorClash(WidgetTester tester) async {
   }
 }
 
+SeaSiegeView? seaWidget() => present(find.byType(SeaSiegeView))
+    ? find.byType(SeaSiegeView).evaluate().first.widget as SeaSiegeView
+    : null;
+
+bool _seaRunning() {
+  final w = seaWidget();
+  return w != null && w.ctx.view['winner'] == null;
+}
+
+List<Json> _fleet() =>
+    (seaWidget()!.ctx.view['fleet']! as List<Object?>).cast<Json>();
+
+Set<Object?> _tried(Json view, String player) {
+  final board = (view['boards']! as Json)[player]! as Json;
+  return {
+    ...board['hits']! as List<Object?>,
+    ...board['misses']! as List<Object?>,
+  };
+}
+
+/// Lets [time] pass for real, then draws a frame.
+Future<void> settle(WidgetTester tester, Duration time) async {
+  await Future<void>.delayed(time);
+  await tester.pump();
+}
+
+/// Uses every placement control once: tap-to-move, Rotate, double-tap,
+/// dragging, Shuffle, then Ready.
+Future<void> _placeFleet(WidgetTester tester) async {
+  final myId = seaWidget()!.ctx.myId;
+  List<Ship> fleet() => [for (final s in _fleet()) Ship.fromJson(s)];
+  Ship ship(ShipType type) => fleet().firstWhere((s) => s.type == type);
+  Finder square(int cell) => find.byKey(ValueKey('sea-own-$cell'));
+  // Single taps count only once the double-tap window has passed, in real
+  // time on a device (pump durations are not real time there).
+  const tapWait = Duration(milliseconds: 500);
+
+  // Tap the destroyer, then a free square (the view nudges if needed).
+  final before = ship(ShipType.destroyer);
+  final free = [
+    for (var cell = 0; cell < 100; cell++)
+      if (!fleet().any((s) => s.cells.contains(cell))) cell,
+  ];
+  await tester.tap(square(before.cells.first));
+  await settle(tester, tapWait);
+  await tester.tap(square(free[free.length ~/ 2]));
+  await settle(tester, tapWait);
+  await pumpUntil(
+    tester,
+    () => ship(ShipType.destroyer).cells.toString() != before.cells.toString(),
+    reason: 'the destroyer to move',
+  );
+
+  final vertical = ship(ShipType.destroyer).vertical;
+  await tester.tap(find.byKey(const ValueKey('sea-rotate')));
+  await pumpUntil(
+    tester,
+    () => ship(ShipType.destroyer).vertical != vertical,
+    reason: 'Rotate to turn the destroyer',
+  );
+  final turned = ship(ShipType.destroyer);
+  await tester.tap(square(turned.cells.first));
+  await settle(tester, const Duration(milliseconds: 60));
+  await tester.tap(square(turned.cells.first));
+  await pumpUntil(
+    tester,
+    () => ship(ShipType.destroyer).vertical == vertical,
+    reason: 'a double-tap to turn the destroyer back',
+  );
+
+  // Drag the cruiser to another spot where it fits.
+  final cruiser = ship(ShipType.cruiser);
+  final dropAt =
+      [
+        for (var cell = 0; cell < 100; cell++)
+          cruiser.movedTo(
+            row: cell ~/ kSeaSize,
+            col: cell % kSeaSize,
+            vertical: cruiser.vertical,
+          ),
+      ].firstWhere(
+        (s) => s.fitsAmong(fleet()) && s.cells.first != cruiser.cells.first,
+      );
+  final from = tester.getCenter(square(cruiser.cells.first));
+  await tester.timedDragFrom(
+    from,
+    tester.getCenter(square(dropAt.cells.first)) - from,
+    const Duration(milliseconds: 500),
+  );
+  await pumpUntil(
+    tester,
+    () => ship(ShipType.cruiser).cells.toString() == dropAt.cells.toString(),
+    reason: 'the cruiser to be dragged',
+  );
+
+  final layout = [for (final s in fleet()) s.cells].toString();
+  await tester.tap(find.byKey(const ValueKey('sea-shuffle')));
+  await pumpUntil(
+    tester,
+    () => [for (final s in fleet()) s.cells].toString() != layout,
+    reason: 'the fleet to shuffle',
+  );
+  await tester.tap(find.byKey(const ValueKey('sea-ready')));
+  await pumpUntil(tester, () {
+    final view = seaWidget()!.ctx.view;
+    return view['phase'] != 'placing' || (view['ready']! as Json)[myId] == true;
+  }, reason: 'the fleet to be ready');
+}
+
+/// Plays one Sea Siege game through the UI: places the fleet, then fires at
+/// untried squares until the game ends. After each of its own shots it
+/// checks the host's "Hit = shoot again" rule against the shot log.
+Future<void> playSeaSiege(WidgetTester tester) async {
+  await pumpUntil(
+    tester,
+    _seaRunning,
+    timeout: const Duration(minutes: 2),
+    reason: 'a running Sea Siege game',
+  );
+  expect(seaWidget()!.ctx.compact, expectCompact, reason: 'compact view');
+  final myId = seaWidget()!.ctx.myId;
+  if (seaWidget()!.ctx.view['phase'] == 'placing') await _placeFleet(tester);
+  var shots = 0;
+  var checked = 0;
+  while (true) {
+    await pumpUntil(
+      tester,
+      () {
+        final w = seaWidget();
+        if (w == null) return true;
+        final v = w.ctx.view;
+        return v['winner'] != null || v['turn'] == myId;
+      },
+      // The other side may be a person taking their time.
+      timeout: const Duration(minutes: 5),
+      reason: 'my turn to fire',
+    );
+    final view = seaWidget()?.ctx.view;
+    if (view == null || view['winner'] != null) break;
+    final enemy = (view['boards']! as Json).keys.firstWhere((id) => id != myId);
+    final tried = _tried(view, enemy);
+    final open = [
+      for (var cell = 0; cell < 100; cell++)
+        if (!tried.contains(cell)) cell,
+    ];
+    final cell = open[(shots * 37) % open.length];
+    await tester.tap(find.byKey(ValueKey('sea-enemy-$cell')));
+    await pumpUntil(
+      tester,
+      () =>
+          seaWidget() == null ||
+          _tried(seaWidget()!.ctx.view, enemy).length > tried.length,
+      reason: 'the shot to register',
+    );
+    shots++;
+    expect(shots, lessThanOrEqualTo(100), reason: 'game should finish');
+    final after = seaWidget()?.ctx.view;
+    if (after == null) break;
+    // Whoever fired next (or has the turn now) must match the rule.
+    final log = (after['log']! as List<Object?>).cast<Json>();
+    final i = log.lastIndexWhere(
+      (e) => e['shooter'] == myId && e['cell'] == cell,
+    );
+    if (i < 0 || (i == log.length - 1 && after['winner'] != null)) continue;
+    final next = i + 1 < log.length ? log[i + 1]['shooter'] : after['turn'];
+    final hit = log[i]['result'] != 'miss';
+    expect(
+      next == myId,
+      after['shootAgain'] == true && hit,
+      reason: 'turn after a ${hit ? 'hit' : 'miss'}',
+    );
+    checked++;
+  }
+  debugPrint(
+    'Sea Siege: fired $shots shots, checked the turn rule $checked times',
+  );
+}
+
+/// Host only: Sea Siege with "Hit = shoot again" off, then on.
+Future<void> hostSeaSiegeRounds(WidgetTester tester) async {
+  await tester.tap(find.byIcon(Icons.swap_horiz));
+  await tester.pump(const Duration(milliseconds: 500));
+  await tapText(tester, 'Sea Siege (2 players)');
+  final option = find.byKey(const ValueKey('game-option-shootAgain'));
+  await pumpUntil(
+    tester,
+    () => present(option),
+    reason: 'the Sea Siege option',
+  );
+  for (final shootAgain in [false, true]) {
+    if (shootAgain) {
+      await tester.ensureVisible(option);
+      await tester.tap(option);
+      await pumpUntil(
+        tester,
+        () => tester.widget<SwitchListTile>(option).value,
+        reason: 'the option to switch on',
+      );
+    }
+    await tapText(tester, 'Start game');
+    await playSeaSiege(tester);
+    await tapText(tester, 'Back to lobby');
+    await pumpUntil(
+      tester,
+      () => present(find.text('Start game')),
+      reason: 'back in the lobby',
+    );
+  }
+}
+
 Future<void> tapText(WidgetTester tester, String text) async {
   final finder = find.text(text);
   await pumpUntil(tester, () => present(finder), reason: '"$text"');
+  // Long forms (e.g. host setup with Single game screen on) can push the
+  // target below a small test window.
+  await tester.ensureVisible(finder.last);
+  await tester.pump(const Duration(milliseconds: 300));
   await tester.tap(finder.last);
   await tester.pump(const Duration(milliseconds: 300));
 }
@@ -247,6 +464,11 @@ void main() {
           timeout: const Duration(minutes: 2),
           reason: 'a browser screen to connect',
         );
+      }
+      if (games == 'sea') {
+        await hostSeaSiegeRounds(tester);
+        await _closeRoomAsHost(tester);
+        return;
       }
       await tapText(tester, 'Start game');
 
@@ -389,13 +611,15 @@ void main() {
         () =>
             present(find.text('Waiting for the host to start the game…')) ||
             tttView() != null ||
-            clashWidget() != null,
+            clashWidget() != null ||
+            seaWidget() != null,
         reason: 'lobby or game',
       );
 
       // Play whatever the host starts until the room is closed.
       var tttGames = 0;
       var clashGames = 0;
+      var seaGames = 0;
       while (true) {
         await pumpUntil(
           tester,
@@ -403,7 +627,8 @@ void main() {
               present(find.text('Host a game')) ||
               (tttView() != null && !_finished(tttView()!)) ||
               (clashWidget() != null &&
-                  clashWidget()!.ctx.view['winner'] == null),
+                  clashWidget()!.ctx.view['winner'] == null) ||
+              _seaRunning(),
           timeout: const Duration(minutes: 3),
           reason: 'next game or room closed',
         );
@@ -411,6 +636,9 @@ void main() {
         if (tttView() != null) {
           await playTicTacToe(tester);
           tttGames++;
+        } else if (_seaRunning()) {
+          await playSeaSiege(tester);
+          seaGames++;
         } else {
           await playColorClash(tester);
           clashGames++;
@@ -428,8 +656,9 @@ void main() {
         timeout: const Duration(seconds: 3),
         reason: 'the "host closed the room" message',
       );
-      expect(tttGames, 2);
-      expect(clashGames, games == 'ttt' ? 0 : 1);
+      expect(tttGames, games == 'sea' ? 0 : 2);
+      expect(clashGames, games == 'all' ? 1 : 0);
+      expect(seaGames, games == 'sea' ? 2 : 0);
     },
     skip: role != 'join',
     timeout: const Timeout(Duration(minutes: 20)),

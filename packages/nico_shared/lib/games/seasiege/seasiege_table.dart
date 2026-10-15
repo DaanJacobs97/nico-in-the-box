@@ -1,3 +1,4 @@
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 
 import '../../net/protocol.dart';
@@ -10,6 +11,7 @@ const _sunkColor = Color(0xFF4E342E);
 const _selectedColor = Color(0xFFFFB300);
 const _hitColor = Color(0xFFE53935);
 const _missColor = Color(0xFFE3F2FD);
+const _previewColor = Color(0xFF43A047);
 
 /// One board as the views send it: shots plus any ships drawn on it.
 class SeaBoard {
@@ -47,8 +49,9 @@ String describeShot(Json shot, String Function(String playerId) nameOf) {
 }
 
 /// A 10×10 board with A–J / 1–10 labels, sized to fit its space. Draws
-/// [ships] (cell -> ship id), [sunkCells], hits and misses. Tapping a cell
-/// calls [onTap] when set.
+/// [ships] (cell -> ship id), [sunkCells], hits, misses and a drag
+/// [preview]. Gestures are handled for the whole board and reported as
+/// squares: [onTap], [onDoubleTap] and the three drag callbacks.
 class SeaGrid extends StatelessWidget {
   const SeaGrid({
     super.key,
@@ -57,7 +60,13 @@ class SeaGrid extends StatelessWidget {
     this.ships = const {},
     this.sunkCells = const {},
     this.selectedShip,
+    this.preview = const {},
+    this.previewValid = true,
     this.onTap,
+    this.onDoubleTap,
+    this.onDragStart,
+    this.onDragUpdate,
+    this.onDragEnd,
     this.keyPrefix = 'sea',
   });
 
@@ -66,7 +75,20 @@ class SeaGrid extends StatelessWidget {
   final Map<int, String> ships;
   final Set<int> sunkCells;
   final String? selectedShip;
+
+  /// Squares a dragged ship would cover, drawn green or red.
+  final Set<int> preview;
+  final bool previewValid;
+
   final void Function(int cell)? onTap;
+
+  /// Setting this delays single taps by the double-tap timeout.
+  final void Function(int cell)? onDoubleTap;
+  final void Function(int cell)? onDragStart;
+
+  /// The square under the finger, clamped onto the board.
+  final void Function(int cell)? onDragUpdate;
+  final VoidCallback? onDragEnd;
 
   /// Cells get the key `<keyPrefix>-<cell>`, for tests and bots.
   final String keyPrefix;
@@ -86,6 +108,50 @@ class SeaGrid extends StatelessWidget {
           height: cell,
           child: Center(child: Text(text, style: label)),
         );
+        int at(Offset local) {
+          final r = (local.dy / cell).floor().clamp(0, kSeaSize - 1);
+          final c = (local.dx / cell).floor().clamp(0, kSeaSize - 1);
+          return r * kSeaSize + c;
+        }
+
+        var doubleTapAt = 0;
+        final tap = onTap;
+        final doubleTap = onDoubleTap;
+        final dragStart = onDragStart;
+        final dragUpdate = onDragUpdate;
+        final dragEnd = onDragEnd;
+        final board = GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTapUp: tap == null ? null : (d) => tap(at(d.localPosition)),
+          onDoubleTapDown: doubleTap == null
+              ? null
+              : (d) => doubleTapAt = at(d.localPosition),
+          onDoubleTap: doubleTap == null ? null : () => doubleTap(doubleTapAt),
+          onPanStart: dragStart == null
+              ? null
+              : (d) => dragStart(at(d.localPosition)),
+          onPanUpdate: dragUpdate == null
+              ? null
+              : (d) => dragUpdate(at(d.localPosition)),
+          onPanEnd: dragEnd == null ? null : (_) => dragEnd(),
+          onPanCancel: dragEnd,
+          // Report the square the finger first touched (the ship being
+          // grabbed), not where it had moved to once the drag was detected.
+          dragStartBehavior: DragStartBehavior.down,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              for (var r = 0; r < kSeaSize; r++)
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    for (var c = 0; c < kSeaSize; c++)
+                      _cell(r * kSeaSize + c, cell),
+                  ],
+                ),
+            ],
+          ),
+        );
         return Center(
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -98,15 +164,31 @@ class SeaGrid extends StatelessWidget {
                     labelBox(cellName(c).substring(0, 1)),
                 ],
               ),
-              for (var r = 0; r < kSeaSize; r++)
-                Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    labelBox('${r + 1}'),
-                    for (var c = 0; c < kSeaSize; c++)
-                      _cell(r * kSeaSize + c, cell),
-                  ],
-                ),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      for (var r = 0; r < kSeaSize; r++) labelBox('${r + 1}'),
+                    ],
+                  ),
+                  if (dragStart == null)
+                    board
+                  else
+                    // Flutter starts a touch drag only after ~36 px, more than
+                    // a whole square on a phone. Scale it to the square so a
+                    // one-square drag works; taps still allow a little wobble.
+                    MediaQuery(
+                      data: MediaQuery.of(context).copyWith(
+                        gestureSettings: DeviceGestureSettings(
+                          touchSlop: (cell * 0.3).clamp(6.0, kTouchSlop),
+                        ),
+                      ),
+                      child: board,
+                    ),
+                ],
+              ),
             ],
           ),
         );
@@ -116,7 +198,9 @@ class SeaGrid extends StatelessWidget {
 
   Widget _cell(int index, double size) {
     final ship = ships[index];
-    final color = sunkCells.contains(index)
+    final color = preview.contains(index)
+        ? (previewValid ? _previewColor : _hitColor)
+        : sunkCells.contains(index)
         ? _sunkColor
         : ship != null && ship == selectedShip
         ? _selectedColor
@@ -128,31 +212,26 @@ class SeaGrid extends StatelessWidget {
         : misses.contains(index)
         ? _missColor
         : null;
-    final tap = onTap;
-    return GestureDetector(
+    return Container(
       key: ValueKey('$keyPrefix-$index'),
-      behavior: HitTestBehavior.opaque,
-      onTap: tap == null ? null : () => tap(index),
-      child: Container(
-        width: size,
-        height: size,
-        decoration: BoxDecoration(
-          color: color,
-          border: Border.all(color: Colors.black26, width: 0.5),
-        ),
-        child: marker == null
-            ? null
-            : Center(
-                child: Container(
-                  width: size * 0.45,
-                  height: size * 0.45,
-                  decoration: BoxDecoration(
-                    color: marker,
-                    shape: BoxShape.circle,
-                  ),
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        color: color,
+        border: Border.all(color: Colors.black26, width: 0.5),
+      ),
+      child: marker == null
+          ? null
+          : Center(
+              child: Container(
+                width: size * 0.45,
+                height: size * 0.45,
+                decoration: BoxDecoration(
+                  color: marker,
+                  shape: BoxShape.circle,
                 ),
               ),
-      ),
+            ),
     );
   }
 }
