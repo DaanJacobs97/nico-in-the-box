@@ -759,3 +759,42 @@ release builds, so the device run used a debug build.
 - Surviving a browser reload or an app restart.
 - The host reconnecting, or handing the room to another player.
 - Continuing a game without a player whose seat expired.
+
+---
+
+# Release builds (demo builds of every app)
+
+**Status:** milestone 1 (signing) in review; milestones 2 (icons) and 3 (release workflow) in progress.
+
+Ship installable builds of each app for a tagged version, so people can try Nico in the Box without a development
+setup.
+
+| File | Platform |
+|---|---|
+| `NicoInTheBox-<version>-windows.zip` | Windows: host and join app |
+| `NicoInTheBox-<version>-android.apk` | Android: host and join app |
+| `NicoCaster-<version>-windows.zip` | Windows: shared-screen app |
+| `NicoCaster-<version>-android.apk` | Android and Android TV: shared-screen app |
+
+The browser client isn't a separate download: the host app serves it, so it's built first and bundled. iOS needs a
+Mac and is still a stub, so it isn't included.
+
+## Decisions (confirmed)
+
+- **One Android release key for both apps,** created by the owner and kept outside the repository. CI reads it
+  from repository secrets; locally a git-ignored `key.properties` at the repo root points at it. Builds without it
+  fall back to the debug key with a warning.
+- **Collaborators only:** builds are published as a GitHub Release on the private repository, so only people with
+  access to it can download them.
+
+## Milestones
+
+1. **Signing:** both Android apps sign release builds with the release key (environment variables in CI,
+   `key.properties` locally, debug fallback otherwise); README *Release builds* section.
+2. **App icons:** distinct icons for the app and the Caster, so they can be told apart on phones and TVs.
+3. **Release workflow:** on a `v*` tag, GitHub Actions builds the browser client, then both apps for Windows
+   (with the Visual C++ runtime DLLs in the zip) and Android, verifies the APK signatures, and attaches the four
+   files to a draft release with the changelog section and install notes (Windows SmartScreen, Android unknown
+   sources, firewall).
+4. **Dry run:** a `-rc` tag; install and play from the downloaded files on Windows and the tablet before the real
+   release (0.3.1, since the icons and signing land after the `v0.3.0` tag).

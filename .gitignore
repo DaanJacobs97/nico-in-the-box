@@ -95,3 +95,6 @@ packages/*/pubspec.lock
 # Built by tool/build_web_client (browser player client for the host app)
 assets/generated/*
 !assets/generated/.gitkeep
+
+# Release signing settings (see "Release builds" in the README).
+/key.properties
