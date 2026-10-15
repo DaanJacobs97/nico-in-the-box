@@ -197,6 +197,19 @@ void main() {
       expect(find.text('Free seat'), findsNWidgets(2));
     });
 
+    testWidgets('lobby shows the active game rules', (tester) async {
+      await pumpBig(
+        tester,
+        SharedScreenView(
+          state: DisplayState(
+            lobby: lobbyOf('tictactoe', phase: RoomPhase.lobby),
+            rules: const ['Hit = shoot again: on', 'Fog: off'],
+          ),
+        ),
+      );
+      expect(find.text('Hit = shoot again: on  ·  Fog: off'), findsOneWidget);
+    });
+
     testWidgets('game shows the table, then the result', (tester) async {
       final game = TicTacToeSession(const [ann, bob]);
       await pumpBig(

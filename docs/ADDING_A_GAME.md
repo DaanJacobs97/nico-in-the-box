@@ -13,10 +13,10 @@ player views and a random deck. Copy from them freely.
 dart run tool/new_game.dart dicewar "Dice War" 2 6
 ```
 
-This creates the engine, player view, Flutter table, browser table and both test files, registers the game in all
-three lists, adds it to the code map and bumps `kProtocolVersion`. The placeholder game ("take turns adding 1 or 2,
-first to 10 wins") follows every rule in this guide and passes every check, so you start from green and change one
-piece at a time. The sections below explain what each generated piece is for.
+This creates the engine (with an example host option), player view, Flutter table, browser table and both test
+files. It registers the game in all three lists, adds it to the code map and bumps `kProtocolVersion`. The
+placeholder game ("take turns adding 1 or 2, first to 10 wins") follows every rule in this guide and passes every
+check, so you start from green and change one piece at a time. The sections below explain what each generated piece is for.
 
 ---
 
@@ -106,12 +106,59 @@ const myGameDefinition = GameDefinition(
   createSession: _create,
 );
 
-GameSession _create(List<PlayerInfo> players, int round, Random random) =>
-    MyGameSession(players, round: round, random: random);
+GameSession _create(
+  List<PlayerInfo> players,
+  int round,
+  Random random,
+  GameOptions options,          // the host's choices; empty if the game has none
+) => MyGameSession(players, round: round, random: random);
 ```
 
 Also add a `MyGameSession.custom(...)` constructor that builds an exact state, like `ColorClashSession.custom`.
 Tests depend on it.
+
+### Options the host can switch (optional)
+
+Some rules are a matter of taste, such as "a hit earns another shot". Declare these as **game options** and the host
+gets a switch for each in the lobby. You don't write any UI or protocol code for them.
+
+```dart
+const myGameDefinition = GameDefinition(
+  // ...
+  options: [
+    GameOption(
+      id: 'shootAgain',          // key in the options map; camelCase, unique in this game
+      label: 'Hit = shoot again',  // the switch's title
+      description: 'A hit earns another shot.', // one line under it
+      defaultValue: false,       // what a new lobby starts with
+    ),
+  ],
+  createSession: _create,
+);
+
+GameSession _create(List<PlayerInfo> players, int round, Random random, GameOptions options) =>
+    MyGameSession(players, round: round, random: random, shootAgain: options['shootAgain'] ?? false);
+```
+
+What the system does for you:
+- **Lobby:** the host sees a switch per option under the game card. Other players see the rules read-only, with
+  On/Off.
+- **Shared screens:** the lobby on every screen type shows the rules as text, such as "Hit = shoot again: on".
+- **Server:**
+  - Only the host can change options, and only in the lobby.
+  - Unknown ids and non-bool values are refused.
+  - Changing the game resets to the new game's defaults.
+  - Every session, including after *Restart game*, gets a map with a value for each of your options.
+
+Your part:
+- **Pass the values as plain constructor parameters** (`shootAgain: true`), not the map. Then tests and `custom(...)`
+  constructors read naturally. Use `options['id'] ?? <default>` in `_create`.
+- **Put rule values that affect play in `tableView()`** when players need to see them, as the generated example does
+  with `target`.
+- **Test both settings** of every option in your engine test (see 7.2).
+- For now options are on/off switches only. If you need a number or a choice, ask first: it needs a new option type.
+
+`dart run tool/new_game.dart` generates an example option ("Long game": race to 20 instead of 10) that shows each step.
 
 ---
 
@@ -196,6 +243,7 @@ Run all of them locally before opening a pull request. CI runs the same checks.
 
 `test/games/registry_consistency_test.dart` checks every registered game. It verifies that:
 - the id is unique and well-formed
+- option ids are unique and well-formed, and each option has a label
 - the player range makes sense
 - the `gameViews` and `gameTables` entries exist
 - the JS renderer exists, registers the right id and is loaded by `index.html`
@@ -215,6 +263,7 @@ This is the most important file. Use `MyGameSession.custom(...)` to set up exact
 | **Rejections** | out of turn, unknown `type`, wrong field types, a non-player, any move after the game ended |
 | **End of game** | a win and a draw (if possible), the exact `result` map, `turn` is null |
 | **Edge cases** | empty deck reshuffles, two-player special cases (Reverse acts as Skip) |
+| **Options** (if any) | every option tested on and off; e.g. "Long game" makes the target 20 in the generated tests |
 | **Randomized full games** | bots that only pick legal moves (from your hints) play 20+ seeded games; every one must finish |
 | **Privacy (mandatory if anything is hidden)** | at *every* move of the random games, `tableView()` contains no private data, and `viewFor(a)` contains none of player b's private data. See `never contains a card from any hand` in `color_clash_test.dart` |
 | **View relationship** | every key in `tableView()` has the same value in `viewFor(p)` |
@@ -283,6 +332,7 @@ Copy this into your pull request description.
 - [ ] Flutter table (scales with real sizes, no Transform.scale)
 - [ ] JS renderer `assets/display/games/<id>.js` (no innerHTML) + <script> tag in index.html
 - [ ] Registered in `availableGames`, `gameViews`, `gameTables`
+- [ ] Options (if any): declared in `GameDefinition.options`, passed to the session as parameters, each tested on and off
 - [ ] `kProtocolVersion` bumped; web client rebuilt
 - [ ] Tests: engine (rules, rejections, end, random games, privacy), widgets (full, compact, TV-size table), registry check passes
 - [ ] (Recommended) server round-trip test; bot move function; a real device session

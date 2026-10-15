@@ -494,3 +494,110 @@ tablet browsers.
 - More than one Caster per room. (Browsers can be several, since they're read-only.)
 - Sound on the shared screen.
 - A finished Flutter web display. Only the stub and its contract are in scope.
+
+---
+
+# Feature: Sea Siege (Battleship) and host-chosen game options
+
+**Status:** approved. Milestone 1 (game options) in review.
+
+A Battleship-style game called **Sea Siege** (`seasiege`). Each player secretly places five ships on a 10×10 grid,
+then players take turns firing at each other's grids. The first to sink the whole enemy fleet wins.
+
+The host can choose whether a hit earns another shot. The system has no way for a host to pick game rules yet, so
+this feature first adds **game options** that work for every game.
+
+## Decisions (confirmed)
+
+| Topic | Choice |
+|---|---|
+| Name | **Sea Siege**, id `seasiege` |
+| Placing ships | **Both:** ships start in a random valid layout. Players can **Shuffle**, or tap a ship and then a cell to move it, and **Rotate** it. Then they press **Ready** |
+| Players | **2**, with the engine built for a later **2–4 free-for-all** |
+| After a hit | **The host decides:** strict turns (default), or *a hit earns another shot* |
+
+## Recommendations (defaults unless you object)
+
+1. **Game options are generic, not Sea Siege-only.**
+   - A game declares its options on its `GameDefinition`. For now these are on/off switches: an id, a label, a
+     one-line description and a default.
+   - The host flips them in the **lobby**, under the game picker. Everyone else sees the active rules as text, and
+     the shared screen's lobby shows them too.
+   - Changing the game resets the options to that game's defaults.
+   - The engine receives the chosen values when a session starts, so a restart keeps them.
+   - Host setup stays as it is. Options live in the lobby only, where they can also change between games.
+2. **Board and coordinates:** a 10×10 grid with columns A–J and rows 1–10, so a shot reads "D4".
+3. **What's public:**
+   - Every shot (hit or miss), whose turn it is, and who is still placing or ready.
+   - Hits name the ship ("Hit! Cruiser"), as in your rules.
+   - **A ship's position becomes public once it's sunk**, so the screen can draw it. Unsunk ships never leave the host.
+   - The privacy test checks this at every move of 20 random games.
+4. **Phases:**
+   - **Placing:** players arrange their fleets privately. Ready locks a fleet, Unready unlocks it. The battle starts
+     the moment every player is ready.
+   - **Battle:** the first shooter alternates between rematches, as in Tic Tac Toe.
+   - **Over:** the winner is the last player with ships afloat.
+5. **The free-for-all stub:**
+   - Every player has their own board, and a shot names its target (`{'type': 'fire', 'target': id, 'cell': n}`).
+   - Turns skip players whose fleet is sunk, and the winner is the last fleet afloat.
+   - With 2 players the target is simply the other player.
+   - Turning on 2–4 later means: raise `maxPlayers`, add a target picker to the player view, lay out 3–4 boards on the
+     table, and add tests. That isn't part of this feature.
+6. **Player screens:**
+   - **Placing:** your own ocean grid with your ships, plus Shuffle, Rotate and Ready.
+   - **Battle:** the enemy grid on top (tap a cell to fire), with your own ocean grid smaller underneath, showing your
+     ships and the shots fired at you.
+   - **Compact mode** (a shared screen is on): both grids stay, because the enemy grid is the input and your ocean
+     grid is private. The shot log and fleet status move to the shared screen.
+7. **Shared screen** (Flutter and browser JS):
+   - Both boards side by side, each showing hits, misses and sunk ships.
+   - Whose turn it is, each fleet's remaining ships, and the last shots.
+   - While players are placing, it shows who is placing and who is ready.
+8. **The LAN bot learns Sea Siege:** it shuffles, readies and fires at random cells it hasn't tried. That lets me play
+   a real session on one device plus the bot.
+9. **Built from the generator** (`dart run tool/new_game.dart seasiege "Sea Siege" 2 2`), then the placeholder pieces
+   are replaced. To stay under the file size cap, the engine is split into `seasiege_fleet.dart` (ships, geometry,
+   random placement) and `seasiege_game.dart` (phases, turns, views). The UI is split into `seasiege_view.dart`
+   (player) and `seasiege_table.dart` (shared screen and the grid widget both use).
+
+## Milestones (one stacked branch and pull request each)
+
+1. **Game options** (`feature/game-options`):
+   - `GameOption` and `GameDefinition.options`; `createSession` gets the chosen values. Tic Tac Toe, Color Clash and
+     the generator templates are updated, with no options of their own.
+   - `LobbyState.gameOptions`, a host-only `setGameOptions` message (lobby phase only, validated), and the reset on
+     `changeGame`. `kProtocolVersion` becomes 3.
+   - The lobby switches for the host, a rules line for the others, and the rules on both shared-screen lobbies.
+   - Tests:
+     - protocol round trip
+     - server: host-only, lobby-only, unknown or mistyped option rejected, reset on game change, values reach the
+       session and survive a restart
+     - lobby widgets for host and player
+     - the registry check: every game's option ids are unique and each default is a valid value
+2. **Sea Siege** (`feature/sea-siege`):
+   - The engine, player view, Flutter table, JS table (with CSS) and registration. `kProtocolVersion` becomes 4.
+   - Engine tests:
+     - placement: in bounds, straight, no overlap; Shuffle always gives a valid fleet; Ready and Unready; no moves
+       once ready
+     - turns: out of turn rejected, a cell can't be shot twice, the first shooter alternates by round
+     - hits, misses, the ship named on a hit, sinking (which reveals the ship)
+     - both "after a hit" rules, and the win
+     - 20 random games with the privacy check
+   - Widget tests: select, move and rotate a ship; fire by tapping; compact view; the shared screen at TV size, while
+     placing and in battle.
+   - Docs: code map and the game guide's game list.
+3. **Bot and device verification** (`feature/sea-siege-verify`):
+   - The bot plays Sea Siege.
+   - Device runs:
+     - the Windows host plus the tablet app, once with each "after a hit" rule
+     - the tablet's browser as the shared screen
+     - a browser player on the tablet's Chrome
+   - The results go into this plan.
+
+## Out of scope for this feature
+- Playing 3–4 players (only the engine stub is included).
+- Option types other than on/off switches, such as number pickers or choice lists.
+- Dragging ships. You tap to select, tap to move and press Rotate, which works the same with a mouse, touch and in
+  browsers.
+- Sounds or animations for hits and sinking.
+- Computer opponents in the app (the LAN bot is a test tool).

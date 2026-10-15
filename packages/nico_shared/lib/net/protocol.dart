@@ -1,7 +1,7 @@
 import 'dart:convert';
 
 /// Bump whenever a message shape changes so mismatched builds refuse to talk.
-const int kProtocolVersion = 2;
+const int kProtocolVersion = 3;
 
 /// TCP port the game server listens on (WebSocket at [kWebSocketPath]).
 const int kGamePort = 47800;
@@ -46,6 +46,7 @@ abstract final class Msg {
   static const changeGame = 'changeGame';
   static const closeRoom = 'closeRoom';
   static const setDisplay = 'setDisplay';
+  static const setGameOptions = 'setGameOptions';
 
   // server -> client
   static const welcome = 'welcome';
@@ -220,6 +221,7 @@ class LobbyState {
     this.hostName = '',
     this.display = DisplaySettings.off,
     this.displays = const [],
+    this.gameOptions = const {},
   });
 
   final String roomName;
@@ -240,6 +242,10 @@ class LobbyState {
 
   /// Shared screens currently connected.
   final List<DisplayInfo> displays;
+
+  /// The host's choices for the game's options (`GameDefinition.options`),
+  /// by option id. Empty for games without options.
+  final Map<String, bool> gameOptions;
 
   bool get canStart => players.length >= minPlayers;
 
@@ -265,6 +271,7 @@ class LobbyState {
     'phase': phase.name,
     'display': display.toJson(),
     'displays': [for (final d in displays) d.toJson()],
+    'options': gameOptions,
   };
 
   factory LobbyState.fromJson(Json json) => LobbyState(
@@ -286,6 +293,7 @@ class LobbyState {
       for (final d in json['displays'] as List<Object?>? ?? const [])
         DisplayInfo.fromJson(d! as Json),
     ],
+    gameOptions: (json['options'] as Json? ?? const {}).cast<String, bool>(),
   );
 }
 
@@ -294,12 +302,21 @@ class LobbyState {
 class DisplayState {
   const DisplayState({
     required this.lobby,
+    this.gameName = '',
+    this.rules = const [],
     this.gameId,
     this.table,
     this.result,
   });
 
   final LobbyState lobby;
+
+  /// The lobby game's display name, so screens without the game registry
+  /// (the browser page) can show it.
+  final String gameName;
+
+  /// The active game options as text, such as `Hit = shoot again: on`.
+  final List<String> rules;
 
   /// Set while a game is running or finished.
   final String? gameId;
@@ -312,6 +329,8 @@ class DisplayState {
 
   Json toJson() => {
     'lobby': lobby.toJson(),
+    'gameName': gameName,
+    'rules': rules,
     'game': gameId,
     'table': table,
     'result': result,
@@ -319,6 +338,10 @@ class DisplayState {
 
   factory DisplayState.fromJson(Json json) => DisplayState(
     lobby: LobbyState.fromJson(json['lobby']! as Json),
+    gameName: json['gameName'] as String? ?? '',
+    rules: [
+      for (final r in json['rules'] as List<Object?>? ?? const []) r! as String,
+    ],
     gameId: json['game'] as String?,
     table: json['table'] as Json?,
     result: json['result'] as Json?,

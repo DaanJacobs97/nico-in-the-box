@@ -72,7 +72,7 @@ Lines are approximate, so you can tell big files from small ones.
 | `packages/nico_shared/lib/net/channel/connect.dart` | 3 | Picks the WebSocket implementation (conditional import) |
 | `packages/nico_shared/lib/net/channel/connect_io.dart` | 6 | Native WebSocket with 5 s pings (the only `dart:io` allowed in this package) |
 | `packages/nico_shared/lib/net/channel/connect_web.dart` | 3 | Browser WebSocket |
-| `packages/nico_shared/lib/games/game_session.dart` | 54 | **`GameSession`** interface, `GameDefinition`, `GameActionException` |
+| `packages/nico_shared/lib/games/game_session.dart` | 104 | **`GameSession`** interface, `GameDefinition` (+ `options`), `GameOption`, `GameOptions`, `GameActionException` |
 | `packages/nico_shared/lib/games/registry.dart` | 14 | `availableGames`, `gameById` |
 | `packages/nico_shared/lib/games/game_views.dart` | 45 | `GameViewContext` (+`compact`), `TableContext`, `gameViews` and `gameTables` maps |
 | `packages/nico_shared/lib/games/tictactoe/tictactoe_game.dart` | 96 | Tic Tac Toe engine (marks swap per round) |
@@ -85,6 +85,7 @@ Lines are approximate, so you can tell big files from small ones.
 | `packages/nico_shared/lib/screens/lobby_view.dart` | 209 | Lobby: game, players, Single game screen settings (host), pinned Start button |
 | `packages/nico_shared/lib/screens/shared_screen_view.dart` | 138 | `SharedScreenView`: draws a `DisplayState` (lobby / table / result) |
 | `packages/nico_shared/lib/widgets/display_settings_editor.dart` | 103 | Single game screen switch + "where is the screen" choice (`ScreenChoice`) |
+| `packages/nico_shared/lib/widgets/game_options_editor.dart` | 49 | Lobby game options: switches for the host, read-only rules for players |
 | `packages/nico_shared/lib/widgets/host_controls.dart` | 134 | Host app-bar menu: restart, end, kick, close |
 | `packages/nico_shared/lib/widgets/nickname_dialog.dart` | 66 | Nickname prompt with validation |
 | `packages/nico_shared/lib/widgets/confirm_dialog.dart` | 27 | Yes/no dialog helper |
@@ -126,7 +127,7 @@ Lines are approximate, so you can tell big files from small ones.
 | File | What it does |
 |---|---|
 | `tool/check.ps1`, `tool/check.sh` | **Run before every PR**: format check, analyze, all five test suites (`-Fix`/`--fix` formats first) |
-| `tool/new_game.dart` | `dart run tool/new_game.dart <id> "<Name>" [min] [max]`: generates a placeholder game (all six pieces, tests, code map rows, protocol bump) |
+| `tool/new_game.dart`, `tool/new_game_templates.dart` | `dart run tool/new_game.dart <id> "<Name>" [min] [max]`: generates a placeholder game (all six pieces, tests, an example option, code map rows, protocol bump). Templates live in the part file |
 | `tool/build_web_client.ps1`, `tool/build_web_client.sh` | Build `web_client/` into `assets/generated/web_client.zip` (git-ignored) |
 | `tool/bot/lan_bot_test.dart` | Scripted LAN player: `flutter test tool/bot/lan_bot_test.dart --dart-define=HOST=<ip>` |
 
@@ -138,6 +139,7 @@ Lines are approximate, so you can tell big files from small ones.
 |---|---|
 | Add a game | `dart run tool/new_game.dart <id> "<Name>"`, then [ADDING_A_GAME.md](ADDING_A_GAME.md) (engine + views in `packages/nico_shared/lib/games/<id>/`, `assets/display/games/<id>.js`, three registrations) |
 | Change a game's rules | `packages/nico_shared/lib/games/<id>/<id>_game.dart` + its test |
+| Rules the host can switch (game options) | the game's `GameDefinition.options` + read them in its `createSession`; the lobby UI, server and screens handle the rest ([ADDING_A_GAME.md](ADDING_A_GAME.md)) |
 | Add or change a network message | `protocol.dart` (`Msg`, bump `kProtocolVersion`) → `game_server.dart` (handle/send) → `game_client.dart` (receive/expose) |
 | New host-only command | `protocol.dart` (`Msg`), `game_server.dart` (`hostCommands` + handler), `game_client.dart` (method), `host_controls.dart` or `lobby_view.dart` (button) |
 | Lobby UI | `lobby_view.dart`; host-only native extras arrive through `hostFooter` / `hostScreenControls` from `host_setup_screen.dart` |
@@ -158,7 +160,8 @@ Lines are approximate, so you can tell big files from small ones.
 
 **Messages:** every message is JSON with a `type`.
 - **Client → server:** `hello` (with `nickname`, `protocol`, optional `hostToken`, `client: app|web`) and `action`.
-- **Host only:** `start`, `restart`, `endGame`, `kick`, `changeGame`, `closeRoom`, `setDisplay`.
+- **Host only:** `start`, `restart`, `endGame`, `kick`, `changeGame`, `closeRoom`, `setDisplay`, `setGameOptions`
+  (lobby only; the values travel in `lobby.options`, and `display` adds `gameName` plus `rules` as text).
 - **Server → client:** `welcome`, `lobby`, `gameState`, `gameOver`, `notice`, `error`, `kicked`, `closed`, and
   `display` (to screens).
 - **Host → Caster:** `castHello`, answered by `castWelcome` or `error{casterBusy}`.
@@ -167,8 +170,8 @@ Lines are approximate, so you can tell big files from small ones.
 
 | Suite | Run from | Covers |
 |---|---|---|
-| `test/` (app) | repo root | server and client over real loopback sockets (`net/server_client_test.dart`), display feed (`net/display_feed_test.dart`), web routes (`net/web_routes_test.dart`), Caster link (`net/caster_link_test.dart`), hosted room (`net/hosted_room_test.dart`), home/dialog widgets (`widget_test.dart`), game registry (`games/registry_consistency_test.dart`), this map (`docs/code_map_test.dart`) |
-| `packages/nico_shared/test/` | that folder | engines (`games/tictactoe_test.dart`, `games/color_clash_test.dart`, incl. privacy), protocol (`net/protocol_test.dart`), shared screens (`widgets/shared_screen_test.dart`). Also runs in Chrome in CI |
+| `test/` (app) | repo root | server and client over real loopback sockets (`net/server_client_test.dart`), display feed (`net/display_feed_test.dart`), web routes (`net/web_routes_test.dart`), Caster link (`net/caster_link_test.dart`), hosted room (`net/hosted_room_test.dart`), game options over the wire (`net/game_options_test.dart`), home/dialog widgets (`widget_test.dart`), game registry (`games/registry_consistency_test.dart`), this map (`docs/code_map_test.dart`) |
+| `packages/nico_shared/test/` | that folder | engines (`games/tictactoe_test.dart`, `games/color_clash_test.dart`, incl. privacy), protocol (`net/protocol_test.dart`), game options and their editor (`games/game_options_test.dart`), shared screens (`widgets/shared_screen_test.dart`). Also runs in Chrome in CI |
 | `packages/nico_native/test/` | that folder | `discovery_test.dart`, `caster_scanner_test.dart` |
 | `caster/test/` | that folder | `cast_server_test.dart`, `idle_screen_test.dart` |
 | `web_client/test/` | that folder | `web_join_test.dart` |

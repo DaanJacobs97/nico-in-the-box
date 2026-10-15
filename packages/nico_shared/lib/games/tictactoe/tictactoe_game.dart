@@ -12,8 +12,12 @@ const ticTacToeDefinition = GameDefinition(
   createSession: _create,
 );
 
-GameSession _create(List<PlayerInfo> players, int round, Random random) =>
-    TicTacToeSession(players, round: round);
+GameSession _create(
+  List<PlayerInfo> players,
+  int round,
+  Random random,
+  GameOptions options,
+) => TicTacToeSession(players, round: round);
 
 const _lines = [
   [0, 1, 2], [3, 4, 5], [6, 7, 8], // rows

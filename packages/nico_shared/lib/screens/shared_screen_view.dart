@@ -28,7 +28,11 @@ class SharedScreenView extends StatelessWidget {
     if (state.lobby.phase == RoomPhase.lobby ||
         table == null ||
         builder == null) {
-      return _ScreenLobby(lobby: state.lobby, footer: lobbyFooter);
+      return _ScreenLobby(
+        lobby: state.lobby,
+        rules: state.rules,
+        footer: lobbyFooter,
+      );
     }
     return Column(
       children: [
@@ -42,9 +46,12 @@ class SharedScreenView extends StatelessWidget {
 }
 
 class _ScreenLobby extends StatelessWidget {
-  const _ScreenLobby({required this.lobby, this.footer});
+  const _ScreenLobby({required this.lobby, this.rules = const [], this.footer});
 
   final LobbyState lobby;
+
+  /// The active game options as text.
+  final List<String> rules;
   final Widget? footer;
 
   @override
@@ -73,6 +80,15 @@ class _ScreenLobby extends StatelessWidget {
                     : '${game.name} · ${game.playerRange}',
                 style: theme.textTheme.headlineSmall,
               ),
+              if (rules.isNotEmpty) ...[
+                const SizedBox(height: 8),
+                Text(
+                  rules.join('  ·  '),
+                  key: const ValueKey('screen-rules'),
+                  textAlign: TextAlign.center,
+                  style: theme.textTheme.titleMedium,
+                ),
+              ],
               const SizedBox(height: 32),
               Wrap(
                 spacing: 16,
