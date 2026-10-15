@@ -47,7 +47,9 @@ Lines are approximate, so you can tell big files from small ones.
 |---|---:|---|
 | `lib/main.dart` | 29 | App entry and theme; opens `HomeScreen` |
 | `lib/app/screen_awake.dart` | 25 | `ScreenAwake`: reference-counted wake lock while hosting |
-| `lib/net/game_server.dart` | 670 | **`GameServer`**: HTTP + WebSocket server. Rooms, seats, nicknames, host-only commands, game sessions, display feed (`attachDisplay`, `DisplayHandle`), web routes (`/`, `/play/`, `/screen/`) |
+| `lib/net/game_server.dart` | 563 | **`GameServer`**: rooms, seats, nicknames, host-only commands, game sessions, display feed (`attachDisplay`, `displayState`). Routes `/ws` and `/display` here; plain HTTP goes to `web_routes.dart` |
+| `lib/net/display_handle.dart` | 37 | `DisplayHandle`: one connected shared screen (part of `game_server.dart`, so it shares its private API) |
+| `lib/net/web_routes.dart` | 88 | `serveWebRequest`: plain HTTP routes `/`, `/play/`, `/screen/` (landing page, browser client, screen page) |
 | `lib/net/hosted_room.dart` | 165 | **`HostedRoom`**: everything a host runs. Starts the server and broadcaster, joins as host, loads web assets, keeps the screen awake, manages the Caster (`connectCaster`) |
 | `lib/net/caster_link.dart` | 140 | `CasterLink`: outbound connection to a Caster (`castHello` handshake, attaches it as a display, drop notice) |
 | `lib/net/web_files.dart` | 65 | `WebFiles`/`MemoryWebFiles`: static files in memory (from a zip or assets), content types |
@@ -77,7 +79,8 @@ Lines are approximate, so you can tell big files from small ones.
 | `packages/nico_shared/lib/games/tictactoe/tictactoe_view.dart` | 170 | Tic Tac Toe player board + `TicTacToeTable` |
 | `packages/nico_shared/lib/games/color_clash/clash_card.dart` | 80 | Cards, colors, `canPlayOn`, 108-card deck |
 | `packages/nico_shared/lib/games/color_clash/color_clash_game.dart` | 324 | Color Clash engine (Uno-style rules, last-card catch, `custom` test constructor) |
-| `packages/nico_shared/lib/games/color_clash/color_clash_view.dart` | 430 | Player view (full/compact), `ClashTableArea`, `ColorClashTable`, card widgets |
+| `packages/nico_shared/lib/games/color_clash/color_clash_view.dart` | 169 | Player view: hand, color picker, buttons (full/compact) |
+| `packages/nico_shared/lib/games/color_clash/color_clash_table.dart` | 267 | Public table: `ClashTableArea` (in the full player view and on the shared screen), `ColorClashTable`, `ClashCardFace`, `colorOf` |
 | `packages/nico_shared/lib/screens/session_screen.dart` | 254 | **`SessionScreen`**: lobby → game → result, notices, leaving, host-as-screen area |
 | `packages/nico_shared/lib/screens/lobby_view.dart` | 209 | Lobby: game, players, Single game screen settings (host), pinned Start button |
 | `packages/nico_shared/lib/screens/shared_screen_view.dart` | 138 | `SharedScreenView`: draws a `DisplayState` (lobby / table / result) |
@@ -123,6 +126,7 @@ Lines are approximate, so you can tell big files from small ones.
 | File | What it does |
 |---|---|
 | `tool/check.ps1`, `tool/check.sh` | **Run before every PR**: format check, analyze, all five test suites (`-Fix`/`--fix` formats first) |
+| `tool/new_game.dart` | `dart run tool/new_game.dart <id> "<Name>" [min] [max]`: generates a placeholder game (all six pieces, tests, code map rows, protocol bump) |
 | `tool/build_web_client.ps1`, `tool/build_web_client.sh` | Build `web_client/` into `assets/generated/web_client.zip` (git-ignored) |
 | `tool/bot/lan_bot_test.dart` | Scripted LAN player: `flutter test tool/bot/lan_bot_test.dart --dart-define=HOST=<ip>` |
 
@@ -132,7 +136,7 @@ Lines are approximate, so you can tell big files from small ones.
 
 | Task | Files |
 |---|---|
-| Add a game | [ADDING_A_GAME.md](ADDING_A_GAME.md) (engine + views in `packages/nico_shared/lib/games/<id>/`, `assets/display/games/<id>.js`, three registrations) |
+| Add a game | `dart run tool/new_game.dart <id> "<Name>"`, then [ADDING_A_GAME.md](ADDING_A_GAME.md) (engine + views in `packages/nico_shared/lib/games/<id>/`, `assets/display/games/<id>.js`, three registrations) |
 | Change a game's rules | `packages/nico_shared/lib/games/<id>/<id>_game.dart` + its test |
 | Add or change a network message | `protocol.dart` (`Msg`, bump `kProtocolVersion`) → `game_server.dart` (handle/send) → `game_client.dart` (receive/expose) |
 | New host-only command | `protocol.dart` (`Msg`), `game_server.dart` (`hostCommands` + handler), `game_client.dart` (method), `host_controls.dart` or `lobby_view.dart` (button) |
@@ -140,7 +144,7 @@ Lines are approximate, so you can tell big files from small ones.
 | Shared screen behaviour | server: `displayState`/`_broadcastDisplay` in `game_server.dart`; Flutter: `shared_screen_view.dart`; browser: `assets/display/app.js` |
 | Room discovery | `nico_native/lib/discovery.dart` (+ `join_screen.dart` UI) |
 | Caster protocol | `protocol.dart` (`kCast*`, `castHello`), `caster/lib/cast_server.dart`, `lib/net/caster_link.dart` |
-| Web routes / served files | `_serveWeb` in `game_server.dart`, `web_files.dart`, `web_pages.dart` |
+| Web routes / served files | `web_routes.dart`, `web_files.dart`, `web_pages.dart` |
 | What the host app bundles | `pubspec.yaml` `assets:` (`assets/generated/`, `assets/display/`) |
 
 ## 4. Protocol cheat sheet
@@ -189,6 +193,7 @@ These are big, generated or irrelevant to most tasks. Don't read them unless the
   app serves its own copy.
 - **Scale big screens with real sizes, not `Transform.scale`.** A transform paints bigger but lays out at the old size,
   so widgets overlap.
+- **Files are capped at 600 non-blank lines** (`docs/code_map_test.dart`). Split by job; don't raise the cap.
 - **Wait on every client in tests.** Each client gets its own copy of an update, and they can arrive in any order.
 - **Windows:** use `tool/check.ps1` instead of `dart format .`, which crashes on `caster/build`. Write commit
   messages to a file (`git commit -F`), because PowerShell 5.1 mangles quotes in `-m`. Keep the host test window

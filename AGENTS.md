@@ -28,13 +28,15 @@ or scaffolding.
 - `packages/nico_shared` must stay **web-safe**: no `dart:io` imports (it also runs in browsers).
 - If you change a network message's shape or add a game, bump `kProtocolVersion` in
   `packages/nico_shared/lib/net/protocol.dart`.
-- **Added, moved or deleted a source file? Update [docs/CODE_MAP.md](docs/CODE_MAP.md).**
-  `test/docs/code_map_test.dart` fails until you do.
+- **Added, moved or deleted a source file, or changed its size a lot? Update [docs/CODE_MAP.md](docs/CODE_MAP.md).**
+  `test/docs/code_map_test.dart` fails until you do. It also caps source files at 600 non-blank lines: split a
+  file that grows past that by job (see `game_server.dart` + `web_routes.dart`), don't raise the cap.
 - Don't weaken or delete tests to make a change pass; fix the code.
 
 ## Common tasks
 
-- **Adding a game:** follow [docs/ADDING_A_GAME.md](docs/ADDING_A_GAME.md).
+- **Adding a game:** run `dart run tool/new_game.dart <id> "<Name>" [min] [max]` to generate every piece with
+  placeholder rules, then follow [docs/ADDING_A_GAME.md](docs/ADDING_A_GAME.md) to replace them.
   `flutter test test/games/registry_consistency_test.dart` names any missing piece.
 - **Testing on devices without a second player:** `flutter test tool/bot/lan_bot_test.dart --dart-define=HOST=<ip>`.
 

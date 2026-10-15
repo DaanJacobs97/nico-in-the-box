@@ -3,6 +3,7 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nico_shared/games/color_clash/color_clash_game.dart';
+import 'package:nico_shared/games/color_clash/color_clash_table.dart';
 import 'package:nico_shared/games/color_clash/color_clash_view.dart';
 import 'package:nico_shared/games/game_views.dart';
 import 'package:nico_shared/games/tictactoe/tictactoe_game.dart';

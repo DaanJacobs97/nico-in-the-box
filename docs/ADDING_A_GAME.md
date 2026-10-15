@@ -7,6 +7,17 @@ steps in order and use the checklist at the end.
 Tic Tac Toe (`tictactoe`) is the smallest complete example. Color Clash (`colorclash`) shows private hands, compact
 player views and a random deck. Copy from them freely.
 
+**Quick start:** generate every piece at once, then replace the placeholder rules with yours.
+
+```bash
+dart run tool/new_game.dart dicewar "Dice War" 2 6
+```
+
+This creates the engine, player view, Flutter table, browser table and both test files, registers the game in all
+three lists, adds it to the code map and bumps `kProtocolVersion`. The placeholder game ("take turns adding 1 or 2,
+first to 10 wins") follows every rule in this guide and passes every check, so you start from green and change one
+piece at a time. The sections below explain what each generated piece is for.
+
 ---
 
 ## 1. How a game fits in
@@ -28,7 +39,7 @@ flowchart LR
 | 1 | Engine: rules and state (`GameSession`) | `packages/nico_shared/lib/games/<id>/<id>_game.dart` | Host only (pure Dart) |
 | 2 | Definition: name, player range, factory (`GameDefinition`) | same file | Host |
 | 3 | Player view: what a player sees and taps | `packages/nico_shared/lib/games/<id>/<id>_view.dart` | Apps and browser client |
-| 4 | Table: the shared-screen view in Flutter | same file as the player view | Host device as screen, Caster |
+| 4 | Table: the shared-screen view in Flutter | the player view file, or `<id>_table.dart` when that gets big (as Color Clash does) | Host device as screen, Caster |
 | 5 | Table: the shared-screen view in JavaScript | `assets/display/games/<id>.js` | Browser screen at `/screen` |
 | 6 | Registration in three lists | `registry.dart`, `game_views.dart`, `assets/display/index.html` | everywhere |
 
