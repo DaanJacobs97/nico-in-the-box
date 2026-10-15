@@ -134,7 +134,7 @@ Lines are approximate, so you can tell big files from small ones.
 | `tool/check.ps1`, `tool/check.sh` | **Run before every PR**: format check, analyze, all five test suites (`-Fix`/`--fix` formats first) |
 | `tool/new_game.dart`, `tool/new_game_templates.dart` | `dart run tool/new_game.dart <id> "<Name>" [min] [max]`: generates a placeholder game (all six pieces, tests, an example option, code map rows, protocol bump). Templates live in the part file |
 | `tool/build_web_client.ps1`, `tool/build_web_client.sh` | Build `web_client/` into `assets/generated/web_client.zip` (git-ignored) |
-| `tool/bot/lan_bot_test.dart` | Scripted LAN player: `flutter test tool/bot/lan_bot_test.dart --dart-define=HOST=<ip>` |
+| `tool/bot/lan_bot_test.dart` | Scripted LAN player (all three games): `flutter test tool/bot/lan_bot_test.dart --dart-define=HOST=<ip>` |
 
 ---
 
@@ -180,7 +180,7 @@ Lines are approximate, so you can tell big files from small ones.
 | `packages/nico_native/test/` | that folder | `discovery_test.dart`, `caster_scanner_test.dart` |
 | `caster/test/` | that folder | `cast_server_test.dart`, `idle_screen_test.dart` |
 | `web_client/test/` | that folder | `web_join_test.dart` |
-| `integration_test/lan_play_test.dart` | repo root, on devices | Real app on two devices (options: `ROLE`, `SCREEN`, `GAMES`, `JOIN_IP`, `EXPECT_WEB_PLAYER`) |
+| `integration_test/lan_play_test.dart` | repo root, on devices | Real app on two devices (options: `ROLE`, `SCREEN`, `GAMES` (`all`, `ttt`, `sea`), `JOIN_IP`, `EXPECT_WEB_PLAYER`) |
 
 ## 6. Folders to skip
 

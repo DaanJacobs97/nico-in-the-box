@@ -366,6 +366,10 @@ Future<void> hostSeaSiegeRounds(WidgetTester tester) async {
 Future<void> tapText(WidgetTester tester, String text) async {
   final finder = find.text(text);
   await pumpUntil(tester, () => present(finder), reason: '"$text"');
+  // Long forms (e.g. host setup with Single game screen on) can push the
+  // target below a small test window.
+  await tester.ensureVisible(finder.last);
+  await tester.pump(const Duration(milliseconds: 300));
   await tester.tap(finder.last);
   await tester.pump(const Duration(milliseconds: 300));
 }

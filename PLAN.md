@@ -499,7 +499,7 @@ tablet browsers.
 
 # Feature: Sea Siege (Battleship) and host-chosen game options
 
-**Status:** approved. Milestones 1 (game options) and 2 (Sea Siege) in review.
+**Status:** milestones 1–3 in review; device verification passed (see *Verification* below).
 
 A Battleship-style game called **Sea Siege** (`seasiege`). Each player secretly places five ships on a 10×10 grid,
 then players take turns firing at each other's grids. The first to sink the whole enemy fleet wins.
@@ -594,6 +594,26 @@ this feature first adds **game options** that work for every game.
      - a browser player on the tablet's Chrome
    - The results go into this plan.
 
+
+## Verification
+
+**Result (2026-10-15).** Devices: the Windows PC and the Android 10 tablet (SM-T590). All three runs passed.
+
+| Run | Host | Shared screen | Players | Checked |
+|---|---|---|---|---|
+| V1 App vs app | Windows | none | Windows app + **tablet app**, both driven through the UI (`GAMES=sea`) | Two games, "Hit = shoot again" off then on. Both sides moved, rotated and shuffled, then readied; about 88 shots each per game; the turn rule held on all 351 shots it could check |
+| V2 Browser screen | Windows | **tablet Chrome at /screen** | Windows app (compact view) + bot | Placing status, both boards with hits, misses and sunk ships, the shot log, and the "A hit earns another shot" line in game 2 (screenshots) |
+| V3 Browser player | Windows | none | Windows app + **a person in the tablet's Chrome** (`/play/`) | The host saw "In a browser"; two full games, one with each setting, then the room closed |
+
+**The tablet's Wi-Fi dropped every 10–30 seconds** during testing (−49 dBm, same network; Android logged a disconnect and
+reconnect each time). Every drop ended the tablet player's session, in Tic Tac Toe as well, so the cause was the
+link rather than Sea Siege. The runs above therefore went through a USB tunnel (`adb reverse tcp:47800 tcp:47800`,
+joining `127.0.0.1`). This tests the real app and browser on the tablet, but not finding rooms over the LAN, which
+was verified in earlier features. Surviving such drops needs **reconnect support**, which is proposed as its own
+feature.
+
+The Windows test also exposed a test bug: with Single game screen on, the host setup form is taller than the test
+window, so the *Create room* tap missed. The test's tap helper now scrolls its target into view first.
 ## Out of scope for this feature
 - Playing 3–4 players (only the engine stub is included).
 - Option types other than on/off switches, such as number pickers or choice lists.
