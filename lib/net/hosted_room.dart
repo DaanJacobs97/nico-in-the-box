@@ -8,6 +8,7 @@ import 'package:nico_shared/games/game_session.dart';
 import 'package:nico_shared/net/game_client.dart';
 import 'package:nico_shared/net/protocol.dart';
 
+import 'caster_link.dart';
 import 'display_frontend.dart';
 import 'game_server.dart';
 import 'web_files.dart';
@@ -21,7 +22,13 @@ const screenAssetDir = 'assets/display/';
 /// Everything the host device runs for a room: the server, the LAN
 /// announcer, and the host's own (auto-joined) client connection.
 class HostedRoom {
-  HostedRoom._(this.server, this._broadcaster, this.client, this.addresses);
+  HostedRoom._(
+    this.server,
+    this._broadcaster,
+    this.client,
+    this.addresses,
+    this.nickname,
+  );
 
   final GameServer server;
   final RoomBroadcaster? _broadcaster;
@@ -29,6 +36,14 @@ class HostedRoom {
 
   /// This device's LAN addresses, for players who join manually.
   final List<String> addresses;
+
+  /// The host's nickname, shown on Casters.
+  final String nickname;
+
+  CasterLink? _caster;
+
+  /// The Caster showing this room, if any.
+  CasterLink? get caster => (_caster?.isConnected ?? false) ? _caster : null;
 
   int get port => server.port;
 
@@ -85,6 +100,7 @@ class HostedRoom {
         broadcaster,
         client,
         await localIPv4Addresses(),
+        nickname,
       );
     } on Object {
       broadcaster?.stop();
@@ -96,6 +112,27 @@ class HostedRoom {
   /// Closes the room for everyone. The server goes first so guests are told
   /// the host closed it; dropping the host's own connection first would make
   /// the server report that the host left instead.
+  /// Shows the room on the Caster at [host]:[port], replacing any Caster
+  /// already connected. Throws [CasterException] if it can't be used.
+  Future<void> connectCaster(String host, int port) async {
+    final next = await CasterLink.connect(
+      server: server,
+      host: host,
+      port: port,
+      hostName: nickname,
+    );
+    final previous = _caster;
+    _caster = next;
+    await previous?.disconnect();
+  }
+
+  /// Stops showing the room on the Caster; it returns to waiting.
+  Future<void> disconnectCaster() async {
+    final link = _caster;
+    _caster = null;
+    await link?.disconnect();
+  }
+
   Future<void> close() async {
     _broadcaster?.stop();
     await server.close(reason: CloseReason.hostClosed);

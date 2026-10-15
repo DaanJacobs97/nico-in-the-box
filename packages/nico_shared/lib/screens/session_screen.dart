@@ -19,6 +19,8 @@ class SessionScreen extends StatefulWidget {
     required this.client,
     this.onClose,
     this.hostFooter,
+    this.hostScreenControls,
+    this.casterAvailable = false,
   });
 
   final GameClient client;
@@ -29,6 +31,12 @@ class SessionScreen extends StatefulWidget {
 
   /// Extra lobby content for the host, e.g. how to join.
   final Widget? hostFooter;
+
+  /// See [LobbyView.hostScreenControls].
+  final Widget? Function(LobbyState lobby)? hostScreenControls;
+
+  /// See [LobbyView.casterAvailable].
+  final bool casterAvailable;
 
   @override
   State<SessionScreen> createState() => _SessionScreenState();
@@ -125,7 +133,12 @@ class _SessionScreenState extends State<SessionScreen> {
             body: lobby == null
                 ? const Center(child: CircularProgressIndicator())
                 : lobby.phase == RoomPhase.lobby
-                ? LobbyView(client: _client, hostFooter: widget.hostFooter)
+                ? LobbyView(
+                    client: _client,
+                    hostFooter: widget.hostFooter,
+                    hostScreenControls: widget.hostScreenControls,
+                    casterAvailable: widget.casterAvailable,
+                  )
                 : _client.isHost && lobby.display.hostIsScreen
                 ? _HostScreenArea(client: _client)
                 : _GameArea(client: _client),

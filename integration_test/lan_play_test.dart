@@ -28,8 +28,9 @@ const games = String.fromEnvironment('GAMES', defaultValue: 'all');
 /// Host only: expect the other player to have joined from a browser.
 const expectWebPlayer = bool.fromEnvironment('EXPECT_WEB_PLAYER');
 
-/// Single game screen: `none`, `browser` (a screen connects to /display)
-/// or `host` (the host's device is the screen and doesn't play).
+/// Single game screen: `none`, `browser` (a screen connects to /display),
+/// `caster` (connect the first Nico Caster found) or `host` (the host's
+/// device is the screen and doesn't play).
 const screen = String.fromEnvironment('SCREEN', defaultValue: 'none');
 
 /// Players get the compact view whenever a shared screen is in use.
@@ -210,6 +211,7 @@ void main() {
         await tester.tap(toggle);
         await tester.pump(const Duration(milliseconds: 300));
         if (screen == 'host') await tapText(tester, 'This device');
+        if (screen == 'caster') await tapText(tester, 'Caster app');
       }
       await tapText(tester, 'Create room');
 
@@ -221,6 +223,21 @@ void main() {
       );
       if (expectWebPlayer) {
         expect(find.text('In a browser'), findsOneWidget);
+      }
+      if (screen == 'caster') {
+        // Pick the first Caster found (its Connect comes before the manual one).
+        await pumpUntil(
+          tester,
+          () => find.text('Connect').evaluate().length >= 2,
+          timeout: const Duration(minutes: 2),
+          reason: 'a Caster to be found',
+        );
+        await tester.tap(find.text('Connect').first);
+        await pumpUntil(
+          tester,
+          () => present(find.textContaining('Showing on')),
+          reason: 'the Caster to connect',
+        );
       }
       if (screen == 'browser') {
         await pumpUntil(

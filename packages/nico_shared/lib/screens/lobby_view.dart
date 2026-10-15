@@ -8,12 +8,25 @@ import '../widgets/host_controls.dart';
 
 /// Waiting room: who's here, which game, and (for the host) how to start.
 class LobbyView extends StatelessWidget {
-  const LobbyView({super.key, required this.client, this.hostFooter});
+  const LobbyView({
+    super.key,
+    required this.client,
+    this.hostFooter,
+    this.hostScreenControls,
+    this.casterAvailable = false,
+  });
 
   final GameClient client;
 
   /// Extra content below the host's Start button, e.g. how to join.
   final Widget? hostFooter;
+
+  /// Extra shared-screen controls for the host, shown under the settings
+  /// (e.g. picking a Caster). Native-only, so the host app supplies them.
+  final Widget? Function(LobbyState lobby)? hostScreenControls;
+
+  /// Whether the host can pick the Caster app as the shared screen.
+  final bool casterAvailable;
 
   @override
   Widget build(BuildContext context) {
@@ -59,10 +72,16 @@ class LobbyView extends StatelessWidget {
                   DisplaySettingsEditor(
                     value: lobby.display,
                     onChanged: client.setDisplay,
+                    casterAvailable: casterAvailable,
                   ),
                   if (lobby.display.enabled) ...[
                     const SizedBox(height: 8),
                     _ScreensConnected(displays: lobby.displays),
+                    if (hostScreenControls?.call(lobby)
+                        case final controls?) ...[
+                      const SizedBox(height: 12),
+                      controls,
+                    ],
                   ],
                 ],
               ),

@@ -14,8 +14,9 @@ automatically and join with a nickname. No internet connection and no accounts a
   type in the host's IP address instead.
 - **The game sets the room size.** The host picks a game, and that decides how many players can join.
 - **Private views.** Each player only receives the state they're allowed to see, so nobody can peek at other hands.
-- **Single game screen.** The host can put the table on one shared screen (their own device, or a TV browser at
-  `http://<host-ip>:47800/screen`). Players then see only their hand and buttons.
+- **Single game screen.** The host can put the table on one shared screen: their own device, a TV browser at
+  `http://<host-ip>:47800/screen`, or a device running **Nico Caster** picked from a list. Players then see only
+  their hand and buttons; if the screen drops, they get the full table back.
 - **No app? Use a browser.** The host also serves a browser version of the game, so anyone on the network can join
   by scanning a QR code. It works without internet.
 

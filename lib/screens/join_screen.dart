@@ -11,11 +11,11 @@ import 'package:nico_shared/widgets/nickname_dialog.dart';
 import '../net/multicast_lock.dart';
 
 /// Parses "host" or "host:port" typed by the user. Returns null if invalid.
-(String, int)? parseManualAddress(String input) {
+(String, int)? parseManualAddress(String input, {int defaultPort = kGamePort}) {
   final text = input.trim();
   if (text.isEmpty) return null;
   final colon = text.lastIndexOf(':');
-  if (colon == -1) return (text, kGamePort);
+  if (colon == -1) return (text, defaultPort);
   final host = text.substring(0, colon).trim();
   final port = int.tryParse(text.substring(colon + 1).trim());
   if (host.isEmpty || port == null || port < 1 || port > 65535) return null;
