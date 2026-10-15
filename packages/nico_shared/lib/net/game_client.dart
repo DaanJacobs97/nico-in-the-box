@@ -23,17 +23,38 @@ class JoinException implements Exception {
 /// Why the client is no longer connected.
 enum DisconnectReason { left, kicked, hostClosed, hostLeft, connectionLost }
 
+typedef _Link = ({
+  WebSocketChannel channel,
+  StreamSubscription<Object?> subscription,
+});
+
 /// A player's connection to a room. Exposes the latest lobby and game state
 /// as a [ChangeNotifier] for the UI.
+///
+/// If the connection drops, the client reconnects on its own for as long as
+/// the server keeps the seat ([reconnecting] is true meanwhile).
 class GameClient extends ChangeNotifier {
-  GameClient._(this._channel, this.playerId, this.isHost);
+  GameClient._(
+    this._uri,
+    this.playerId,
+    this.isHost,
+    this._timeout,
+    this._retryInterval,
+  );
 
-  final WebSocketChannel _channel;
+  final Uri _uri;
   final String playerId;
   final bool isHost;
+  final Duration _timeout;
+  final Duration _retryInterval;
 
+  late WebSocketChannel _channel;
   StreamSubscription<Object?>? _subscription;
   final _notices = StreamController<String>.broadcast();
+
+  /// From the welcome; null for the host, who never reconnects.
+  String? _resumeToken;
+  Duration _grace = Duration.zero;
 
   LobbyState? lobby;
 
@@ -50,6 +71,10 @@ class GameClient extends ChangeNotifier {
 
   DisconnectReason? disconnectReason;
 
+  /// The connection dropped and the client is trying to get its seat back.
+  /// Actions sent meanwhile are dropped.
+  bool reconnecting = false;
+
   bool get isConnected => disconnectReason == null;
 
   /// Server notices and action errors, for showing as snackbars.
@@ -63,24 +88,58 @@ class GameClient extends ChangeNotifier {
     required String nickname,
     String? hostToken,
     Duration timeout = const Duration(seconds: 5),
+    Duration retryInterval = const Duration(seconds: 2),
   }) async {
-    final channel = connectChannel(
-      Uri(scheme: 'ws', host: host, port: port, path: kWebSocketPath),
+    final uri = Uri(scheme: 'ws', host: host, port: port, path: kWebSocketPath);
+    late final GameClient client;
+    await _handshake(
+      uri,
+      {
+        'nickname': nickname,
+        'protocol': kProtocolVersion,
+        'hostToken': ?hostToken,
+        'client': kIsWeb ? 'web' : 'app',
+      },
+      timeout,
+      onWelcome: (welcome, link) {
+        client = GameClient._(
+          uri,
+          welcome['playerId']! as String,
+          welcome['isHost'] == true,
+          timeout,
+          retryInterval,
+        ).._attach(welcome, link);
+      },
+      onMessage: (msg) => client._handle(msg),
+      onDone: () => client._onConnectionClosed(),
     );
+    return client;
+  }
+
+  /// Opens a connection to [uri] and says [hello]. [onWelcome] runs as soon
+  /// as the welcome arrives, so messages right behind it (the first lobby
+  /// update) are not lost; they go to [onMessage]. Throws [JoinException].
+  static Future<void> _handshake(
+    Uri uri,
+    Json hello,
+    Duration timeout, {
+    required void Function(Json welcome, _Link link) onWelcome,
+    required void Function(Json msg) onMessage,
+    required void Function() onDone,
+  }) async {
+    final channel = connectChannel(uri);
     try {
       await channel.ready.timeout(timeout);
     } on Object {
       unawaited(channel.sink.close());
       throw JoinException(
         JoinException.unreachable,
-        'Could not reach a room at $host:$port.',
+        'Could not reach a room at ${uri.host}:${uri.port}.',
       );
     }
 
-    // Messages that arrive right after the welcome (the first lobby update)
-    // must not be lost, so a single subscription serves both phases.
-    final welcome = Completer<GameClient>();
-    GameClient? client;
+    final welcomed = Completer<void>();
+    var accepted = false;
     late final StreamSubscription<Object?> sub;
     sub = channel.stream.listen(
       (raw) {
@@ -90,32 +149,31 @@ class GameClient extends ChangeNotifier {
         } on FormatException {
           return;
         }
-        if (client != null) {
-          client!._handle(msg);
+        if (accepted) {
+          onMessage(msg);
           return;
         }
         switch (msg['type']) {
           case Msg.welcome:
-            client = GameClient._(
-              channel,
-              msg['playerId']! as String,
-              msg['isHost'] == true,
-            ).._subscription = sub;
-            welcome.complete(client);
+            accepted = true;
+            onWelcome(msg, (channel: channel, subscription: sub));
+            welcomed.complete();
           case Msg.error:
-            welcome.completeError(
-              JoinException(
-                msg['code'] as String? ?? ErrorCode.badMessage,
-                msg['msg'] as String? ?? 'The room refused the connection.',
-              ),
-            );
+            if (!welcomed.isCompleted) {
+              welcomed.completeError(
+                JoinException(
+                  msg['code'] as String? ?? ErrorCode.badMessage,
+                  msg['msg'] as String? ?? 'The room refused the connection.',
+                ),
+              );
+            }
         }
       },
       onDone: () {
-        if (client != null) {
-          client!._onConnectionClosed();
-        } else if (!welcome.isCompleted) {
-          welcome.completeError(
+        if (accepted) {
+          onDone();
+        } else if (!welcomed.isCompleted) {
+          welcomed.completeError(
             const JoinException(
               JoinException.unreachable,
               'The room closed the connection.',
@@ -126,17 +184,10 @@ class GameClient extends ChangeNotifier {
       onError: (Object _) {},
     );
 
-    channel.sink.add(
-      encodeMessage(Msg.hello, {
-        'nickname': nickname,
-        'protocol': kProtocolVersion,
-        'hostToken': ?hostToken,
-        'client': kIsWeb ? 'web' : 'app',
-      }),
-    );
+    channel.sink.add(encodeMessage(Msg.hello, hello));
 
     try {
-      return await welcome.future.timeout(timeout);
+      await welcomed.future.timeout(timeout);
     } on Object catch (e) {
       await sub.cancel();
       await channel.sink.close();
@@ -146,6 +197,13 @@ class GameClient extends ChangeNotifier {
         'The room did not respond.',
       );
     }
+  }
+
+  void _attach(Json welcome, _Link link) {
+    _channel = link.channel;
+    _subscription = link.subscription;
+    _resumeToken = welcome['resumeToken'] as String?;
+    _grace = Duration(milliseconds: welcome['graceMs'] as int? ?? 0);
   }
 
   void _handle(Json msg) {
@@ -182,15 +240,70 @@ class GameClient extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// The connection dropped without the server saying why: reconnect if the
+  /// server keeps our seat, otherwise give up.
   void _onConnectionClosed() {
-    if (disconnectReason == null) {
-      disconnectReason = DisconnectReason.connectionLost;
-      notifyListeners();
+    if (disconnectReason != null || reconnecting) return;
+    final token = _resumeToken;
+    if (token == null || _grace <= Duration.zero) {
+      _giveUp();
+      return;
+    }
+    reconnecting = true;
+    notifyListeners();
+    unawaited(_subscription?.cancel());
+    unawaited(_channel.sink.close());
+    unawaited(_reconnect(token));
+  }
+
+  void _giveUp() {
+    reconnecting = false;
+    disconnectReason = DisconnectReason.connectionLost;
+    notifyListeners();
+  }
+
+  /// Tries to take the seat back until the server's grace period is over.
+  Future<void> _reconnect(String token) async {
+    final elapsed = Stopwatch()..start();
+    while (disconnectReason == null) {
+      try {
+        await _handshake(
+          _uri,
+          {'protocol': kProtocolVersion, 'resume': token},
+          _timeout,
+          onWelcome: (welcome, link) {
+            if (disconnectReason != null) {
+              // Left while reconnecting: free the seat right away.
+              link.channel.sink.add(encodeMessage(Msg.leave));
+              unawaited(link.subscription.cancel());
+              unawaited(link.channel.sink.close());
+              return;
+            }
+            _attach(welcome, link);
+            reconnecting = false;
+          },
+          onMessage: _handle,
+          onDone: _onConnectionClosed,
+        );
+        if (!reconnecting) notifyListeners();
+        return;
+      } on JoinException catch (e) {
+        if (disconnectReason != null) return;
+        if (e.code != JoinException.unreachable) {
+          _giveUp(); // The seat is gone.
+          return;
+        }
+      }
+      if (elapsed.elapsed >= _grace) {
+        _giveUp();
+        return;
+      }
+      await Future<void>.delayed(_retryInterval);
     }
   }
 
   void _send(String type, [Json body = const {}]) {
-    if (!isConnected) return;
+    if (!isConnected || reconnecting) return;
     try {
       _channel.sink.add(encodeMessage(type, body));
     } on StateError {
@@ -215,8 +328,11 @@ class GameClient extends ChangeNotifier {
   void setGameOptions(Map<String, bool> changes) =>
       _send(Msg.setGameOptions, {'options': changes});
 
+  /// Leaves for good: the server frees the seat instead of keeping it.
   Future<void> leave() async {
+    if (disconnectReason == null) _send(Msg.leave);
     disconnectReason ??= DisconnectReason.left;
+    reconnecting = false;
     await _subscription?.cancel();
     await _channel.sink.close();
   }

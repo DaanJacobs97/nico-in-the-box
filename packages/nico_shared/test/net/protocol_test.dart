@@ -36,7 +36,7 @@ void main() {
       gameId: 'tictactoe',
       players: [
         PlayerInfo(id: 'p1', nickname: 'Host'),
-        PlayerInfo(id: 'p2', nickname: 'Guest'),
+        PlayerInfo(id: 'p2', nickname: 'Guest', away: true),
       ],
       minPlayers: 2,
       maxPlayers: 2,
@@ -52,6 +52,7 @@ void main() {
     expect(decoded.phase, RoomPhase.playing);
     expect(decoded.canStart, isTrue);
     expect(decoded.nicknameOf('p2'), 'Guest');
+    expect(decoded.players.map((p) => p.away), [false, true]);
   });
 
   test('Caster announcement round trip and rejects foreign packets', () {

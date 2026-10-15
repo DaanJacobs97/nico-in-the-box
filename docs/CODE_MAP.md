@@ -47,8 +47,9 @@ Lines are approximate, so you can tell big files from small ones.
 |---|---:|---|
 | `lib/main.dart` | 29 | App entry and theme; opens `HomeScreen` |
 | `lib/app/screen_awake.dart` | 25 | `ScreenAwake`: reference-counted wake lock while hosting |
-| `lib/net/game_server.dart` | 563 | **`GameServer`**: rooms, seats, nicknames, host-only commands, game sessions, display feed (`attachDisplay`, `displayState`). Routes `/ws` and `/display` here; plain HTTP goes to `web_routes.dart` |
+| `lib/net/game_server.dart` | 466 | **`GameServer`**: rooms, messages, host-only commands, game sessions, display feed (`attachDisplay`, `displayState`). Routes `/ws` and `/display` here; plain HTTP goes to `web_routes.dart` |
 | `lib/net/display_handle.dart` | 37 | `DisplayHandle`: one connected shared screen (part of `game_server.dart`, so it shares its private API) |
+| `lib/net/player_seats.dart` | 189 | Seats (part of `game_server.dart`): hello and nicknames, resume tokens, the reconnect grace period, leaving, kicking, dropping connections |
 | `lib/net/web_routes.dart` | 88 | `serveWebRequest`: plain HTTP routes `/`, `/play/`, `/screen/` (landing page, browser client, screen page) |
 | `lib/net/hosted_room.dart` | 165 | **`HostedRoom`**: everything a host runs. Starts the server and broadcaster, joins as host, loads web assets, keeps the screen awake, manages the Caster (`connectCaster`) |
 | `lib/net/caster_link.dart` | 140 | `CasterLink`: outbound connection to a Caster (`castHello` handshake, attaches it as a display, drop notice) |
@@ -68,7 +69,7 @@ Lines are approximate, so you can tell big files from small ones.
 | File | Lines | What it does |
 |---|---:|---|
 | `packages/nico_shared/lib/net/protocol.dart` | 305 | **The protocol**: ports, `kProtocolVersion`, `Msg.*` message types, `ErrorCode`, `PlayerInfo`, `LobbyState`, `DisplaySettings`, `DisplayInfo`, `DisplayState`, `CasterAnnouncement` |
-| `packages/nico_shared/lib/net/game_client.dart` | 198 | **`GameClient`** (ChangeNotifier): connect + hello, lobby/game/display state, notices, host commands, `DisconnectReason` |
+| `packages/nico_shared/lib/net/game_client.dart` | 281 | **`GameClient`** (ChangeNotifier): connect + hello, reconnects on its own after a drop (`reconnecting`), lobby/game/display state, notices, host commands, `DisconnectReason` |
 | `packages/nico_shared/lib/net/channel/connect.dart` | 3 | Picks the WebSocket implementation (conditional import) |
 | `packages/nico_shared/lib/net/channel/connect_io.dart` | 6 | Native WebSocket with 5 s pings (the only `dart:io` allowed in this package) |
 | `packages/nico_shared/lib/net/channel/connect_web.dart` | 3 | Browser WebSocket |
@@ -85,8 +86,8 @@ Lines are approximate, so you can tell big files from small ones.
 | `packages/nico_shared/lib/games/seasiege/seasiege_game.dart` | 249 | Sea Siege engine: placing (shuffle, move, ready) then battle; `shootAgain` option; free-for-all-ready (target per shot); `custom` test constructor |
 | `packages/nico_shared/lib/games/seasiege/seasiege_view.dart` | 290 | Sea Siege player view: placing (drag with preview, double-tap to turn, tap ship then square, Rotate, Shuffle, Ready; nudges to fit), then enemy board above own board |
 | `packages/nico_shared/lib/games/seasiege/seasiege_table.dart` | 316 | `SeaGrid` (10×10 board used by both views; whole-board tap, double-tap and drag, preview), `SeaBoard`, `describeShot`, `SeaSiegeTable` (shared screen) |
-| `packages/nico_shared/lib/screens/session_screen.dart` | 254 | **`SessionScreen`**: lobby → game → result, notices, leaving, host-as-screen area |
-| `packages/nico_shared/lib/screens/lobby_view.dart` | 209 | Lobby: game, players, Single game screen settings (host), pinned Start button |
+| `packages/nico_shared/lib/screens/session_screen.dart` | 282 | **`SessionScreen`**: lobby → game → result, notices, leaving, host-as-screen area, "Reconnecting…" banner |
+| `packages/nico_shared/lib/screens/lobby_view.dart` | 215 | Lobby: game, players (away ones marked), Single game screen settings (host), pinned Start button |
 | `packages/nico_shared/lib/screens/shared_screen_view.dart` | 138 | `SharedScreenView`: draws a `DisplayState` (lobby / table / result) |
 | `packages/nico_shared/lib/widgets/display_settings_editor.dart` | 103 | Single game screen switch + "where is the screen" choice (`ScreenChoice`) |
 | `packages/nico_shared/lib/widgets/game_options_editor.dart` | 49 | Lobby game options: switches for the host, read-only rules for players |
@@ -171,18 +172,20 @@ Lines are approximate, so you can tell big files from small ones.
 | TCP 47803 | Caster `/cast` |
 
 **Messages:** every message is JSON with a `type`.
-- **Client → server:** `hello` (with `nickname`, `protocol`, optional `hostToken`, `client: app|web`) and `action`.
+- **Client → server:** `hello` (with `nickname`, `protocol`, optional `hostToken`, `client: app|web`; or `resume`
+  with a token to take back a kept seat), `action`, and `leave` (on purpose: frees the seat at once).
 - **Host only:** `start`, `restart`, `endGame`, `kick`, `changeGame`, `closeRoom`, `setDisplay`, `setGameOptions`
   (lobby only; the values travel in `lobby.options`, and `display` adds `gameName` plus `rules` as text).
-- **Server → client:** `welcome`, `lobby`, `gameState`, `gameOver`, `notice`, `error`, `kicked`, `closed`, and
-  `display` (to screens).
+- **Server → client:** `welcome` (players also get a secret `resumeToken` and `graceMs`), `lobby` (players
+  carry `away` while reconnecting), `gameState`, `gameOver`, `notice`, `error`, `kicked`, `closed`, and `display`
+  (to screens).
 - **Host → Caster:** `castHello`, answered by `castWelcome` or `error{casterBusy}`.
 
 ## 5. Tests: what lives where
 
 | Suite | Run from | Covers |
 |---|---|---|
-| `test/` (app) | repo root | server and client over real loopback sockets (`net/server_client_test.dart`), display feed (`net/display_feed_test.dart`), web routes (`net/web_routes_test.dart`), Caster link (`net/caster_link_test.dart`), hosted room (`net/hosted_room_test.dart`), game options over the wire (`net/game_options_test.dart`), home/dialog widgets (`widget_test.dart`), game registry (`games/registry_consistency_test.dart`), this map (`docs/code_map_test.dart`) |
+| `test/` (app) | repo root | server and client over real loopback sockets (`net/server_client_test.dart`), reconnects (`net/reconnect_test.dart` on the server, `net/reconnect_client_test.dart` for the client and its banner), display feed (`net/display_feed_test.dart`), web routes (`net/web_routes_test.dart`), Caster link (`net/caster_link_test.dart`), hosted room (`net/hosted_room_test.dart`), game options over the wire (`net/game_options_test.dart`), home/dialog widgets (`widget_test.dart`), game registry (`games/registry_consistency_test.dart`), this map (`docs/code_map_test.dart`) |
 | `packages/nico_shared/test/` | that folder | engines (`games/tictactoe_test.dart`, `games/color_clash_test.dart`, incl. privacy), protocol (`net/protocol_test.dart`), game options and their editor (`games/game_options_test.dart`), shared screens (`widgets/shared_screen_test.dart`), Sea Siege (`games/seasiege_test.dart`, `widgets/seasiege_view_test.dart`). Also runs in Chrome in CI |
 | `packages/nico_native/test/` | that folder | `discovery_test.dart`, `caster_scanner_test.dart` |
 | `caster/test/` | that folder | `cast_server_test.dart`, `idle_screen_test.dart` |
@@ -210,6 +213,9 @@ These are big, generated or irrelevant to most tasks. Don't read them unless the
   so widgets overlap.
 - **Files are capped at 600 non-blank lines** (`docs/code_map_test.dart`). Split by job; don't raise the cap.
 - **Wait on every client in tests.** Each client gets its own copy of an update, and they can arrive in any order.
+- **A dropped player keeps their seat** for `GameServer.reconnectGrace` (60 s): they stay in `players`, marked
+  `away`, and the game waits. Only `leave`, a kick or the grace period running out frees the seat. The host gets
+  no grace: their leaving closes the room.
 - **Windows:** use `tool/check.ps1` instead of `dart format .`, which crashes on `caster/build`. Write commit
   messages to a file (`git commit -F`), because PowerShell 5.1 mangles quotes in `-m`. Keep the host test window
   visible during device tests.

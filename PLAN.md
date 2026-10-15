@@ -58,7 +58,8 @@ Platforms: Windows + Android first, with iOS as an untested stub.
 4. **Each player gets their own view of the game state.** The server never sends a player anyone else's cards.
 5. **Call the Uno-style game "Color Clash"**, which avoids the Uno trademark.
 6. **No reconnects in v1.** If a player drops mid-game, the game ends and everyone returns to the lobby.
-   If the host closes the room, every client goes back to the menu.
+   If the host closes the room, every client goes back to the menu. (Reconnects were added later; see
+   *Feature: Reconnect after a short drop*.)
 7. **State management:** `ChangeNotifier` + `ListenableBuilder` from Flutter itself; no state package needed at this size.
 8. **Git:** the repo is `github.com/DaanJacobs97/nico-in-the-box` (private). Each milestone is committed to `main`.
    After the skeleton is pushed, work happens on feature branches merged through pull requests, with CI running
@@ -655,3 +656,106 @@ on invalid squares.
   nothing. The board scales that threshold to the square size.
 - On a device, single taps only count once the double-tap window has passed in real time; the device test now
   waits for real.
+
+---
+
+# Feature: Reconnect after a short drop
+
+**Status:** built on `feature/reconnect` (PR #29); a light device check passed (see *Verification*). Revisit after real games with people if reconnecting misbehaves.
+
+During the Sea Siege device tests the tablet's Wi-Fi dropped every 10–30 seconds for about 4 seconds. Each drop
+ends the player's session for good: the 5 s WebSocket ping times out, `GameServer._onDisconnect` removes the player
+and a running game ends ("Ann left. The game was ended."). The goal: **a player (app or browser) who loses the
+connection briefly gets back into the same seat and the same running game, without doing anything.**
+
+## Decisions (confirmed)
+
+| Topic | Choice |
+|---|---|
+| How long a seat is kept | **60 s.** A blip is about 4 s, plus up to 10 s before the ping notices. 60 s also covers a phone screen that locks or a browser tab switched away for a moment |
+| Browser page reload | **Not in this feature.** The resume token lives in memory, so Wi-Fi drops and a backgrounded tab are covered, but a reload asks for a nickname again (and gets "name taken" until the seat expires). Keeping the token in `sessionStorage` is a small follow-up |
+| What the others see | A notice ("Ann lost connection. Waiting up to 60 s…"), a reconnecting mark next to their name in the lobby and on the shared screen's lobby, a notice when they're back, and today's notice when the seat expires. The game just waits: every game is turn-based or waits for everyone (Sea Siege placing), so no game code changes. The host can still kick an away player or end the game |
+| What the player who dropped sees | A **"Reconnecting…" banner** with a **Leave** button; the game is greyed out and not tappable, so no move seems to go through and then vanishes. After the seat expires: home with "Lost connection to the room.", as today |
+
+## Recommendations (defaults unless you object)
+
+1. **Only unexpected drops keep the seat.** Pressing Leave sends a new `leave` message first, so a deliberate exit
+   still frees the seat at once ("Ann left."). Kicks, the room closing and the host leaving work as today.
+2. **The host doesn't get a grace period.** The host's own client talks over loopback and won't blip; if it goes,
+   the room closes as today.
+3. **Resume tokens.**
+   - `welcome` gives each player a random secret `resumeToken` (16 bytes, like `hostToken`) and the grace period
+     (`graceMs`, in milliseconds so tests can use short ones). Only that player ever receives it; the host gets
+     none.
+   - `hello` may carry `resume: <token>` instead of a nickname. If a seat with that token is waiting (or still
+     looks connected, see 4), the server reattaches it: same player id, nickname and token. It answers with
+     `welcome` (same id), the lobby, and, during a game, that player's own `gameState` (and
+     `gameOver` if the game finished meanwhile).
+   - Wrong or expired token, or a kicked player: `error{resumeFailed}`, and the client goes home.
+   - Resuming skips the "game in progress" and "room full" checks, since the seat is already theirs.
+4. **A resume replaces a connection the server hasn't noticed is dead yet.** The client often notices the drop
+   before the server's ping does. The old connection is then closed quietly, without counting as a disconnect.
+5. **During the grace period** the seat stays in `players` (the game, seat count and nickname check all see it),
+   messages to it are skipped, and its private view is rebuilt on resume, so nothing is queued.
+6. **Client.** `GameClient` keeps the server address and token. On an unexpected close it sets `reconnecting`
+   (instead of `disconnectReason`), notifies, and retries every 2 s until it gets back in or the grace period is up.
+   Actions sent meanwhile are dropped (the UI blocks them anyway). `SessionScreen` shows the banner. The web client
+   uses the same code, so browsers get it for free.
+7. **Browsers and silent drops.** A browser can't see WebSocket pings, so it may not notice a dead link on its own.
+   Chrome on Android closes sockets when the network changes, which covers the case we saw. If the device test shows
+   a browser hanging instead, the server adds a small `ping` message every 5 s and the client treats 10 s of silence
+   as a drop.
+8. **Tests use short timers.** `GameServer` takes the grace period and `GameClient` the retry interval as
+   parameters, so tests run in milliseconds over real loopback sockets.
+9. **File size.** `game_server.dart` is at 591 of 600 non-blank lines, so seat bookkeeping (`_Connection`, seats,
+   grace timers, resume) moves to a new part file `lib/net/player_seats.dart`.
+10. **Protocol:** `kProtocolVersion` becomes 5 (`welcome.resumeToken` and `graceMs`, `hello.resume`,
+    `PlayerInfo.away`, `Msg.leave`, `ErrorCode.resumeFailed`).
+
+## Milestones
+
+One branch and pull request, `feature/reconnect`, with the device results added before you merge:
+
+1. **Server and protocol:** seats with grace timers, resume, `leave`, the away mark, notices; split into
+   `player_seats.dart`.
+2. **Client and UI:** reconnect loop in `GameClient`, banner in `SessionScreen`, away mark in the lobby list and the
+   shared screens (Flutter and `assets/display/app.js`).
+3. **Docs:** code map, protocol cheat sheet, this plan; the "No reconnects in v1" line above points here.
+4. **Device verification** (results go into this plan).
+
+## Verification
+
+- **Server tests** (`test/net/reconnect_test.dart`, real loopback):
+  - a drop mid-game keeps the seat; others get the notice and the away mark; resume within the grace period gets the
+    same id and that player's own private view (Sea Siege fleet), and the game goes on
+  - expiry: after the grace period the player is removed and the game ends, as today
+  - a wrong token is rejected; a kicked player's token is rejected; `leave` frees the seat at once
+  - resuming while the old connection still looks open replaces it
+  - the nickname stays taken while the seat waits; a resume works even when the room is full or a game is running
+- **Client and widget tests:** the client reconnects on its own after the server drops its socket; it gives up with
+  `connectionLost` after the grace period or on `resumeFailed`; `SessionScreen` shows the banner, blocks the game and
+  hides it again on resume; the lobby shows the away mark.
+- **Protocol round trip** for the new fields; `tool/check.ps1` passes.
+- **Devices** (Windows host + tablet, over the tablet's real Wi-Fi, no USB tunnel):
+  - the tablet app plays Tic Tac Toe and Sea Siege through several real drops
+  - the same with the tablet's Chrome as a browser player
+  - airplane mode on for longer than the grace period: the seat expires and the game ends cleanly
+
+**Result (2026-10-15).** Windows host app + the tablet (SM-T590) over its real Wi-Fi, no USB tunnel. A logcat watcher
+showed the tablet dropping Wi-Fi for about 4 s at a time, often switching between two access points.
+
+| Run | Result |
+|---|---|
+| Tablet app | No Wi-Fi drop happened during this run, so reconnecting was not exercised on the app (the loopback tests cover it) |
+| Tablet Chrome (`/play/`) | The log showed five drops in about 90 s around this run. One visibly broke the connection: the browser showed *Reconnecting…*, the host got the notice, and the player was back in the same game. The others went unnoticed (the connection seems to have survived them) |
+| Seat expiry, Leave | Not run on devices (covered by the server tests) |
+
+The user judged this enough for now and will revisit after playing real games with people. Found along the way:
+`flutter run --release` on Android fails because the `integration_test` plugin is registered but not packaged in
+release builds, so the device run used a debug build.
+
+## Out of scope for this feature
+
+- Surviving a browser reload or an app restart.
+- The host reconnecting, or handing the room to another player.
+- Continuing a game without a player whose seat expired.
