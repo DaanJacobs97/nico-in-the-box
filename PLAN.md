@@ -621,3 +621,37 @@ window, so the *Create room* tap missed. The test's tap helper now scrolls its t
   browsers.
 - Sounds or animations for hits and sinking.
 - Computer opponents in the app (the LAN bot is a test tool).
+
+## Follow-up: easier ship placement
+
+**Status:** done, in review. Verified on the Windows PC and the tablet (both sides used tap-to-move, Rotate,
+double-tap, drag, Shuffle and Ready, then played two games). Feedback from playing V3: placing and turning ships felt awkward, and moves often landed
+on invalid squares.
+
+**Decisions (confirmed):**
+- **Double-tap a ship to turn it.** It turns around the square you tapped. If the turned ship doesn't fit, it's
+  **nudged** to the nearest spot where it does. If there's no room nearby, it stays put and the hint line says so.
+  The Rotate button does the same for the selected ship, turning it around its middle.
+- **Drag ships, with a live preview.** Grab any part of a ship and drag. A ghost shows where it will land, green
+  when valid and red when not. Dropping on red snaps it back, so an invalid placement never reaches the server.
+- **Tap a ship, then a square still works,** and now nudges too instead of failing.
+- **A new PR stacked on #26,** so the open Sea Siege PRs don't change.
+
+**How:**
+- All client side; the engine and protocol don't change.
+- `seasiege_fleet.dart` gains `Ship.fromJson`, `rotatedAround(cell)` and `nudgeToFit(others)`.
+- `SeaGrid` handles gestures for the whole board (tap, double-tap, drag), maps positions to squares, and draws the
+  preview.
+- Tests:
+  - unit tests for turning and nudging
+  - widget tests for double-tap turning (including nudging), dragging to a valid square, and dropping on an
+    invalid square, which sends nothing
+  - the device test drags a ship too
+
+**Found while building it:**
+- A drag reported the square where Flutter *recognised* the drag, not where the finger first touched, so grabbing
+  a ship could miss it. The board now uses the touch-down square.
+- Flutter only starts a touch drag after about 36 px, more than a whole square on a phone, so one-square drags did
+  nothing. The board scales that threshold to the square size.
+- On a device, single taps only count once the double-tap window has passed in real time; the device test now
+  waits for real.

@@ -21,6 +21,15 @@ class _SeaSiegeViewState extends State<SeaSiegeView> {
   /// The ship the player tapped while placing, to move or rotate.
   String? _selected;
 
+  /// Why the last placement didn't happen, shown in the hint line.
+  String? _hint;
+
+  /// The ship being dragged, and which of its squares was grabbed.
+  ({Ship ship, int grip})? _drag;
+
+  /// Where the dragged ship would land right now.
+  Ship? _dragAt;
+
   GameViewContext get ctx => widget.ctx;
 
   @override
@@ -111,37 +120,115 @@ class _SeaSiegeViewState extends State<SeaSiegeView> {
     );
   }
 
-  Widget _placing(List<Json> fleet, ThemeData theme) {
+  Widget _placing(List<Json> fleetJson, ThemeData theme) {
     final view = ctx.view;
     final ready = (view['ready']! as Json)[ctx.myId] == true;
-    final cells = shipCells(fleet);
+    final fleet = [for (final s in fleetJson) Ship.fromJson(s)];
+    final cells = shipCells(fleetJson);
     final selected = ready ? null : _selected;
-    Json? shipById(String? id) => fleet.where((s) => s['id'] == id).firstOrNull;
+    Ship? shipAt(int cell) =>
+        fleet.where((s) => s.cells.contains(cell)).firstOrNull;
+    Ship? shipNamed(String? id) =>
+        fleet.where((s) => s.type.name == id).firstOrNull;
 
-    void move(Json ship, int row, int col, bool vertical) => ctx.sendAction({
+    void send(Ship ship) => ctx.sendAction({
       'type': 'move',
-      'ship': ship['id'],
-      'row': row,
-      'col': col,
-      'vertical': vertical,
+      'ship': ship.type.name,
+      'row': ship.row,
+      'col': ship.col,
+      'vertical': ship.vertical,
     });
 
+    /// Places [wanted] or, if it doesn't fit, the nearest spot that does.
+    void place(Ship wanted, String what) {
+      final placed = wanted.nudgeToFit(fleet);
+      if (placed == null) {
+        setState(() => _hint = 'No room for the ${wanted.type.label} $what.');
+        return;
+      }
+      setState(() => _hint = null);
+      send(placed);
+    }
+
+    void turn(Ship ship, int pivot) =>
+        place(ship.rotatedAround(pivot), 'to turn there');
+
     void tap(int cell) {
-      final hit = cells[cell];
-      final ship = shipById(selected);
+      final hit = shipAt(cell);
+      final ship = shipNamed(selected);
       if (hit != null) {
-        setState(() => _selected = hit == selected ? null : hit);
+        setState(() {
+          _selected = hit.type.name == selected ? null : hit.type.name;
+          _hint = null;
+        });
       } else if (ship != null) {
-        move(
-          ship,
-          cell ~/ kSeaSize,
-          cell % kSeaSize,
-          ship['vertical']! as bool,
+        place(
+          ship.movedTo(
+            row: cell ~/ kSeaSize,
+            col: cell % kSeaSize,
+            vertical: ship.vertical,
+          ),
+          'there',
         );
       }
     }
 
-    final ship = shipById(selected);
+    void dragStart(int cell) {
+      final ship = shipAt(cell);
+      if (ship == null) return;
+      setState(() {
+        _drag = (ship: ship, grip: ship.cells.indexOf(cell));
+        _dragAt = ship;
+        _selected = ship.type.name;
+        _hint = null;
+      });
+    }
+
+    void dragUpdate(int cell) {
+      final drag = _drag;
+      if (drag == null) return;
+      final r = cell ~/ kSeaSize;
+      final c = cell % kSeaSize;
+      final ship = drag.ship;
+      setState(
+        () => _dragAt = ship.movedTo(
+          row: ship.vertical ? r - drag.grip : r,
+          col: ship.vertical ? c : c - drag.grip,
+          vertical: ship.vertical,
+        ),
+      );
+    }
+
+    void dragEnd() {
+      final drag = _drag;
+      final target = _dragAt;
+      setState(() {
+        _drag = null;
+        _dragAt = null;
+      });
+      if (drag == null || target == null) return;
+      if (target.row == drag.ship.row && target.col == drag.ship.col) return;
+      if (target.fitsAmong(fleet)) {
+        send(target);
+      } else {
+        setState(() => _hint = "The ${target.type.label} doesn't fit there.");
+      }
+    }
+
+    final ship = shipNamed(selected);
+    final dragging = _dragAt;
+    final String help;
+    if (ready) {
+      help = 'Tap Unready to change it.';
+    } else if (_hint != null) {
+      help = _hint!;
+    } else if (ship != null) {
+      help =
+          '${ship.type.label}: drag it, tap a square, or double-tap to turn.';
+    } else {
+      help = 'Drag a ship to move it, double-tap to turn it, or Shuffle.';
+    }
+
     return Column(
       children: [
         Padding(
@@ -152,21 +239,31 @@ class _SeaSiegeViewState extends State<SeaSiegeView> {
             style: theme.textTheme.headlineSmall,
           ),
         ),
-        Text(
-          ready
-              ? 'Tap Unready to change it.'
-              : ship == null
-              ? 'Tap a ship to move or rotate it, or Shuffle.'
-              : '${ship['name']}: tap a square for its front end.',
-        ),
+        Text(help, key: const ValueKey('seasiege-hint')),
         Expanded(
           child: Padding(
             padding: const EdgeInsets.all(8),
             child: SeaGrid(
               keyPrefix: 'sea-own',
-              ships: cells,
+              ships: dragging == null
+                  ? cells
+                  : {
+                      for (final MapEntry(:key, :value) in cells.entries)
+                        if (value != dragging.type.name) key: value,
+                    },
               selectedShip: selected,
+              preview: {...?dragging?.cellsOnBoard},
+              previewValid: dragging?.fitsAmong(fleet) ?? true,
               onTap: ready ? null : tap,
+              onDoubleTap: ready
+                  ? null
+                  : (cell) {
+                      final hit = shipAt(cell);
+                      if (hit != null) turn(hit, cell);
+                    },
+              onDragStart: ready ? null : dragStart,
+              onDragUpdate: ready ? null : dragUpdate,
+              onDragEnd: ready ? null : dragEnd,
             ),
           ),
         ),
@@ -183,12 +280,7 @@ class _SeaSiegeViewState extends State<SeaSiegeView> {
                 label: const Text('Rotate'),
                 onPressed: ship == null
                     ? null
-                    : () => move(
-                        ship,
-                        ship['row']! as int,
-                        ship['col']! as int,
-                        !(ship['vertical']! as bool),
-                      ),
+                    : () => turn(ship, ship.cells[ship.type.size ~/ 2]),
               ),
               OutlinedButton.icon(
                 key: const ValueKey('sea-shuffle'),
@@ -196,14 +288,20 @@ class _SeaSiegeViewState extends State<SeaSiegeView> {
                 label: const Text('Shuffle'),
                 onPressed: ready
                     ? null
-                    : () => ctx.sendAction({'type': 'shuffle'}),
+                    : () {
+                        setState(() => _hint = null);
+                        ctx.sendAction({'type': 'shuffle'});
+                      },
               ),
               FilledButton.icon(
                 key: const ValueKey('sea-ready'),
                 icon: Icon(ready ? Icons.lock_open : Icons.check),
                 label: Text(ready ? 'Unready' : 'Ready'),
                 onPressed: () {
-                  setState(() => _selected = null);
+                  setState(() {
+                    _selected = null;
+                    _hint = null;
+                  });
                   ctx.sendAction({'type': ready ? 'unready' : 'ready'});
                 },
               ),

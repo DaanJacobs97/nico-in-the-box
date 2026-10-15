@@ -17,6 +17,7 @@ import 'package:nico_in_the_box/main.dart';
 import 'package:nico_shared/games/color_clash/color_clash_table.dart';
 import 'package:nico_shared/games/color_clash/color_clash_view.dart';
 import 'package:nico_shared/games/game_views.dart';
+import 'package:nico_shared/games/seasiege/seasiege_fleet.dart';
 import 'package:nico_shared/games/seasiege/seasiege_view.dart';
 import 'package:nico_shared/games/tictactoe/tictactoe_view.dart';
 import 'package:nico_shared/net/protocol.dart';
@@ -202,8 +203,6 @@ bool _seaRunning() {
 List<Json> _fleet() =>
     (seaWidget()!.ctx.view['fleet']! as List<Object?>).cast<Json>();
 
-List<int> _cellsOf(Json ship) => (ship['cells']! as List<Object?>).cast<int>();
-
 Set<Object?> _tried(Json view, String player) {
   final board = (view['boards']! as Json)[player]! as Json;
   return {
@@ -212,47 +211,86 @@ Set<Object?> _tried(Json view, String player) {
   };
 }
 
-/// Uses every placement control once: moves the destroyer to a free square,
-/// rotates it, shuffles, then readies.
+/// Lets [time] pass for real, then draws a frame.
+Future<void> settle(WidgetTester tester, Duration time) async {
+  await Future<void>.delayed(time);
+  await tester.pump();
+}
+
+/// Uses every placement control once: tap-to-move, Rotate, double-tap,
+/// dragging, Shuffle, then Ready.
 Future<void> _placeFleet(WidgetTester tester) async {
   final myId = seaWidget()!.ctx.myId;
-  Json destroyer() => _fleet().firstWhere((s) => s['id'] == 'destroyer');
-  final start = destroyer();
-  final taken = {
-    for (final s in _fleet())
-      if (s['id'] != 'destroyer') ..._cellsOf(s),
-  };
-  bool free(int cell) => !taken.contains(cell);
-  // A free square that fits the destroyer both ways, away from where it is.
-  final target = [
-    for (var cell = 0; cell < 90; cell++)
-      if (cell % 10 < 9 &&
-          free(cell) &&
-          free(cell + 1) &&
-          free(cell + 10) &&
-          !_cellsOf(start).contains(cell))
-        cell,
-  ].first;
-  await tester.tap(find.byKey(ValueKey('sea-own-${_cellsOf(start).first}')));
-  await tester.pump(const Duration(milliseconds: 300));
-  await tester.tap(find.byKey(ValueKey('sea-own-$target')));
+  List<Ship> fleet() => [for (final s in _fleet()) Ship.fromJson(s)];
+  Ship ship(ShipType type) => fleet().firstWhere((s) => s.type == type);
+  Finder square(int cell) => find.byKey(ValueKey('sea-own-$cell'));
+  // Single taps count only once the double-tap window has passed, in real
+  // time on a device (pump durations are not real time there).
+  const tapWait = Duration(milliseconds: 500);
+
+  // Tap the destroyer, then a free square (the view nudges if needed).
+  final before = ship(ShipType.destroyer);
+  final free = [
+    for (var cell = 0; cell < 100; cell++)
+      if (!fleet().any((s) => s.cells.contains(cell))) cell,
+  ];
+  await tester.tap(square(before.cells.first));
+  await settle(tester, tapWait);
+  await tester.tap(square(free[free.length ~/ 2]));
+  await settle(tester, tapWait);
   await pumpUntil(
     tester,
-    () => _cellsOf(destroyer()).first == target,
+    () => ship(ShipType.destroyer).cells.toString() != before.cells.toString(),
     reason: 'the destroyer to move',
   );
-  final vertical = destroyer()['vertical'];
+
+  final vertical = ship(ShipType.destroyer).vertical;
   await tester.tap(find.byKey(const ValueKey('sea-rotate')));
   await pumpUntil(
     tester,
-    () => destroyer()['vertical'] != vertical,
-    reason: 'the destroyer to rotate',
+    () => ship(ShipType.destroyer).vertical != vertical,
+    reason: 'Rotate to turn the destroyer',
   );
-  final before = [for (final s in _fleet()) _cellsOf(s)].toString();
+  final turned = ship(ShipType.destroyer);
+  await tester.tap(square(turned.cells.first));
+  await settle(tester, const Duration(milliseconds: 60));
+  await tester.tap(square(turned.cells.first));
+  await pumpUntil(
+    tester,
+    () => ship(ShipType.destroyer).vertical == vertical,
+    reason: 'a double-tap to turn the destroyer back',
+  );
+
+  // Drag the cruiser to another spot where it fits.
+  final cruiser = ship(ShipType.cruiser);
+  final dropAt =
+      [
+        for (var cell = 0; cell < 100; cell++)
+          cruiser.movedTo(
+            row: cell ~/ kSeaSize,
+            col: cell % kSeaSize,
+            vertical: cruiser.vertical,
+          ),
+      ].firstWhere(
+        (s) => s.fitsAmong(fleet()) && s.cells.first != cruiser.cells.first,
+      );
+  final from = tester.getCenter(square(cruiser.cells.first));
+  await tester.timedDragFrom(
+    from,
+    tester.getCenter(square(dropAt.cells.first)) - from,
+    const Duration(milliseconds: 500),
+  );
+  await pumpUntil(
+    tester,
+    () => ship(ShipType.cruiser).cells.toString() == dropAt.cells.toString(),
+    reason: 'the cruiser to be dragged',
+  );
+
+  final layout = [for (final s in fleet()) s.cells].toString();
   await tester.tap(find.byKey(const ValueKey('sea-shuffle')));
   await pumpUntil(
     tester,
-    () => [for (final s in _fleet()) _cellsOf(s)].toString() != before,
+    () => [for (final s in fleet()) s.cells].toString() != layout,
     reason: 'the fleet to shuffle',
   );
   await tester.tap(find.byKey(const ValueKey('sea-ready')));
