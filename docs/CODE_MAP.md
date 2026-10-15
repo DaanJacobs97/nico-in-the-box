@@ -135,6 +135,7 @@ Lines are approximate, so you can tell big files from small ones.
 | `tool/check.ps1`, `tool/check.sh` | **Run before every PR**: format check, analyze, all five test suites (`-Fix`/`--fix` formats first) |
 | `tool/new_game.dart`, `tool/new_game_templates.dart` | `dart run tool/new_game.dart <id> "<Name>" [min] [max]`: generates a placeholder game (all six pieces, tests, an example option, code map rows, protocol bump). Templates live in the part file |
 | `tool/build_web_client.ps1`, `tool/build_web_client.sh` | Build `web_client/` into `assets/generated/web_client.zip` (git-ignored) |
+| `tool/release/package_windows.ps1`, `tool/release/package_android.sh` | Build the release files into `build/release/`: Windows zips (with the Visual C++ runtime DLLs) and release-signed APKs (fails on a debug-signed APK) |
 | `tool/bot/lan_bot_test.dart` | Scripted LAN player (all three games): `flutter test tool/bot/lan_bot_test.dart --dart-define=HOST=<ip>` |
 
 ### `.github/`: CI and pull requests
@@ -143,6 +144,8 @@ Lines are approximate, so you can tell big files from small ones.
 |---|---|
 | `.github/workflows/ci.yml` | CI on every PR: format, analyze, `dart:io` grep, all test suites, web client build + size budget, shared tests in Chrome |
 | `.github/pull_request_template.md` | PR description sections: what and why, changes, checks, device tests |
+| `.github/workflows/release.yml` | On a `v*` tag: checks it matches `pubspec.yaml`, runs the packaging scripts, drafts a GitHub Release with the changelog section |
+| `.github/release_install_notes.md` | Install instructions appended to every release |
 
 ---
 

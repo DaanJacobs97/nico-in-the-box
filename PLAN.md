@@ -764,7 +764,8 @@ release builds, so the device run used a debug build.
 
 # Release builds (demo builds of every app)
 
-**Status:** milestone 1 (signing) in review; milestones 2 (icons) and 3 (release workflow) in progress.
+**Status:** milestones 1 (signing), 2 (icons) and 3 (release workflow) in review; the dry run (4) follows once
+they are merged.
 
 Ship installable builds of each app for a tagged version, so people can try Nico in the Box without a development
 setup.
