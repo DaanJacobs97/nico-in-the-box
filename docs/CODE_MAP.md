@@ -81,6 +81,10 @@ Lines are approximate, so you can tell big files from small ones.
 | `packages/nico_shared/lib/games/color_clash/color_clash_game.dart` | 324 | Color Clash engine (Uno-style rules, last-card catch, `custom` test constructor) |
 | `packages/nico_shared/lib/games/color_clash/color_clash_view.dart` | 169 | Player view: hand, color picker, buttons (full/compact) |
 | `packages/nico_shared/lib/games/color_clash/color_clash_table.dart` | 267 | Public table: `ClashTableArea` (in the full player view and on the shared screen), `ColorClashTable`, `ClashCardFace`, `colorOf` |
+| `packages/nico_shared/lib/games/seasiege/seasiege_fleet.dart` | 86 | Sea Siege geometry: `ShipType`, `Ship`, `cellName` ("D4"), `isValidFleet`, `randomFleet` |
+| `packages/nico_shared/lib/games/seasiege/seasiege_game.dart` | 249 | Sea Siege engine: placing (shuffle, move, ready) then battle; `shootAgain` option; free-for-all-ready (target per shot); `custom` test constructor |
+| `packages/nico_shared/lib/games/seasiege/seasiege_view.dart` | 201 | Sea Siege player view: placing (tap ship, tap square, Rotate, Shuffle, Ready), then enemy board above own board |
+| `packages/nico_shared/lib/games/seasiege/seasiege_table.dart` | 259 | `SeaGrid` (10×10 board used by both views), `SeaBoard`, `describeShot`, `SeaSiegeTable` (shared screen) |
 | `packages/nico_shared/lib/screens/session_screen.dart` | 254 | **`SessionScreen`**: lobby → game → result, notices, leaving, host-as-screen area |
 | `packages/nico_shared/lib/screens/lobby_view.dart` | 209 | Lobby: game, players, Single game screen settings (host), pinned Start button |
 | `packages/nico_shared/lib/screens/shared_screen_view.dart` | 138 | `SharedScreenView`: draws a `DisplayState` (lobby / table / result) |
@@ -118,9 +122,10 @@ Lines are approximate, so you can tell big files from small ones.
 |---|---:|---|
 | `assets/display/index.html` | 22 | Page shell; loads `app.js` and one script per game |
 | `assets/display/app.js` | 133 | `NicoDisplay`: `/display` WebSocket, reconnect, lobby/result, safe `el()` DOM helper, `register()` |
-| `assets/display/style.css` | 137 | TV-scaled styles |
+| `assets/display/style.css` | 153 | TV-scaled styles |
 | `assets/display/games/tictactoe.js` | 36 | Tic Tac Toe table renderer |
 | `assets/display/games/colorclash.js` | 54 | Color Clash table renderer |
+| `assets/display/games/seasiege.js` | 64 | Sea Siege table renderer (placing status, both boards, last shots) |
 
 ### `tool/`: scripts
 
@@ -171,7 +176,7 @@ Lines are approximate, so you can tell big files from small ones.
 | Suite | Run from | Covers |
 |---|---|---|
 | `test/` (app) | repo root | server and client over real loopback sockets (`net/server_client_test.dart`), display feed (`net/display_feed_test.dart`), web routes (`net/web_routes_test.dart`), Caster link (`net/caster_link_test.dart`), hosted room (`net/hosted_room_test.dart`), game options over the wire (`net/game_options_test.dart`), home/dialog widgets (`widget_test.dart`), game registry (`games/registry_consistency_test.dart`), this map (`docs/code_map_test.dart`) |
-| `packages/nico_shared/test/` | that folder | engines (`games/tictactoe_test.dart`, `games/color_clash_test.dart`, incl. privacy), protocol (`net/protocol_test.dart`), game options and their editor (`games/game_options_test.dart`), shared screens (`widgets/shared_screen_test.dart`). Also runs in Chrome in CI |
+| `packages/nico_shared/test/` | that folder | engines (`games/tictactoe_test.dart`, `games/color_clash_test.dart`, incl. privacy), protocol (`net/protocol_test.dart`), game options and their editor (`games/game_options_test.dart`), shared screens (`widgets/shared_screen_test.dart`), Sea Siege (`games/seasiege_test.dart`, `widgets/seasiege_view_test.dart`). Also runs in Chrome in CI |
 | `packages/nico_native/test/` | that folder | `discovery_test.dart`, `caster_scanner_test.dart` |
 | `caster/test/` | that folder | `cast_server_test.dart`, `idle_screen_test.dart` |
 | `web_client/test/` | that folder | `web_join_test.dart` |

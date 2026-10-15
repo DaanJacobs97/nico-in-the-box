@@ -499,7 +499,7 @@ tablet browsers.
 
 # Feature: Sea Siege (Battleship) and host-chosen game options
 
-**Status:** approved. Milestone 1 (game options) in review.
+**Status:** approved. Milestones 1 (game options) and 2 (Sea Siege) in review.
 
 A Battleship-style game called **Sea Siege** (`seasiege`). Each player secretly places five ships on a 10×10 grid,
 then players take turns firing at each other's grids. The first to sink the whole enemy fleet wins.

@@ -26,6 +26,7 @@ automatically and join with a nickname. No internet connection and no accounts a
 |---|---|---|
 | Tic Tac Toe | 2 | The classic game, with the host against one other player |
 | Color Clash | 2–4 | An Uno-style card game: match by color or number, with Skip, Reverse, Draw Two and Wild cards |
+| Sea Siege | 2 | Battleship-style: hide five ships, then take turns firing at the enemy grid. The host can let a hit earn another shot |
 
 ## Platforms
 

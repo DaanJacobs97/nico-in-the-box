@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import '../net/protocol.dart';
 import 'color_clash/color_clash_table.dart';
 import 'color_clash/color_clash_view.dart';
+import 'seasiege/seasiege_table.dart';
+import 'seasiege/seasiege_view.dart';
 import 'tictactoe/tictactoe_view.dart';
 
 /// What a game's widget needs to render the current view and send moves.
@@ -36,6 +38,7 @@ typedef GameViewBuilder = Widget Function(GameViewContext context);
 final Map<String, GameViewBuilder> gameViews = {
   'tictactoe': (ctx) => TicTacToeView(ctx: ctx),
   'colorclash': (ctx) => ColorClashView(ctx: ctx),
+  'seasiege': (ctx) => SeaSiegeView(ctx: ctx),
 };
 
 /// What a shared screen needs to draw a game's table.
@@ -55,4 +58,5 @@ typedef GameTableBuilder = Widget Function(TableContext context);
 final Map<String, GameTableBuilder> gameTables = {
   'tictactoe': (ctx) => TicTacToeTable(ctx: ctx),
   'colorclash': (ctx) => ColorClashTable(ctx: ctx),
+  'seasiege': (ctx) => SeaSiegeTable(ctx: ctx),
 };

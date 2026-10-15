@@ -5,7 +5,8 @@ its pull request can be merged. It's written for human contributors and AI codin
 steps in order and use the checklist at the end.
 
 Tic Tac Toe (`tictactoe`) is the smallest complete example. Color Clash (`colorclash`) shows private hands, compact
-player views and a random deck. Copy from them freely.
+player views and a random deck. Sea Siege (`seasiege`) shows a host option, a setup phase where everyone acts at
+once, and a stateful player view. Copy from them freely.
 
 **Quick start:** generate every piece at once, then replace the placeholder rules with yours.
 
