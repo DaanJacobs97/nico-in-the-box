@@ -143,7 +143,9 @@ Add `--dart-define=MOVE_DELAY_MS=1000` to slow it down, for example while watchi
 4. Players tap **Join**. The room should appear in the list; if it doesn't, enter the IP address shown in the host's
    lobby.
 5. Each player picks a nickname. When enough players have joined, the host starts the game.
-6. **No app?** The host's lobby shows a QR code and a link like `http://192.168.0.156:47800/play`. Scanning it
+6. The hosting device keeps its screen on while the room is open, so a tablet used as the shared screen doesn't dim
+   or sleep. It goes back to normal when the room closes. The Caster app does the same.
+7. **No app?** The host's lobby shows a QR code and a link like `http://192.168.0.156:47800/play`. Scanning it
    with a phone camera (or typing it into any browser on the same network) opens the browser version: pick a
    nickname and play like everyone else. Browser players are marked with a globe icon in the lobby.
 

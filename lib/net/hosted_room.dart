@@ -8,6 +8,7 @@ import 'package:nico_shared/games/game_session.dart';
 import 'package:nico_shared/net/game_client.dart';
 import 'package:nico_shared/net/protocol.dart';
 
+import '../app/screen_awake.dart';
 import 'caster_link.dart';
 import 'display_frontend.dart';
 import 'game_server.dart';
@@ -41,6 +42,7 @@ class HostedRoom {
   final String nickname;
 
   CasterLink? _caster;
+  bool _closed = false;
 
   /// The Caster showing this room, if any.
   CasterLink? get caster => (_caster?.isConnected ?? false) ? _caster : null;
@@ -95,6 +97,7 @@ class HostedRoom {
         nickname: nickname,
         hostToken: server.hostToken,
       );
+      ScreenAwake.hold();
       return HostedRoom._(
         server,
         broadcaster,
@@ -134,6 +137,10 @@ class HostedRoom {
   }
 
   Future<void> close() async {
+    if (!_closed) {
+      _closed = true;
+      ScreenAwake.release();
+    }
     _broadcaster?.stop();
     await server.close(reason: CloseReason.hostClosed);
     await client.leave();
