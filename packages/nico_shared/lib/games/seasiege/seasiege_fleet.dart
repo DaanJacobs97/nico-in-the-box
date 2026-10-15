@@ -56,6 +56,57 @@ class Ship {
   Ship movedTo({required int row, required int col, required bool vertical}) =>
       Ship(type, row: row, col: col, vertical: vertical);
 
+  /// The cells of this ship that lie on the board, even when part of it
+  /// hangs off an edge (for drawing a preview).
+  List<int> get cellsOnBoard => [
+    for (var i = 0; i < type.size; i++)
+      if ((vertical ? row + i : row) case final r when r >= 0 && r < kSeaSize)
+        if ((vertical ? col : col + i) case final c when c >= 0 && c < kSeaSize)
+          r * kSeaSize + c,
+  ];
+
+  /// Whether this ship is on the board and clear of every ship in [others].
+  bool fitsAmong(Iterable<Ship> others) =>
+      inBounds && !others.any((o) => o.type != type && overlaps(o));
+
+  /// Turned a quarter, keeping the square [pivot] (one of its cells) in place.
+  Ship rotatedAround(int pivot) {
+    final i = cells.indexOf(pivot).clamp(0, type.size - 1);
+    final r = pivot ~/ kSeaSize;
+    final c = pivot % kSeaSize;
+    return vertical
+        ? movedTo(row: r, col: c - i, vertical: false)
+        : movedTo(row: r - i, col: c, vertical: true);
+  }
+
+  /// This ship if it fits among [others]; otherwise the closest position
+  /// with the same direction that does, within [reach] squares. Null if
+  /// there is none.
+  Ship? nudgeToFit(Iterable<Ship> others, {int reach = 4}) {
+    if (fitsAmong(others)) return this;
+    for (var d = 1; d <= reach; d++) {
+      // Every offset at distance d (max of row and column shift), nearest
+      // in a straight line first.
+      final offsets = [
+        for (var dr = -d; dr <= d; dr++)
+          for (var dc = -d; dc <= d; dc++)
+            if (max(dr.abs(), dc.abs()) == d) (dr, dc),
+      ]..sort((a, b) => (a.$1.abs() + a.$2.abs()) - (b.$1.abs() + b.$2.abs()));
+      for (final (dr, dc) in offsets) {
+        final moved = movedTo(row: row + dr, col: col + dc, vertical: vertical);
+        if (moved.fitsAmong(others)) return moved;
+      }
+    }
+    return null;
+  }
+
+  factory Ship.fromJson(Json json) => Ship(
+    ShipType.values.byName(json['id']! as String),
+    row: json['row']! as int,
+    col: json['col']! as int,
+    vertical: json['vertical']! as bool,
+  );
+
   Json toJson() => {
     'id': type.name,
     'name': type.label,

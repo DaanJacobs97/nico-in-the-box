@@ -81,10 +81,10 @@ Lines are approximate, so you can tell big files from small ones.
 | `packages/nico_shared/lib/games/color_clash/color_clash_game.dart` | 324 | Color Clash engine (Uno-style rules, last-card catch, `custom` test constructor) |
 | `packages/nico_shared/lib/games/color_clash/color_clash_view.dart` | 169 | Player view: hand, color picker, buttons (full/compact) |
 | `packages/nico_shared/lib/games/color_clash/color_clash_table.dart` | 267 | Public table: `ClashTableArea` (in the full player view and on the shared screen), `ColorClashTable`, `ClashCardFace`, `colorOf` |
-| `packages/nico_shared/lib/games/seasiege/seasiege_fleet.dart` | 86 | Sea Siege geometry: `ShipType`, `Ship`, `cellName` ("D4"), `isValidFleet`, `randomFleet` |
+| `packages/nico_shared/lib/games/seasiege/seasiege_fleet.dart` | 132 | Sea Siege geometry: `ShipType`, `Ship` (+ `rotatedAround`, `nudgeToFit`, `fitsAmong`), `cellName` ("D4"), `isValidFleet`, `randomFleet` |
 | `packages/nico_shared/lib/games/seasiege/seasiege_game.dart` | 249 | Sea Siege engine: placing (shuffle, move, ready) then battle; `shootAgain` option; free-for-all-ready (target per shot); `custom` test constructor |
-| `packages/nico_shared/lib/games/seasiege/seasiege_view.dart` | 201 | Sea Siege player view: placing (tap ship, tap square, Rotate, Shuffle, Ready), then enemy board above own board |
-| `packages/nico_shared/lib/games/seasiege/seasiege_table.dart` | 259 | `SeaGrid` (10×10 board used by both views), `SeaBoard`, `describeShot`, `SeaSiegeTable` (shared screen) |
+| `packages/nico_shared/lib/games/seasiege/seasiege_view.dart` | 290 | Sea Siege player view: placing (drag with preview, double-tap to turn, tap ship then square, Rotate, Shuffle, Ready; nudges to fit), then enemy board above own board |
+| `packages/nico_shared/lib/games/seasiege/seasiege_table.dart` | 316 | `SeaGrid` (10×10 board used by both views; whole-board tap, double-tap and drag, preview), `SeaBoard`, `describeShot`, `SeaSiegeTable` (shared screen) |
 | `packages/nico_shared/lib/screens/session_screen.dart` | 254 | **`SessionScreen`**: lobby → game → result, notices, leaving, host-as-screen area |
 | `packages/nico_shared/lib/screens/lobby_view.dart` | 209 | Lobby: game, players, Single game screen settings (host), pinned Start button |
 | `packages/nico_shared/lib/screens/shared_screen_view.dart` | 138 | `SharedScreenView`: draws a `DisplayState` (lobby / table / result) |

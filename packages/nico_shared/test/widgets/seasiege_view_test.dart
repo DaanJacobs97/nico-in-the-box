@@ -56,79 +56,223 @@ void main() {
   const phone = Size(400, 800);
 
   group('placing', () {
-    late SeaSiegeSession session;
-    late List<Ship> fleet;
+    // rowsFleet: carrier 0-4, battleship 20-23, cruiser 40-42,
+    // submarine 60-62, destroyer 80-81.
+    Json placingView({bool ready = false}) {
+      const empty = {
+        'hits': <int>[],
+        'misses': <int>[],
+        'sunk': <Json>[],
+        'afloat': <String>[],
+      };
+      return {
+        'phase': 'placing',
+        'order': ['a', 'b'],
+        'ready': {'a': ready, 'b': false},
+        'boards': {'a': empty, 'b': empty},
+        'turn': null,
+        'winner': null,
+        'shootAgain': false,
+        'log': <Json>[],
+        'fleet': [for (final s in rowsFleet) s.toJson()],
+      };
+    }
 
-    setUp(() {
-      session = SeaSiegeSession(const [ann, bob], random: Random(3));
-      fleet = [
-        for (final s
-            in (session.viewFor('a')['fleet']! as List<Object?>).cast<Json>())
-          Ship(
-            ShipType.values.byName(s['id']! as String),
-            row: s['row']! as int,
-            col: s['col']! as int,
-            vertical: s['vertical']! as bool,
-          ),
-      ];
+    Widget placing(List<Json> sent, {bool ready = false}) => SeaSiegeView(
+      ctx: GameViewContext(
+        view: placingView(ready: ready),
+        myId: 'a',
+        lobby: lobby,
+        sendAction: sent.add,
+      ),
+    );
+
+    Json moveOf(Ship s) => {
+      'type': 'move',
+      'ship': s.type.name,
+      'row': s.row,
+      'col': s.col,
+      'vertical': s.vertical,
+    };
+
+    // Single taps wait out the double-tap window.
+    Future<void> tapCell(WidgetTester tester, int index) async {
+      await tester.tap(cell('sea-own', index));
+      await tester.pump(const Duration(milliseconds: 400));
+    }
+
+    Future<void> doubleTapCell(WidgetTester tester, int index) async {
+      await tester.tap(cell('sea-own', index));
+      await tester.pump(const Duration(milliseconds: 60));
+      await tester.tap(cell('sea-own', index));
+      await tester.pump(const Duration(milliseconds: 400));
+    }
+
+    testWidgets('a random fleet renders on a phone', (tester) async {
+      final session = SeaSiegeSession(const [ann, bob], random: Random(3));
+      await pumpAt(tester, phone, viewOf(session));
+      expect(tester.takeException(), isNull);
+      expect(find.text('Place your fleet'), findsOneWidget);
     });
 
     testWidgets('tap a ship, then a square, to move it', (tester) async {
       final sent = <Json>[];
-      await pumpAt(tester, phone, viewOf(session, sent: sent));
-      expect(tester.takeException(), isNull);
-      expect(find.text('Place your fleet'), findsOneWidget);
-
-      final destroyer = fleet.firstWhere((s) => s.type == ShipType.destroyer);
-      final taken = {for (final s in fleet) ...s.cells};
-      final free = List.generate(
-        100,
-        (i) => i,
-      ).firstWhere((i) => !taken.contains(i));
-      await tester.tap(cell('sea-own', destroyer.cells.first));
-      await tester.pump();
-      expect(find.textContaining('Destroyer: tap a square'), findsOneWidget);
-      await tester.tap(cell('sea-own', free));
-      expect(sent.single, {
-        'type': 'move',
-        'ship': 'destroyer',
-        'row': free ~/ 10,
-        'col': free % 10,
-        'vertical': destroyer.vertical,
-      });
+      await pumpAt(tester, phone, placing(sent));
+      await tapCell(tester, 81);
+      expect(find.textContaining('Destroyer: drag it'), findsOneWidget);
+      await tapCell(tester, 55);
+      expect(sent, [moveOf(const Ship(ShipType.destroyer, row: 5, col: 5))]);
     });
 
-    testWidgets('rotate, shuffle and ready send their actions', (tester) async {
+    testWidgets('a tapped square that does not fit is nudged', (tester) async {
       final sent = <Json>[];
-      await pumpAt(tester, phone, viewOf(session, sent: sent));
-      final rotate = find.byKey(const ValueKey('sea-rotate'));
-      expect(tester.widget<OutlinedButton>(rotate).onPressed, isNull);
+      await pumpAt(tester, phone, placing(sent));
+      await tapCell(tester, 0); // select the carrier
+      await tapCell(tester, 38); // D... would run off the right edge
+      final expected = const Ship(
+        ShipType.carrier,
+        row: 3,
+        col: 8,
+      ).nudgeToFit(rowsFleet)!;
+      expect(expected.fitsAmong(rowsFleet), isTrue);
+      expect(sent, [moveOf(expected)]);
+    });
 
-      final carrier = fleet.first;
-      await tester.tap(cell('sea-own', carrier.cells.last));
+    testWidgets('double-tap turns a ship around the tapped square', (
+      tester,
+    ) async {
+      final sent = <Json>[];
+      await pumpAt(tester, phone, placing(sent));
+      await doubleTapCell(tester, 80);
+      expect(sent, [
+        moveOf(const Ship(ShipType.destroyer, row: 8, col: 0, vertical: true)),
+      ]);
+    });
+
+    testWidgets('a turn that does not fit is nudged into place', (
+      tester,
+    ) async {
+      final sent = <Json>[];
+      await pumpAt(tester, phone, placing(sent));
+      // Turning the carrier around C1 would stick out above the board.
+      await doubleTapCell(tester, 2);
+      final expected = rowsFleet.first.rotatedAround(2).nudgeToFit(rowsFleet)!;
+      expect(expected.vertical, isTrue);
+      expect(sent, [moveOf(expected)]);
+    });
+
+    testWidgets('Rotate turns the selected ship around its middle', (
+      tester,
+    ) async {
+      final sent = <Json>[];
+      await pumpAt(tester, phone, placing(sent));
+      await tapCell(tester, 40);
+      await tester.tap(find.byKey(const ValueKey('sea-rotate')));
+      expect(sent, [
+        moveOf(const Ship(ShipType.cruiser, row: 3, col: 1, vertical: true)),
+      ]);
+    });
+
+    testWidgets('drag a ship by any square to move it', (tester) async {
+      final sent = <Json>[];
+      await pumpAt(tester, phone, placing(sent));
+      final from = tester.getCenter(cell('sea-own', 81)); // destroyer's tail
+      final to = tester.getCenter(cell('sea-own', 55));
+      await tester.timedDragFrom(
+        from,
+        to - from,
+        const Duration(milliseconds: 300),
+      );
       await tester.pump();
-      await tester.tap(rotate);
+      expect(sent, [moveOf(const Ship(ShipType.destroyer, row: 5, col: 4))]);
+    });
+
+    testWidgets('a one-square drag works on a small phone', (tester) async {
+      final sent = <Json>[];
+      await pumpAt(tester, const Size(360, 640), placing(sent));
+      final from = tester.getCenter(cell('sea-own', 81));
+      final to = tester.getCenter(cell('sea-own', 82));
+      expect((to - from).distance, lessThan(36), reason: 'below default slop');
+      final gesture = await tester.startGesture(from);
+      for (var i = 1; i <= 8; i++) {
+        await gesture.moveTo(Offset.lerp(from, to, i / 8)!);
+        await tester.pump(const Duration(milliseconds: 16));
+      }
+      await gesture.up();
+      await tester.pump();
+      expect(sent, [moveOf(const Ship(ShipType.destroyer, row: 8, col: 1))]);
+    });
+
+    testWidgets('dragging shows a preview, red where it cannot go', (
+      tester,
+    ) async {
+      final sent = <Json>[];
+      await pumpAt(tester, phone, placing(sent));
+      Color colorOf(int index) =>
+          ((tester.widget<Container>(cell('sea-own', index)).decoration!
+                  as BoxDecoration)
+              .color)!;
+
+      // Move in small steps, as a finger does.
+      Future<void> glide(TestGesture g, Offset from, Offset to) async {
+        for (var i = 1; i <= 10; i++) {
+          await g.moveTo(Offset.lerp(from, to, i / 10)!);
+          await tester.pump(const Duration(milliseconds: 16));
+        }
+      }
+
+      final start = tester.getCenter(cell('sea-own', 80));
+      final over55 = tester.getCenter(cell('sea-own', 55));
+      final gesture = await tester.startGesture(start);
+      await glide(gesture, start, over55);
+      expect(colorOf(55), const Color(0xFF43A047), reason: 'green: fits');
+      expect(colorOf(80), isNot(const Color(0xFF90A4AE)), reason: 'lifted');
+
+      await glide(gesture, over55, tester.getCenter(cell('sea-own', 2)));
+      expect(
+        colorOf(2),
+        const Color(0xFFE53935),
+        reason: 'red: on the carrier',
+      );
+
+      await gesture.up();
+      await tester.pump();
+      expect(sent, isEmpty, reason: 'an invalid drop sends nothing');
+      expect(find.text("The Destroyer doesn't fit there."), findsOneWidget);
+      expect(
+        colorOf(80),
+        const Color(0xFFFFB300),
+        reason: 'snapped back, still selected',
+      );
+    });
+
+    testWidgets('shuffle and ready send their actions', (tester) async {
+      final sent = <Json>[];
+      await pumpAt(tester, phone, placing(sent));
+      expect(
+        tester
+            .widget<OutlinedButton>(find.byKey(const ValueKey('sea-rotate')))
+            .onPressed,
+        isNull,
+      );
       await tester.tap(find.byKey(const ValueKey('sea-shuffle')));
       await tester.tap(find.byKey(const ValueKey('sea-ready')));
       expect(sent, [
-        {
-          'type': 'move',
-          'ship': 'carrier',
-          'row': carrier.row,
-          'col': carrier.col,
-          'vertical': !carrier.vertical,
-        },
         {'type': 'shuffle'},
         {'type': 'ready'},
       ]);
     });
 
     testWidgets('a ready fleet is locked until Unready', (tester) async {
-      session.applyAction('a', {'type': 'ready'});
       final sent = <Json>[];
-      await pumpAt(tester, phone, viewOf(session, sent: sent));
+      await pumpAt(tester, phone, placing(sent, ready: true));
       expect(find.text('Ready! Waiting for the others…'), findsOneWidget);
-      await tester.tap(cell('sea-own', fleet.first.cells.first));
+      await tapCell(tester, 0);
+      await doubleTapCell(tester, 80);
+      await tester.dragFrom(
+        tester.getCenter(cell('sea-own', 80)),
+        const Offset(0, -100),
+      );
       await tester.tap(find.byKey(const ValueKey('sea-shuffle')));
       expect(sent, isEmpty);
       await tester.tap(find.text('Unready'));
