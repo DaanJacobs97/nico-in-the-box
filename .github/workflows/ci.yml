@@ -75,3 +75,14 @@ jobs:
         working-directory: packages/nico_shared
         timeout-minutes: 10
         run: flutter test --platform chrome
+
+      # Last, because it changes the checkout: generate a throwaway game and
+      # check it passes everything, so tool/new_game.dart can't rot when the
+      # game interfaces change.
+      - name: New-game generator still produces a passing game
+        run: |
+          dart run tool/new_game.dart scaffoldcheck "Scaffold Check" 2 5
+          dart format --output=none --set-exit-if-changed packages/nico_shared
+          flutter analyze
+          flutter test test/games test/docs
+          (cd packages/nico_shared && flutter test)

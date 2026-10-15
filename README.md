@@ -175,7 +175,8 @@ itself and TCP 47803 for the host's connection.
 
 Follow **[docs/ADDING_A_GAME.md](docs/ADDING_A_GAME.md)**. It covers the six pieces a game needs, where each one goes,
 the required tests, and a pull-request checklist. `test/games/registry_consistency_test.dart` fails until a new game
-is fully wired in.
+is fully wired in. To start, `dart run tool/new_game.dart <id> "<Name>" [min] [max]` generates every piece with
+placeholder rules that already pass the checks.
 
 ### Before opening a pull request
 
