@@ -168,6 +168,12 @@ itself and TCP 47803 for the host's connection.
 - AI assistants: create a branch, commit there, push the branch and open a pull request. Leave the merge to a human
   unless one explicitly tells you to merge.
 
+### Adding a game
+
+Follow **[docs/ADDING_A_GAME.md](docs/ADDING_A_GAME.md)**. It covers the six pieces a game needs, where each one goes,
+the required tests, and a pull-request checklist. `test/games/registry_consistency_test.dart` fails until a new game
+is fully wired in.
+
 ### Before opening a pull request
 
 - Run `dart format .`, `flutter analyze` and `flutter test` locally. CI runs the same checks on every pull request.
