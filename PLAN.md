@@ -764,8 +764,8 @@ release builds, so the device run used a debug build.
 
 # Release builds (demo builds of every app)
 
-**Status:** milestones 1 (signing), 2 (icons) and 3 (release workflow) in review; the dry run (4) follows once
-they are merged.
+**Status:** done. All four milestones merged; the `v0.3.1-rc1` dry run passed (downloads installed and started on
+Windows and the tablet, icons shown), and v0.3.1 is the first release with downloads.
 
 Ship installable builds of each app for a tagged version, so people can try Nico in the Box without a development
 setup.

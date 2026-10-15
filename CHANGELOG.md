@@ -7,7 +7,7 @@ commit `vX.Y.Z`: pushing the tag builds the downloads (see "Release builds" in t
 The network protocol has its own number (`kProtocolVersion`, currently 5). It changes whenever a message changes,
 so builds of different versions refuse to play together.
 
-## 0.3.1 (unreleased)
+## 0.3.1 (2026-10-15)
 
 The first version with installable demo builds; the games are the same as in 0.3.0.
 
