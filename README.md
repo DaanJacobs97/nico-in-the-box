@@ -3,8 +3,8 @@
 Jackbox-style LAN party games built with Flutter. One device hosts a room, and friends on the same Wi-Fi find it
 automatically and join with a nickname. No internet connection and no accounts are needed.
 
-> **Status:** v0.1. Playable on Windows and Android over a LAN. See [PLAN.md](PLAN.md) for the design and
-> milestones.
+> **Status:** v0.3. Playable on Windows and Android over a LAN, and from any browser. See
+> [CHANGELOG.md](CHANGELOG.md) for what each version added and [PLAN.md](PLAN.md) for the design.
 
 ## Features
 
