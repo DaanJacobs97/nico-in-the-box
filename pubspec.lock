@@ -221,14 +221,14 @@ packages:
       path: "packages/nico_native"
       relative: true
     source: path
-    version: "0.3.0"
+    version: "0.3.1"
   nico_shared:
     dependency: "direct main"
     description:
       path: "packages/nico_shared"
       relative: true
     source: path
-    version: "0.3.0"
+    version: "0.3.1"
   package_info_plus:
     dependency: transitive
     description:

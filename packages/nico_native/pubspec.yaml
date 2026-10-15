@@ -1,7 +1,7 @@
 name: nico_native
 description: "Native-only LAN code (dart:io) shared by the Nico in the Box host app and the Caster app."
 publish_to: 'none'
-version: 0.3.0
+version: 0.3.1
 
 environment:
   sdk: ^3.13.5

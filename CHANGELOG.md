@@ -1,11 +1,21 @@
 # Changelog
 
-What each version of Nico in the Box added. Version numbers stay below 1.0 until iOS builds, release signing and app
-icons are done. Bump the version in every `pubspec.yaml` (app, Caster, browser client and both packages) together,
-and tag the merge commit `vX.Y.Z`.
+What each version of Nico in the Box added. Version numbers stay below 1.0 until there are iOS builds. To release,
+bump the version in every `pubspec.yaml` (app, Caster, browser client and both packages) together, then tag the merge
+commit `vX.Y.Z`: pushing the tag builds the downloads (see "Release builds" in the README).
 
 The network protocol has its own number (`kProtocolVersion`, currently 5). It changes whenever a message changes,
 so builds of different versions refuse to play together.
+
+## 0.3.1 (unreleased)
+
+The first version with installable demo builds; the games are the same as in 0.3.0.
+
+- **Downloads:** each release has a Windows zip and an Android APK of the app and of the Caster, built by GitHub
+  Actions from the version tag. The Windows zips include the Visual C++ runtime. (#33)
+- **Release signing:** Android builds are signed with the project's key, so later versions install as updates. (#31)
+- **App icons:** the app, the Caster and the browser client have their own icons instead of Flutter's default.
+  (#32)
 
 ## 0.3.0 (2026-10-15)
 
