@@ -70,6 +70,9 @@ hides the QR code.
 
 ### Project layout
 
+The table below gives the big picture. **[docs/CODE_MAP.md](docs/CODE_MAP.md)** lists every source file, says where to change
+what, and maps the tests.
+
 | Path | What lives there |
 |---|---|
 | `lib/` | The host/join app: server, LAN discovery, hosting and joining screens. Native-only code (`dart:io`) belongs here |
@@ -175,6 +178,10 @@ the required tests, and a pull-request checklist. `test/games/registry_consisten
 is fully wired in.
 
 ### Before opening a pull request
+
+- Run the full check (format, analyze, all five test suites):
+  `powershell -ExecutionPolicy Bypass -File tool/check.ps1 -Fix` on Windows, `tool/check.sh --fix` elsewhere.
+- Added, moved or deleted a source file? Update [docs/CODE_MAP.md](docs/CODE_MAP.md). A test checks it.
 
 - Run `dart format .`, `flutter analyze` and `flutter test` locally. CI runs the same checks on every pull request.
 - Keep each pull request focused on one feature or fix, and describe what changed and how you tested it.
