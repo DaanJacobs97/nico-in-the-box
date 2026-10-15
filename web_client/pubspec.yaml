@@ -47,6 +47,7 @@ dev_dependencies:
   # package. See that file for information about deactivating specific lint
   # rules and activating additional ones.
   flutter_lints: ^6.0.0
+  flutter_launcher_icons: ^0.14.4
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
@@ -89,3 +90,15 @@ flutter:
   #
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/to/font-from-package
+
+# Browser tab and home-screen icons, drawn by tool/icons/draw_icons_test.dart.
+# Regenerate with `dart run flutter_launcher_icons` after redrawing.
+flutter_launcher_icons:
+  image_path: ../icons/app_icon.png
+  android: false
+  ios: false
+  web:
+    generate: true
+    image_path: ../icons/app_icon.png
+    background_color: "#5A3FC0"
+    theme_color: "#5A3FC0"

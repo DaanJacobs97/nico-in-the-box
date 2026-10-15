@@ -3,8 +3,8 @@
     "short_name": "Nico Box",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#673AB7",
-    "theme_color": "#673AB7",
+    "background_color": "#5A3FC0",
+    "theme_color": "#5A3FC0",
     "description": "Browser player client for Nico in the Box",
     "prefer_related_applications": false,
     "icons": [

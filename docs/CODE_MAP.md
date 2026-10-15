@@ -136,6 +136,7 @@ Lines are approximate, so you can tell big files from small ones.
 | `tool/new_game.dart`, `tool/new_game_templates.dart` | `dart run tool/new_game.dart <id> "<Name>" [min] [max]`: generates a placeholder game (all six pieces, tests, an example option, code map rows, protocol bump). Templates live in the part file |
 | `tool/build_web_client.ps1`, `tool/build_web_client.sh` | Build `web_client/` into `assets/generated/web_client.zip` (git-ignored) |
 | `tool/bot/lan_bot_test.dart` | Scripted LAN player (all three games): `flutter test tool/bot/lan_bot_test.dart --dart-define=HOST=<ip>` |
+| `tool/icons/draw_icons_test.dart` | Draws the app, Caster and browser-client icons into `icons/` (`flutter test tool/icons/draw_icons_test.dart`, then `dart run flutter_launcher_icons` in each app) |
 
 ### `.github/`: CI and pull requests
 
