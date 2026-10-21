@@ -447,6 +447,38 @@ void main() {
       expect(direction(), Axis.vertical);
     });
 
+    testWidgets('a long Afloat line does not shrink one board', (tester) async {
+      final session =
+          SeaSiegeSession.custom(
+              const [ann, bob],
+              fleets: {'a': rowsFleet, 'b': rowsFleet},
+              shootAgain: true,
+            )
+            ..applyAction('a', fire(80))
+            ..applyAction('a', fire(81));
+      // Ann's line names five ships, Bob's four: at some width only one of
+      // them would wrap.
+      for (var width = 1000.0; width <= 2400; width += 100) {
+        await pumpAt(
+          tester,
+          Size(width, 800),
+          SharedScreenView(
+            state: DisplayState(
+              lobby: lobby,
+              gameId: 'seasiege',
+              table: session.tableView(),
+            ),
+          ),
+        );
+        expect(tester.takeException(), isNull);
+        expect(
+          tester.getSize(cell('table-a', 0)),
+          tester.getSize(cell('table-b', 0)),
+          reason: 'at $width px wide',
+        );
+      }
+    });
+
     testWidgets("the host's board comes first", (tester) async {
       Offset at(String text) => tester.getCenter(find.text(text));
       await pumpBattle(tester, const Size(1920, 1080), hostId: 'b');

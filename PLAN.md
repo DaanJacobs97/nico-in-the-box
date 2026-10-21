@@ -818,3 +818,15 @@ host's grid first, animate the water, and draw sprites for every ship type.
   reduced motion.
 - **Layout follows the space the table actually has,** not the device orientation: wider than tall puts the boards
   side by side. When the host's device is the shared screen, the host has no board and join order stays.
+- **The Caster may turn:** it used to lock itself to landscape on Android and iPad, so a tablet Caster never showed
+  the stacked layout. TVs are landscape anyway.
+- **Each board's "Afloat" line is always one line high** (shrunk to fit), so a longer list can't wrap and make
+  one board smaller than the other. Found on the tablet Caster.
+
+**Verified on the tablet** (Samsung SM-T590, USB tunnel, scripted second player, both rule settings):
+- **Chrome `/screen/`:** side by side in landscape, stacked in portrait, host first. The water moves, and wrecks
+  show both horizontal and vertical.
+- **Release-signed Caster from this branch:** a full run in landscape passed both games. After the lock was
+  removed, the Caster turned to portrait and showed the stacked layout and wrecks (screenshots). That run then
+  failed: the tablet's Wi-Fi re-associated, the Caster dropped, and later it was no longer found by scanning. That
+  issue is unrelated and is to be looked at separately.

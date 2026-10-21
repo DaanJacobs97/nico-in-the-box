@@ -13,6 +13,7 @@ so builds of different versions refuse to play together.
   and the shared screen shows sunk ships as burnt-out wrecks. On the shared screen the water moves, the host's board
   comes first, and the boards sit side by side on a wide screen and stacked on a tall one, in the Caster and the
   browser alike.
+- **The Caster turns with the device:** a tablet Caster can stand in portrait instead of being locked to landscape.
 
 ## 0.3.1 (2026-10-15)
 

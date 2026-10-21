@@ -4,7 +4,6 @@ import 'dart:io';
 import 'dart:math';
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:nico_native/discovery.dart';
 import 'package:nico_shared/net/protocol.dart';
 import 'package:nico_shared/screens/shared_screen_view.dart';
@@ -48,13 +47,8 @@ class _CasterAppState extends State<CasterApp> {
   }
 
   Future<void> _start() async {
-    // A screen across the room: landscape, and never going to sleep.
-    if (Platform.isAndroid || Platform.isIOS) {
-      await SystemChrome.setPreferredOrientations([
-        DeviceOrientation.landscapeLeft,
-        DeviceOrientation.landscapeRight,
-      ]);
-    }
+    // A screen across the room never goes to sleep. It may turn: a tablet
+    // propped up in portrait gets layouts made for tall screens.
     unawaited(WakelockPlus.enable().catchError((Object _) {}));
 
     try {

@@ -156,12 +156,20 @@ class _BoardPanel extends StatelessWidget {
             keyPrefix: keyPrefix,
           ),
         ),
-        Text(
-          board.afloat.isEmpty
-              ? 'Fleet sunk'
-              : 'Afloat: ${board.afloat.join(', ')}',
-          style: style,
-          textAlign: TextAlign.center,
+        // Always one line high, shrunk to fit: otherwise a longer line
+        // would wrap and make this board smaller than its neighbour.
+        SizedBox(
+          height: style.fontSize! * 1.5,
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text(
+              board.afloat.isEmpty
+                  ? 'Fleet sunk'
+                  : 'Afloat: ${board.afloat.join(', ')}',
+              style: style,
+              maxLines: 1,
+            ),
+          ),
         ),
       ],
     );

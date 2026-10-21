@@ -109,7 +109,7 @@ Lines are approximate, so you can tell big files from small ones.
 
 | File | Lines | What it does |
 |---|---:|---|
-| `caster/lib/main.dart` | 149 | App: name (remembered), announcer, wakelock, landscape; shows `IdleScreen` or `SharedScreenView` |
+| `caster/lib/main.dart` | 149 | App: name (remembered), announcer, wakelock (turns freely); shows `IdleScreen` or `SharedScreenView` |
 | `caster/lib/cast_server.dart` | 135 | `CastServer`: `/cast` WebSocket, one host at a time (`casterBusy`), display updates |
 | `caster/lib/idle_screen.dart` | 127 | "Waiting for a host", rename dialog, address |
 
