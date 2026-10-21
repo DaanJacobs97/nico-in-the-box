@@ -15,7 +15,6 @@ dependencies:
   nico_shared:
     path: packages/nico_shared
   qr_flutter: ^4.1.0
-  wakelock_plus: ^1.8.1
 
 dev_dependencies:
   flutter_test:

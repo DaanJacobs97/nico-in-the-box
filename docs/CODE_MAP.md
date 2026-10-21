@@ -46,7 +46,6 @@ Lines are approximate, so you can tell big files from small ones.
 | File | Lines | What it does |
 |---|---:|---|
 | `lib/main.dart` | 29 | App entry and theme; opens `HomeScreen` |
-| `lib/app/screen_awake.dart` | 25 | `ScreenAwake`: reference-counted wake lock while hosting |
 | `lib/net/game_server.dart` | 466 | **`GameServer`**: rooms, messages, host-only commands, game sessions, display feed (`attachDisplay`, `displayState`). Routes `/ws` and `/display` here; plain HTTP goes to `web_routes.dart` |
 | `lib/net/display_handle.dart` | 37 | `DisplayHandle`: one connected shared screen (part of `game_server.dart`, so it shares its private API) |
 | `lib/net/player_seats.dart` | 189 | Seats (part of `game_server.dart`): hello and nicknames, resume tokens, the reconnect grace period, leaving, kicking, dropping connections |
@@ -89,7 +88,8 @@ Lines are approximate, so you can tell big files from small ones.
 | `packages/nico_shared/lib/games/seasiege/sea_effects.dart` | 307 | Turn and shot effects for both views: `seaTargetOf`, `TurnBanner` (gold, pulsing), `SeaShotFeed` (new shots only, 3 s each), `SeaToastLayer`, `SeaBoardPanel` (title, crosshair, dimming, toasts) |
 | `packages/nico_shared/lib/games/seasiege/seasiege_sprites.dart` | 222 | `paintShip` (top-down art for each ship type, intact or wrecked; also exported as the browser PNGs), `ShipSprite` |
 | `packages/nico_shared/lib/games/seasiege/seasiege_table.dart` | 152 | `SeaBoard`, `hostFirst`, `describeShot`, `SeaSiegeTable` (shared screen: "Ann is firing at Bob's fleet" banner, host's board first, side by side when wide, stacked when tall, toasts over the board hit) |
-| `packages/nico_shared/lib/screens/session_screen.dart` | 282 | **`SessionScreen`**: lobby → game → result, notices, leaving, host-as-screen area, "Reconnecting…" banner |
+| `packages/nico_shared/lib/screens/session_screen.dart` | 298 | **`SessionScreen`**: lobby → game → result, notices, leaving, host-as-screen area, "Reconnecting…" banner; keeps the screen on while open |
+| `packages/nico_shared/lib/screens/screen_awake.dart` | 28 | `ScreenAwake`: reference-counted wake lock while hosting or in a room (apps, and browsers where allowed) |
 | `packages/nico_shared/lib/screens/lobby_view.dart` | 215 | Lobby: game, players (away ones marked), Single game screen settings (host), pinned Start button |
 | `packages/nico_shared/lib/screens/shared_screen_view.dart` | 138 | `SharedScreenView`: draws a `DisplayState` (lobby / table / result) |
 | `packages/nico_shared/lib/widgets/display_settings_editor.dart` | 103 | Single game screen switch + "where is the screen" choice (`ScreenChoice`) |

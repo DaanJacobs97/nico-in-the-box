@@ -22,6 +22,9 @@ so builds of different versions refuse to play together.
     up as short-lived messages over the board they hit, and the square flashes. On your turn these messages
     never cover the board you tap.
   - **Protocol 6:** shots in the log are numbered.
+- **Screens stay on in a room:** players' phones no longer lock while they're in a room (lobby, game and
+  results), just as the host's device already didn't. The normal timeout comes back when you leave. Browser players
+  are not covered yet: over the LAN's plain `http://`, browsers don't allow keeping the screen on.
 - **The Caster turns with the device:** a tablet Caster can stand in portrait instead of being locked to landscape.
 
 ## 0.3.1 (2026-10-15)

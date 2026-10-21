@@ -855,3 +855,23 @@ must not cover squares a player can tap.
 - **Shot numbers:** each log entry gets `n` so screens can tell new shots from old ones. Protocol 6.
 - **The browser screen is rebuilt on every update,** so it remembers what it has seen and keeps each toast's
   timing with a negative animation delay.
+
+## Follow-up: keep the screen on while in a room
+
+**Status:** works in the apps; the browser is open.
+
+**Decisions (confirmed):**
+- **Scope:** the screen stays on for the whole time you're in a room: lobby, game and results.
+  - `ScreenAwake` moved to `nico_shared`, and `SessionScreen` holds it.
+  - The host already held it through `HostedRoom`; the counter handles both holds.
+- **Browsers where supported.** The same code runs in the browser client.
+
+**Verified on the tablet:**
+- **App:** a screen wake lock for the app was taken when joining and dropped after leaving.
+  - Waiting out the timeout couldn't prove anything: the tablet has "Stay awake while charging" on and was
+    plugged in.
+- **Browser (Chrome, `http://192.168.0.156:47800/play/`):** no wake lock.
+  - The page isn't a secure context, so `navigator.wakeLock` is missing.
+  - wakelock_plus then falls back to a hidden looping video (NoSleep.js). Its data-URI video loads its metadata
+    but never decodes a frame (`readyState` 1, `currentTime` stuck at 0). Chrome doesn't count it as playing,
+    even when added to the page at 300 px.
