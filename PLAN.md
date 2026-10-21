@@ -903,6 +903,9 @@ connect, then misbehave. This came up with a friend's game branch started before
 - **`git pull` after the bot's commit** before pushing again.
 - **Rare conflict:** if two PRs merge while a third is open, updating the third conflicts on the version line.
   Either side will do; the workflow then sets the right number.
+- **"Awaiting approval" runs:** GitHub also creates `pull_request` runs for the bot's commit and holds them for
+  approval. They aren't needed (the started CI run covers the commit) and don't block merging. Approving them just
+  runs CI again, and the workflow finds the number already right.
 
 **Not covered:** a changed message shape is no longer detected separately. It doesn't need to be, since every PR
 bumps anyway.
