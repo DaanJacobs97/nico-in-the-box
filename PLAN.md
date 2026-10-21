@@ -813,15 +813,18 @@ host's grid first, animate the water, and draw sprites for every ship type.
 - **One source of art:** `paintShip` in `seasiege_sprites.dart` draws each ship with plain shapes. Flutter paints
   it directly, and `tool/sprites/` exports PNGs from it for the browser screen.
   `test/games/seasiege_sprites_test.dart` fails if the PNGs fall behind the painter.
-- **Subtle animated water on the shared screen only:** a slow shimmer and drifting wave lines (a `CustomPainter`
-  in Flutter, CSS backgrounds in the browser). Phones keep still water. Both stop when the system asks for
-  reduced motion.
+- **Subtle animated water:** a slow shimmer and drifting wave lines (a `CustomPainter` in Flutter, CSS
+  backgrounds in the browser). First on the shared screen only; after the tablet test the owner asked for it on
+  players' boards too (app and browser client), moving like the screen. It stops when the system asks for reduced
+  motion.
+- **No "Afloat" list on the shared screen** (owner's request after the tablet test); the boards and the shot log
+  say enough.
 - **Layout follows the space the table actually has,** not the device orientation: wider than tall puts the boards
   side by side. When the host's device is the shared screen, the host has no board and join order stays.
 - **The Caster may turn:** it used to lock itself to landscape on Android and iPad, so a tablet Caster never showed
   the stacked layout. TVs are landscape anyway.
-- **Each board's "Afloat" line is always one line high** (shrunk to fit), so a longer list can't wrap and make
-  one board smaller than the other. Found on the tablet Caster.
+- **Both boards are always the same size.** On the tablet Caster, a wrapped "Afloat" line made one board smaller.
+  The line is gone now, and a widget test checks both boards match at many widths.
 
 **Verified on the tablet** (Samsung SM-T590, USB tunnel, scripted second player, both rule settings):
 - **Chrome `/screen/`:** side by side in landscape, stacked in portrait, host first. The water moves, and wrecks

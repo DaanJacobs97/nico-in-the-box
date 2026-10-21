@@ -13,13 +13,11 @@ class SeaBoard {
       sunk = [
         for (final s in board['sunk']! as List<Object?>)
           Ship.fromJson(s! as Json),
-      ],
-      afloat = (board['afloat']! as List<Object?>).cast<String>();
+      ];
 
   final Set<int> hits;
   final Set<int> misses;
   final List<Ship> sunk;
-  final List<String> afloat;
 
   Set<String> get sunkIds => {for (final ship in sunk) ship.type.name};
 
@@ -152,23 +150,7 @@ class _BoardPanel extends StatelessWidget {
             misses: board.misses,
             fleet: board.sunk,
             sunk: board.sunkIds,
-            animatedWater: true,
             keyPrefix: keyPrefix,
-          ),
-        ),
-        // Always one line high, shrunk to fit: otherwise a longer line
-        // would wrap and make this board smaller than its neighbour.
-        SizedBox(
-          height: style.fontSize! * 1.5,
-          child: FittedBox(
-            fit: BoxFit.scaleDown,
-            child: Text(
-              board.afloat.isEmpty
-                  ? 'Fleet sunk'
-                  : 'Afloat: ${board.afloat.join(', ')}',
-              style: style,
-              maxLines: 1,
-            ),
           ),
         ),
       ],

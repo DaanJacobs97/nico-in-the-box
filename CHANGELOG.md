@@ -10,9 +10,10 @@ so builds of different versions refuse to play together.
 ## Unreleased
 
 - **Sea Siege looks the part:** every ship type has its own top-down sprite. Players see their fleet drawn as ships,
-  and the shared screen shows sunk ships as burnt-out wrecks. On the shared screen the water moves, the host's board
-  comes first, and the boards sit side by side on a wide screen and stacked on a tall one, in the Caster and the
-  browser alike.
+  and the shared screen shows sunk ships as burnt-out wrecks. The water moves on every board, on players' devices
+  too. On the shared screen the host's board comes first, and the boards sit side by side on a wide screen and
+  stacked on a tall one, in the Caster and the browser alike. The shared screen no longer lists the ships still
+  afloat.
 - **The Caster turns with the device:** a tablet Caster can stand in portrait instead of being locked to landscape.
 
 ## 0.3.1 (2026-10-15)

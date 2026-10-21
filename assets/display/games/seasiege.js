@@ -52,8 +52,7 @@ NicoDisplay.register('seasiege', (table, lobby, { el, nameOf }) => {
       'div',
       { class: 'sea-panel' },
       el('h3', {}, `${nameOf(lobby, id)}'s fleet`),
-      grid,
-      el('div', { class: 'log' }, b.afloat.length ? `Afloat: ${b.afloat.join(', ')}` : 'Fleet sunk')
+      grid
     );
   }
 

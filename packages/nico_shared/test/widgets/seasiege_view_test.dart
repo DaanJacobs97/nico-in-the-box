@@ -210,10 +210,10 @@ void main() {
     ) async {
       final sent = <Json>[];
       await pumpAt(tester, phone, placing(sent));
-      Color colorOf(int index) =>
+      Color? colorOf(int index) =>
           ((tester.widget<Container>(cell('sea-own', index)).decoration!
                   as BoxDecoration)
-              .color)!;
+              .color);
 
       // Move in small steps, as a finger does.
       Future<void> glide(TestGesture g, Offset from, Offset to) async {
@@ -375,10 +375,7 @@ void main() {
         find.text('Ann fired at B9: Hit! Destroyer sunk!'),
         findsOneWidget,
       );
-      expect(
-        find.text('Afloat: Carrier, Battleship, Cruiser, Submarine'),
-        findsOneWidget,
-      );
+      expect(find.textContaining('Afloat'), findsNothing);
       expect(cell('table-b', 80), findsOneWidget);
     });
 
@@ -447,7 +444,7 @@ void main() {
       expect(direction(), Axis.vertical);
     });
 
-    testWidgets('a long Afloat line does not shrink one board', (tester) async {
+    testWidgets('both boards are the same size at any width', (tester) async {
       final session =
           SeaSiegeSession.custom(
               const [ann, bob],
@@ -456,8 +453,7 @@ void main() {
             )
             ..applyAction('a', fire(80))
             ..applyAction('a', fire(81));
-      // Ann's line names five ships, Bob's four: at some width only one of
-      // them would wrap.
+      // Ann has lost a ship and Bob hasn't; their boards still match.
       for (var width = 1000.0; width <= 2400; width += 100) {
         await pumpAt(
           tester,
@@ -490,7 +486,7 @@ void main() {
     });
   });
 
-  testWidgets('players see their own fleet as sprites on still water', (
+  testWidgets('players see their own fleet as sprites on moving water', (
     tester,
   ) async {
     final session =
@@ -515,7 +511,7 @@ void main() {
       isTrue,
     );
     expect(find.byKey(const ValueKey('sea-enemy-ship-carrier')), findsNothing);
-    expect(find.byType(SeaWater), findsNothing);
+    expect(find.byType(SeaWater), findsNWidgets(2));
   });
 }
 

@@ -6,7 +6,6 @@ import 'package:flutter/material.dart';
 import 'seasiege_fleet.dart';
 import 'seasiege_sprites.dart';
 
-const _water = Color(0xFF1565C0);
 const _selectedColor = Color(0xFFFFB300);
 const _hitColor = Color(0xFFE53935);
 const _missColor = Color(0xFFE3F2FD);
@@ -16,8 +15,7 @@ const _previewColor = Color(0xFF43A047);
 /// the [fleet] as ship sprites ([sunk] ones as wrecks), hits, misses and a
 /// dragged ship's [preview]. Gestures are handled for the whole board and
 /// reported as squares: [onTap], [onDoubleTap] and the three drag
-/// callbacks. [animatedWater] is for the shared screen; phones keep still
-/// water.
+/// callbacks. The water under it moves ([SeaWater]).
 class SeaGrid extends StatelessWidget {
   const SeaGrid({
     super.key,
@@ -28,7 +26,6 @@ class SeaGrid extends StatelessWidget {
     this.selectedShip,
     this.preview,
     this.previewValid = true,
-    this.animatedWater = false,
     this.onTap,
     this.onDoubleTap,
     this.onDragStart,
@@ -49,7 +46,6 @@ class SeaGrid extends StatelessWidget {
   /// squares.
   final Ship? preview;
   final bool previewValid;
-  final bool animatedWater;
 
   final void Function(int cell)? onTap;
 
@@ -172,9 +168,7 @@ class SeaGrid extends StatelessWidget {
             ? (previewValid ? _previewColor : _hitColor)
             : selected.contains(index)
             ? _selectedColor
-            : animatedWater
-            ? null
-            : _water,
+            : null,
         border: Border.all(color: Colors.black26, width: 0.5),
       ),
     );
@@ -190,7 +184,7 @@ class SeaGrid extends StatelessWidget {
       dimension: cell * kSeaSize,
       child: Stack(
         children: [
-          if (animatedWater) const Positioned.fill(child: SeaWater()),
+          const Positioned.fill(child: SeaWater()),
           Column(
             children: [
               for (var r = 0; r < kSeaSize; r++)
