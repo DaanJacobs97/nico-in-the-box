@@ -3,8 +3,10 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nico_shared/games/game_views.dart';
+import 'package:nico_shared/games/seasiege/sea_grid.dart';
 import 'package:nico_shared/games/seasiege/seasiege_fleet.dart';
 import 'package:nico_shared/games/seasiege/seasiege_game.dart';
+import 'package:nico_shared/games/seasiege/seasiege_sprites.dart';
 import 'package:nico_shared/games/seasiege/seasiege_view.dart';
 import 'package:nico_shared/net/protocol.dart';
 import 'package:nico_shared/screens/shared_screen_view.dart';
@@ -379,6 +381,109 @@ void main() {
       );
       expect(cell('table-b', 80), findsOneWidget);
     });
+
+    testWidgets('only sunk ships are drawn, as wrecks on moving water', (
+      tester,
+    ) async {
+      final session =
+          SeaSiegeSession.custom(
+              const [ann, bob],
+              fleets: {'a': rowsFleet, 'b': rowsFleet},
+              shootAgain: true,
+            )
+            ..applyAction('a', fire(80))
+            ..applyAction('a', fire(81))
+            ..applyAction('a', fire(0));
+      await pumpScreen(tester, session.tableView());
+      final wreck = tester.widget<ShipSprite>(
+        find.byKey(const ValueKey('table-b-ship-destroyer')),
+      );
+      expect(wreck.sunk, isTrue);
+      expect(find.byType(ShipSprite), findsOneWidget, reason: 'afloat: hidden');
+      expect(find.byType(SeaWater), findsNWidgets(2));
+    });
+
+    Future<void> pumpBattle(
+      WidgetTester tester,
+      Size size, {
+      String hostId = 'a',
+    }) {
+      final session = SeaSiegeSession.custom(
+        const [ann, bob],
+        fleets: {'a': rowsFleet, 'b': rowsFleet},
+      );
+      return pumpAt(
+        tester,
+        size,
+        SharedScreenView(
+          state: DisplayState(
+            lobby: LobbyState(
+              roomName: 'Party',
+              gameId: 'seasiege',
+              players: const [ann, bob],
+              minPlayers: 2,
+              maxPlayers: 2,
+              hostId: hostId,
+              hostName: '',
+              phase: RoomPhase.playing,
+            ),
+            gameId: 'seasiege',
+            table: session.tableView(),
+          ),
+        ),
+      );
+    }
+
+    testWidgets('boards sit side by side in landscape, stacked in portrait', (
+      tester,
+    ) async {
+      Axis direction() => tester
+          .widget<Flex>(find.byKey(const ValueKey('sea-boards')))
+          .direction;
+      await pumpBattle(tester, const Size(1920, 1080));
+      expect(direction(), Axis.horizontal);
+      await pumpBattle(tester, const Size(1080, 1920));
+      expect(tester.takeException(), isNull);
+      expect(direction(), Axis.vertical);
+    });
+
+    testWidgets("the host's board comes first", (tester) async {
+      Offset at(String text) => tester.getCenter(find.text(text));
+      await pumpBattle(tester, const Size(1920, 1080), hostId: 'b');
+      expect(at("Bob's fleet").dx, lessThan(at("Ann's fleet").dx));
+      await pumpBattle(tester, const Size(1080, 1920), hostId: 'b');
+      expect(at("Bob's fleet").dy, lessThan(at("Ann's fleet").dy));
+      await pumpBattle(tester, const Size(1920, 1080));
+      expect(at("Ann's fleet").dx, lessThan(at("Bob's fleet").dx));
+    });
+  });
+
+  testWidgets('players see their own fleet as sprites on still water', (
+    tester,
+  ) async {
+    final session =
+        SeaSiegeSession.custom(
+            const [ann, bob],
+            fleets: {'a': rowsFleet, 'b': rowsFleet},
+            turn: 'b',
+            shootAgain: true,
+          )
+          ..applyAction('b', fire(80))
+          ..applyAction('b', fire(81));
+    await pumpAt(tester, phone, viewOf(session));
+    for (final type in ShipType.values) {
+      expect(find.byKey(ValueKey('sea-own-ship-${type.name}')), findsOneWidget);
+    }
+    expect(
+      tester
+          .widget<ShipSprite>(
+            find.byKey(const ValueKey('sea-own-ship-destroyer')),
+          )
+          .sunk,
+      isTrue,
+    );
+    expect(find.byKey(const ValueKey('sea-enemy-ship-carrier')), findsNothing);
+    expect(find.byType(SeaWater), findsNothing);
   });
 }
 

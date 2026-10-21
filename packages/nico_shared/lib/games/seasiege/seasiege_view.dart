@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../net/protocol.dart';
 import '../game_views.dart';
+import 'sea_grid.dart';
 import 'seasiege_fleet.dart';
 import 'seasiege_table.dart';
 
@@ -54,8 +55,6 @@ class _SeaSiegeViewState extends State<SeaSiegeView> {
       orElse: () => order.firstWhere((id) => id != ctx.myId),
     );
     final enemy = SeaBoard.fromJson(boards[enemyId]! as Json);
-    final enemySunk = shipCells(enemy.sunk);
-    final mySunk = shipCells(myBoard.sunk).keys.toSet();
     final log = view['log']! as List<Object?>;
 
     final String status;
@@ -86,8 +85,8 @@ class _SeaSiegeViewState extends State<SeaSiegeView> {
             keyPrefix: 'sea-enemy',
             hits: enemy.hits,
             misses: enemy.misses,
-            ships: enemySunk,
-            sunkCells: enemySunk.keys.toSet(),
+            fleet: enemy.sunk,
+            sunk: enemy.sunkIds,
             onTap: myTurn
                 ? (cell) {
                     if (enemy.isShot(cell)) return;
@@ -107,8 +106,8 @@ class _SeaSiegeViewState extends State<SeaSiegeView> {
             keyPrefix: 'sea-own',
             hits: myBoard.hits,
             misses: myBoard.misses,
-            ships: shipCells(fleet),
-            sunkCells: mySunk,
+            fleet: [for (final s in fleet) Ship.fromJson(s)],
+            sunk: myBoard.sunkIds,
           ),
         ),
         if (!ctx.compact && log.isNotEmpty)
@@ -124,7 +123,6 @@ class _SeaSiegeViewState extends State<SeaSiegeView> {
     final view = ctx.view;
     final ready = (view['ready']! as Json)[ctx.myId] == true;
     final fleet = [for (final s in fleetJson) Ship.fromJson(s)];
-    final cells = shipCells(fleetJson);
     final selected = ready ? null : _selected;
     Ship? shipAt(int cell) =>
         fleet.where((s) => s.cells.contains(cell)).firstOrNull;
@@ -245,14 +243,13 @@ class _SeaSiegeViewState extends State<SeaSiegeView> {
             padding: const EdgeInsets.all(8),
             child: SeaGrid(
               keyPrefix: 'sea-own',
-              ships: dragging == null
-                  ? cells
-                  : {
-                      for (final MapEntry(:key, :value) in cells.entries)
-                        if (value != dragging.type.name) key: value,
-                    },
+              // The dragged ship is lifted off the board into the preview.
+              fleet: [
+                for (final s in fleet)
+                  if (s.type != dragging?.type) s,
+              ],
               selectedShip: selected,
-              preview: {...?dragging?.cellsOnBoard},
+              preview: dragging,
               previewValid: dragging?.fitsAmong(fleet) ?? true,
               onTap: ready ? null : tap,
               onDoubleTap: ready

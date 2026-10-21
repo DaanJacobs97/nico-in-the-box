@@ -33,6 +33,8 @@ flutter:
     # Shared screen page served at /screen/ (lightweight HTML/JS).
     - assets/display/
     - assets/display/games/
+    # Sea Siege ship sprites, drawn by tool/sprites/draw_sprites_test.dart.
+    - assets/display/games/seasiege/
 
 # App icons, drawn by tool/icons/draw_icons_test.dart. Regenerate with
 # `dart run flutter_launcher_icons` after redrawing.

@@ -799,3 +799,22 @@ Mac and is still a stub, so it isn't included.
    sources, firewall).
 4. **Dry run:** a `-rc` tag; install and play from the downloaded files on Windows and the tablet before the real
    release (0.3.1, since the icons and signing land after the `v0.3.0` tag).
+
+## Follow-up: Sea Siege visuals
+
+**Status:** built on `feature/seasiege-visuals`; PR held back until the owner has nothing more to add.
+
+**Request:** on the shared screen, stack the grids in portrait and put them side by side in landscape, show the
+host's grid first, animate the water, and draw sprites for every ship type.
+
+**Decisions (confirmed):**
+- **Sprites appear for players too:** your own fleet is drawn as ships while placing and in battle. The shared
+  screen still shows only sunk ships, as wrecks, so nothing secret leaks.
+- **One source of art:** `paintShip` in `seasiege_sprites.dart` draws each ship with plain shapes. Flutter paints
+  it directly, and `tool/sprites/` exports PNGs from it for the browser screen.
+  `test/games/seasiege_sprites_test.dart` fails if the PNGs fall behind the painter.
+- **Subtle animated water on the shared screen only:** a slow shimmer and drifting wave lines (a `CustomPainter`
+  in Flutter, CSS backgrounds in the browser). Phones keep still water. Both stop when the system asks for
+  reduced motion.
+- **Layout follows the space the table actually has,** not the device orientation: wider than tall puts the boards
+  side by side. When the host's device is the shared screen, the host has no board and join order stays.

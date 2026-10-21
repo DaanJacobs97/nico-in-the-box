@@ -7,6 +7,13 @@ commit `vX.Y.Z`: pushing the tag builds the downloads (see "Release builds" in t
 The network protocol has its own number (`kProtocolVersion`, currently 5). It changes whenever a message changes,
 so builds of different versions refuse to play together.
 
+## Unreleased
+
+- **Sea Siege looks the part:** every ship type has its own top-down sprite. Players see their fleet drawn as ships,
+  and the shared screen shows sunk ships as burnt-out wrecks. On the shared screen the water moves, the host's board
+  comes first, and the boards sit side by side on a wide screen and stacked on a tall one, in the Caster and the
+  browser alike.
+
 ## 0.3.1 (2026-10-15)
 
 The first version with installable demo builds; the games are the same as in 0.3.0.

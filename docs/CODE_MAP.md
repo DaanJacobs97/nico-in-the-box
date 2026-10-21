@@ -84,8 +84,10 @@ Lines are approximate, so you can tell big files from small ones.
 | `packages/nico_shared/lib/games/color_clash/color_clash_table.dart` | 267 | Public table: `ClashTableArea` (in the full player view and on the shared screen), `ColorClashTable`, `ClashCardFace`, `colorOf` |
 | `packages/nico_shared/lib/games/seasiege/seasiege_fleet.dart` | 132 | Sea Siege geometry: `ShipType`, `Ship` (+ `rotatedAround`, `nudgeToFit`, `fitsAmong`), `cellName` ("D4"), `isValidFleet`, `randomFleet` |
 | `packages/nico_shared/lib/games/seasiege/seasiege_game.dart` | 249 | Sea Siege engine: placing (shuffle, move, ready) then battle; `shootAgain` option; free-for-all-ready (target per shot); `custom` test constructor |
-| `packages/nico_shared/lib/games/seasiege/seasiege_view.dart` | 290 | Sea Siege player view: placing (drag with preview, double-tap to turn, tap ship then square, Rotate, Shuffle, Ready; nudges to fit), then enemy board above own board |
-| `packages/nico_shared/lib/games/seasiege/seasiege_table.dart` | 316 | `SeaGrid` (10×10 board used by both views; whole-board tap, double-tap and drag, preview), `SeaBoard`, `describeShot`, `SeaSiegeTable` (shared screen) |
+| `packages/nico_shared/lib/games/seasiege/seasiege_view.dart` | 287 | Sea Siege player view: placing (drag with preview, double-tap to turn, tap ship then square, Rotate, Shuffle, Ready; nudges to fit), then enemy board above own board (own fleet as sprites) |
+| `packages/nico_shared/lib/games/seasiege/sea_grid.dart` | 318 | `SeaGrid` (10×10 board used by both views: water, squares, ship sprites, shot markers; whole-board tap, double-tap and drag, preview), `SeaWater` (animated water for the shared screen) |
+| `packages/nico_shared/lib/games/seasiege/seasiege_sprites.dart` | 222 | `paintShip` (top-down art for each ship type, intact or wrecked; also exported as the browser PNGs), `ShipSprite` |
+| `packages/nico_shared/lib/games/seasiege/seasiege_table.dart` | 156 | `SeaBoard`, `hostFirst`, `describeShot`, `SeaSiegeTable` (shared screen: host's board first, side by side when wide, stacked when tall) |
 | `packages/nico_shared/lib/screens/session_screen.dart` | 282 | **`SessionScreen`**: lobby → game → result, notices, leaving, host-as-screen area, "Reconnecting…" banner |
 | `packages/nico_shared/lib/screens/lobby_view.dart` | 215 | Lobby: game, players (away ones marked), Single game screen settings (host), pinned Start button |
 | `packages/nico_shared/lib/screens/shared_screen_view.dart` | 138 | `SharedScreenView`: draws a `DisplayState` (lobby / table / result) |
@@ -123,10 +125,10 @@ Lines are approximate, so you can tell big files from small ones.
 |---|---:|---|
 | `assets/display/index.html` | 22 | Page shell; loads `app.js` and one script per game |
 | `assets/display/app.js` | 133 | `NicoDisplay`: `/display` WebSocket, reconnect, lobby/result, safe `el()` DOM helper, `register()` |
-| `assets/display/style.css` | 153 | TV-scaled styles |
+| `assets/display/style.css` | 180 | TV-scaled styles (incl. Sea Siege's portrait/landscape boards and moving water) |
 | `assets/display/games/tictactoe.js` | 36 | Tic Tac Toe table renderer |
 | `assets/display/games/colorclash.js` | 54 | Color Clash table renderer |
-| `assets/display/games/seasiege.js` | 64 | Sea Siege table renderer (placing status, both boards, last shots) |
+| `assets/display/games/seasiege.js` | 75 | Sea Siege table renderer (placing status, host's board first, wrecks from `games/seasiege/*.png`, last shots) |
 
 ### `tool/`: scripts
 
@@ -138,6 +140,7 @@ Lines are approximate, so you can tell big files from small ones.
 | `tool/release/package_windows.ps1`, `tool/release/package_android.sh` | Build the release files into `build/release/`: Windows zips (with the Visual C++ runtime DLLs) and release-signed APKs (fails on a debug-signed APK) |
 | `tool/bot/lan_bot_test.dart` | Scripted LAN player (all three games): `flutter test tool/bot/lan_bot_test.dart --dart-define=HOST=<ip>` |
 | `tool/icons/draw_icons_test.dart` | Draws the app, Caster and browser-client icons into `icons/` (`flutter test tool/icons/draw_icons_test.dart`, then `dart run flutter_launcher_icons` in each app) |
+| `tool/sprites/ship_sprites.dart`, `tool/sprites/draw_sprites_test.dart` | Export the Sea Siege ship sprites (`paintShip`) as PNGs into `assets/display/games/seasiege/` (`flutter test tool/sprites/draw_sprites_test.dart`); `test/games/seasiege_sprites_test.dart` fails while they're out of date |
 
 ### `.github/`: CI and pull requests
 
@@ -189,7 +192,7 @@ Lines are approximate, so you can tell big files from small ones.
 
 | Suite | Run from | Covers |
 |---|---|---|
-| `test/` (app) | repo root | server and client over real loopback sockets (`net/server_client_test.dart`), reconnects (`net/reconnect_test.dart` on the server, `net/reconnect_client_test.dart` for the client and its banner), display feed (`net/display_feed_test.dart`), web routes (`net/web_routes_test.dart`), Caster link (`net/caster_link_test.dart`), hosted room (`net/hosted_room_test.dart`), game options over the wire (`net/game_options_test.dart`), home/dialog widgets (`widget_test.dart`), game registry (`games/registry_consistency_test.dart`), this map (`docs/code_map_test.dart`) |
+| `test/` (app) | repo root | server and client over real loopback sockets (`net/server_client_test.dart`), reconnects (`net/reconnect_test.dart` on the server, `net/reconnect_client_test.dart` for the client and its banner), display feed (`net/display_feed_test.dart`), web routes (`net/web_routes_test.dart`), Caster link (`net/caster_link_test.dart`), hosted room (`net/hosted_room_test.dart`), game options over the wire (`net/game_options_test.dart`), home/dialog widgets (`widget_test.dart`), game registry (`games/registry_consistency_test.dart`), Sea Siege sprite PNGs up to date (`games/seasiege_sprites_test.dart`), this map (`docs/code_map_test.dart`) |
 | `packages/nico_shared/test/` | that folder | engines (`games/tictactoe_test.dart`, `games/color_clash_test.dart`, incl. privacy), protocol (`net/protocol_test.dart`), game options and their editor (`games/game_options_test.dart`), shared screens (`widgets/shared_screen_test.dart`), Sea Siege (`games/seasiege_test.dart`, `widgets/seasiege_view_test.dart`). Also runs in Chrome in CI |
 | `packages/nico_native/test/` | that folder | `discovery_test.dart`, `caster_scanner_test.dart` |
 | `caster/test/` | that folder | `cast_server_test.dart`, `idle_screen_test.dart` |
