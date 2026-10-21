@@ -15,7 +15,7 @@ dart run tool/new_game.dart dicewar "Dice War" 2 6
 ```
 
 This creates the engine (with an example host option), player view, Flutter table, browser table and both test
-files. It registers the game in all three lists, adds it to the code map and bumps `kProtocolVersion`. The
+files. It registers the game in all three lists, adds it to the code map. (Your pull request gets a new `kProtocolVersion` automatically.) The
 placeholder game ("take turns adding 1 or 2, first to 10 wins") follows every rule in this guide and passes every
 check, so you start from green and change one piece at a time. The sections below explain what each generated piece is for.
 
@@ -229,9 +229,9 @@ NicoDisplay.register('mygame', (table, lobby, { el, nameOf }) => {
    order hosts see.
 2. Add your player view and table to `gameViews` and `gameTables` in `game_views.dart`.
 3. Add the `<script>` tag (step 5).
-4. **Bump `kProtocolVersion`** in `packages/nico_shared/lib/net/protocol.dart`. Older app builds don't know the new
-   game and would get stuck when it starts. A version bump makes them refuse the room with a clear "different app
-   version" message instead.
+4. **Leave `kProtocolVersion` alone.** Your pull request into `main` gets the next number automatically, so older app
+   builds, which don't know the new game, refuse the room with a clear "different app version" message instead of
+   getting stuck when it starts. If the "Protocol version" check fails (e.g. from a fork), set the number it names.
 5. **Rebuild the browser client** (`tool/build_web_client.ps1` or `.sh`). The host app carries a copy of it.
 
 ---
@@ -334,7 +334,7 @@ Copy this into your pull request description.
 - [ ] JS renderer `assets/display/games/<id>.js` (no innerHTML) + <script> tag in index.html
 - [ ] Registered in `availableGames`, `gameViews`, `gameTables`
 - [ ] Options (if any): declared in `GameDefinition.options`, passed to the session as parameters, each tested on and off
-- [ ] `kProtocolVersion` bumped; web client rebuilt
+- [ ] Web client rebuilt; the "Protocol version" check passes on the PR (the number is set automatically)
 - [ ] Tests: engine (rules, rejections, end, random games, privacy), widgets (full, compact, TV-size table), registry check passes
 - [ ] (Recommended) server round-trip test; bot move function; a real device session
 ```

@@ -4,11 +4,14 @@ What each version of Nico in the Box added. Version numbers stay below 1.0 until
 bump the version in every `pubspec.yaml` (app, Caster, browser client and both packages) together, then tag the merge
 commit `vX.Y.Z`: pushing the tag builds the downloads (see "Release builds" in the README).
 
-The network protocol has its own number (`kProtocolVersion`, currently 6). It changes whenever a message changes,
-so builds of different versions refuse to play together.
+The network protocol has its own number (`kProtocolVersion`). Every pull request into `main` raises it by one
+automatically, so builds from different merges refuse to play together.
 
 ## Unreleased
 
+- **The protocol number sets itself:** every pull request into `main` gets the next `kProtocolVersion`
+  automatically, committed to its branch by a workflow. A CI check blocks a PR whose number isn't main's + 1. Two
+  people bumping to the same number at once can no longer slip through.
 - **Sea Siege looks the part:** every ship type has its own top-down sprite. Players see their fleet drawn as ships,
   and the shared screen shows sunk ships as burnt-out wrecks. The water moves on every board, on players' devices
   too. On the shared screen the host's board comes first, and the boards sit side by side on a wide screen and

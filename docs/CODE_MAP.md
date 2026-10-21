@@ -142,13 +142,15 @@ Lines are approximate, so you can tell big files from small ones.
 | `tool/bot/lan_bot_test.dart` | Scripted LAN player (all three games): `flutter test tool/bot/lan_bot_test.dart --dart-define=HOST=<ip>` |
 | `tool/icons/draw_icons_test.dart` | Draws the app, Caster and browser-client icons into `icons/` (`flutter test tool/icons/draw_icons_test.dart`, then `dart run flutter_launcher_icons` in each app) |
 | `tool/sprites/ship_sprites.dart`, `tool/sprites/draw_sprites_test.dart` | Export the Sea Siege ship sprites (`paintShip`) as PNGs into `assets/display/games/seasiege/` (`flutter test tool/sprites/draw_sprites_test.dart`); `test/games/seasiege_sprites_test.dart` fails while they're out of date |
+| `tool/protocol_version.dart` | `check` / `set`: a PR into `main` must carry main's `kProtocolVersion` + 1; used by the PR workflow and the CI check (plain Dart, no Flutter) |
 
 ### `.github/`: CI and pull requests
 
 | File | What it does |
 |---|---|
-| `.github/workflows/ci.yml` | CI on every PR: format, analyze, `dart:io` grep, all test suites, web client build + size budget, shared tests in Chrome |
+| `.github/workflows/ci.yml` | CI on every PR: "Protocol version" check (main + 1), format, analyze, `dart:io` grep, all test suites, web client build + size budget, shared tests in Chrome |
 | `.github/pull_request_template.md` | PR description sections: what and why, changes, checks, device tests |
+| `.github/workflows/protocol_version.yml` | On every PR into `main`: sets `kProtocolVersion` to main's + 1, commits it to the PR branch as github-actions[bot] and starts CI on it (not for fork PRs) |
 | `.github/workflows/release.yml` | On a `v*` tag: checks it matches `pubspec.yaml`, runs the packaging scripts, drafts a GitHub Release with the changelog section |
 | `.github/release_install_notes.md` | Install instructions appended to every release |
 
@@ -161,7 +163,7 @@ Lines are approximate, so you can tell big files from small ones.
 | Add a game | `dart run tool/new_game.dart <id> "<Name>"`, then [ADDING_A_GAME.md](ADDING_A_GAME.md) (engine + views in `packages/nico_shared/lib/games/<id>/`, `assets/display/games/<id>.js`, three registrations) |
 | Change a game's rules | `packages/nico_shared/lib/games/<id>/<id>_game.dart` + its test |
 | Rules the host can switch (game options) | the game's `GameDefinition.options` + read them in its `createSession`; the lobby UI, server and screens handle the rest ([ADDING_A_GAME.md](ADDING_A_GAME.md)) |
-| Add or change a network message | `protocol.dart` (`Msg`, bump `kProtocolVersion`) → `game_server.dart` (handle/send) → `game_client.dart` (receive/expose) |
+| Add or change a network message | `protocol.dart` (`Msg`; `kProtocolVersion` is set on the PR automatically) → `game_server.dart` (handle/send) → `game_client.dart` (receive/expose) |
 | New host-only command | `protocol.dart` (`Msg`), `game_server.dart` (`hostCommands` + handler), `game_client.dart` (method), `host_controls.dart` or `lobby_view.dart` (button) |
 | Lobby UI | `lobby_view.dart`; host-only native extras arrive through `hostFooter` / `hostScreenControls` from `host_setup_screen.dart` |
 | Shared screen behaviour | server: `displayState`/`_broadcastDisplay` in `game_server.dart`; Flutter: `shared_screen_view.dart`; browser: `assets/display/app.js` |
@@ -193,7 +195,7 @@ Lines are approximate, so you can tell big files from small ones.
 
 | Suite | Run from | Covers |
 |---|---|---|
-| `test/` (app) | repo root | server and client over real loopback sockets (`net/server_client_test.dart`), reconnects (`net/reconnect_test.dart` on the server, `net/reconnect_client_test.dart` for the client and its banner), display feed (`net/display_feed_test.dart`), web routes (`net/web_routes_test.dart`), Caster link (`net/caster_link_test.dart`), hosted room (`net/hosted_room_test.dart`), game options over the wire (`net/game_options_test.dart`), home/dialog widgets (`widget_test.dart`), game registry (`games/registry_consistency_test.dart`), Sea Siege sprite PNGs up to date (`games/seasiege_sprites_test.dart`), this map (`docs/code_map_test.dart`) |
+| `test/` (app) | repo root | server and client over real loopback sockets (`net/server_client_test.dart`), reconnects (`net/reconnect_test.dart` on the server, `net/reconnect_client_test.dart` for the client and its banner), display feed (`net/display_feed_test.dart`), web routes (`net/web_routes_test.dart`), Caster link (`net/caster_link_test.dart`), hosted room (`net/hosted_room_test.dart`), game options over the wire (`net/game_options_test.dart`), home/dialog widgets (`widget_test.dart`), game registry (`games/registry_consistency_test.dart`), Sea Siege sprite PNGs up to date (`games/seasiege_sprites_test.dart`), protocol version rule incl. a real-git replay of two branches bumping to the same number (`test/tool/protocol_version_test.dart`), this map (`docs/code_map_test.dart`) |
 | `packages/nico_shared/test/` | that folder | engines (`games/tictactoe_test.dart`, `games/color_clash_test.dart`, incl. privacy), protocol (`net/protocol_test.dart`), game options and their editor (`games/game_options_test.dart`), shared screens (`widgets/shared_screen_test.dart`), Sea Siege (`games/seasiege_test.dart`, `widgets/seasiege_view_test.dart`). Also runs in Chrome in CI |
 | `packages/nico_native/test/` | that folder | `discovery_test.dart`, `caster_scanner_test.dart` |
 | `caster/test/` | that folder | `cast_server_test.dart`, `idle_screen_test.dart` |
@@ -213,8 +215,9 @@ These are big, generated or irrelevant to most tasks. Don't read them unless the
 
 - **`packages/nico_shared` must not import `dart:io`**, because it runs in browsers. CI greps for this. A web build
   does *not* catch it (it only fails at runtime).
-- **Bump `kProtocolVersion`** whenever a message shape changes or a game is added. Mismatched builds then refuse each
-  other cleanly.
+- **Never edit `kProtocolVersion` by hand.** Every PR into `main` gets main's version + 1 from the "Set protocol
+  version" workflow (a bot commit on the PR branch: `git pull` before pushing again), and the "Protocol version" CI
+  check enforces it. Builds from different merges then refuse each other cleanly.
 - **Rebuild the browser client** (`tool/build_web_client`) after changing `web_client/` or `nico_shared`. The host
   app serves its own copy.
 - **Scale big screens with real sizes, not `Transform.scale`.** A transform paints bigger but lays out at the old size,
