@@ -83,11 +83,12 @@ Lines are approximate, so you can tell big files from small ones.
 | `packages/nico_shared/lib/games/color_clash/color_clash_view.dart` | 169 | Player view: hand, color picker, buttons (full/compact) |
 | `packages/nico_shared/lib/games/color_clash/color_clash_table.dart` | 267 | Public table: `ClashTableArea` (in the full player view and on the shared screen), `ColorClashTable`, `ClashCardFace`, `colorOf` |
 | `packages/nico_shared/lib/games/seasiege/seasiege_fleet.dart` | 132 | Sea Siege geometry: `ShipType`, `Ship` (+ `rotatedAround`, `nudgeToFit`, `fitsAmong`), `cellName` ("D4"), `isValidFleet`, `randomFleet` |
-| `packages/nico_shared/lib/games/seasiege/seasiege_game.dart` | 249 | Sea Siege engine: placing (shuffle, move, ready) then battle; `shootAgain` option; free-for-all-ready (target per shot); `custom` test constructor |
-| `packages/nico_shared/lib/games/seasiege/seasiege_view.dart` | 287 | Sea Siege player view: placing (drag with preview, double-tap to turn, tap ship then square, Rotate, Shuffle, Ready; nudges to fit), then enemy board above own board (own fleet as sprites) |
-| `packages/nico_shared/lib/games/seasiege/sea_grid.dart` | 318 | `SeaGrid` (10×10 board used by both views: water, squares, ship sprites, shot markers; whole-board tap, double-tap and drag, preview), `SeaWater` (the moving water under every board) |
+| `packages/nico_shared/lib/games/seasiege/seasiege_game.dart` | 250 | Sea Siege engine: placing (shuffle, move, ready) then battle; `shootAgain` option; free-for-all-ready (target per shot); numbered shot log (`n`); `custom` test constructor |
+| `packages/nico_shared/lib/games/seasiege/seasiege_view.dart` | 344 | Sea Siege player view: placing (drag with preview, double-tap to turn, tap ship then square, Rotate, Shuffle, Ready; nudges to fit), then the enemy and own boards (stacked in portrait, side by side in landscape) with turn banner, target glow and shot toasts kept off the enemy board on your turn |
+| `packages/nico_shared/lib/games/seasiege/sea_grid.dart` | 366 | `SeaGrid` (10×10 board used by both views: water, squares, ship sprites, shot markers, gold target glow, new-shot flash; whole-board tap, double-tap and drag, preview), `SeaWater` (the moving water under every board) |
+| `packages/nico_shared/lib/games/seasiege/sea_effects.dart` | 307 | Turn and shot effects for both views: `seaTargetOf`, `TurnBanner` (gold, pulsing), `SeaShotFeed` (new shots only, 3 s each), `SeaToastLayer`, `SeaBoardPanel` (title, crosshair, dimming, toasts) |
 | `packages/nico_shared/lib/games/seasiege/seasiege_sprites.dart` | 222 | `paintShip` (top-down art for each ship type, intact or wrecked; also exported as the browser PNGs), `ShipSprite` |
-| `packages/nico_shared/lib/games/seasiege/seasiege_table.dart` | 156 | `SeaBoard`, `hostFirst`, `describeShot`, `SeaSiegeTable` (shared screen: host's board first, side by side when wide, stacked when tall) |
+| `packages/nico_shared/lib/games/seasiege/seasiege_table.dart` | 152 | `SeaBoard`, `hostFirst`, `describeShot`, `SeaSiegeTable` (shared screen: "Ann is firing at Bob's fleet" banner, host's board first, side by side when wide, stacked when tall, toasts over the board hit) |
 | `packages/nico_shared/lib/screens/session_screen.dart` | 282 | **`SessionScreen`**: lobby → game → result, notices, leaving, host-as-screen area, "Reconnecting…" banner |
 | `packages/nico_shared/lib/screens/lobby_view.dart` | 215 | Lobby: game, players (away ones marked), Single game screen settings (host), pinned Start button |
 | `packages/nico_shared/lib/screens/shared_screen_view.dart` | 138 | `SharedScreenView`: draws a `DisplayState` (lobby / table / result) |
@@ -125,10 +126,10 @@ Lines are approximate, so you can tell big files from small ones.
 |---|---:|---|
 | `assets/display/index.html` | 22 | Page shell; loads `app.js` and one script per game |
 | `assets/display/app.js` | 133 | `NicoDisplay`: `/display` WebSocket, reconnect, lobby/result, safe `el()` DOM helper, `register()` |
-| `assets/display/style.css` | 180 | TV-scaled styles (incl. Sea Siege's portrait/landscape boards and moving water) |
+| `assets/display/style.css` | 253 | TV-scaled styles (incl. Sea Siege's portrait/landscape boards, moving water, turn banner, target glow, toasts and flash) |
 | `assets/display/games/tictactoe.js` | 36 | Tic Tac Toe table renderer |
 | `assets/display/games/colorclash.js` | 54 | Color Clash table renderer |
-| `assets/display/games/seasiege.js` | 75 | Sea Siege table renderer (placing status, host's board first, wrecks from `games/seasiege/*.png`, last shots) |
+| `assets/display/games/seasiege.js` | 129 | Sea Siege table renderer (placing status, turn banner and target glow, host's board first, wrecks from `games/seasiege/*.png`, toasts and flash for new shots, remembered across redraws) |
 
 ### `tool/`: scripts
 

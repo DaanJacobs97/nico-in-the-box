@@ -3,6 +3,7 @@ import 'dart:math';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 
+import 'sea_effects.dart';
 import 'seasiege_fleet.dart';
 import 'seasiege_sprites.dart';
 
@@ -26,6 +27,8 @@ class SeaGrid extends StatelessWidget {
     this.selectedShip,
     this.preview,
     this.previewValid = true,
+    this.highlighted = false,
+    this.flashes = const [],
     this.onTap,
     this.onDoubleTap,
     this.onDragStart,
@@ -46,6 +49,12 @@ class SeaGrid extends StatelessWidget {
   /// squares.
   final Ship? preview;
   final bool previewValid;
+
+  /// The board being fired at: a gold frame and glow.
+  final bool highlighted;
+
+  /// New shots on this board; each square pulses once.
+  final List<FreshShot> flashes;
 
   final void Function(int cell)? onTap;
 
@@ -180,8 +189,19 @@ class SeaGrid extends StatelessWidget {
       child: child,
     );
     final marker = cell * 0.45;
-    return SizedBox.square(
-      dimension: cell * kSeaSize,
+    return Container(
+      width: cell * kSeaSize,
+      height: cell * kSeaSize,
+      // Painted outside and over the board, so the glow never changes its
+      // size.
+      decoration: BoxDecoration(
+        boxShadow: highlighted
+            ? [BoxShadow(color: seaTurnColor, blurRadius: cell * 0.6)]
+            : null,
+      ),
+      foregroundDecoration: highlighted
+          ? BoxDecoration(border: Border.all(color: seaTurnColor, width: 3))
+          : null,
       child: Stack(
         children: [
           const Positioned.fill(child: SeaWater()),
@@ -232,6 +252,15 @@ class SeaGrid extends StatelessWidget {
                           ),
                         ),
                       ),
+                  for (final flash in flashes)
+                    Positioned(
+                      key: ValueKey('$keyPrefix-flash-${flash.shot['n']}'),
+                      left: (flash.cell % kSeaSize - 0.5) * cell,
+                      top: (flash.cell ~/ kSeaSize - 0.5) * cell,
+                      width: cell * 2,
+                      height: cell * 2,
+                      child: _Flash(life: flash.life),
+                    ),
                 ],
               ),
             ),
@@ -242,7 +271,37 @@ class SeaGrid extends StatelessWidget {
   }
 }
 
-/// Slowly moving water: a deep-blue gradient, drifting wave lines and a
+/// A ring that grows and fades over the first third of a shot's [life].
+class _Flash extends StatelessWidget {
+  const _Flash({required this.life});
+
+  final Animation<double> life;
+
+  @override
+  Widget build(BuildContext context) => AnimatedBuilder(
+    animation: life,
+    builder: (context, _) {
+      final t = (life.value * 3).clamp(0.0, 1.0);
+      if (t >= 1) return const SizedBox.shrink();
+      // Starts on the square (the box is two squares wide) and grows.
+      return FractionallySizedBox(
+        widthFactor: 0.4 + 0.6 * t,
+        heightFactor: 0.4 + 0.6 * t,
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            border: Border.all(
+              color: Colors.white.withValues(alpha: 1 - t),
+              width: 3,
+            ),
+          ),
+        ),
+      );
+    },
+  );
+}
+
+/// Slowly moving water:a deep-blue gradient, drifting wave lines and a
 /// light shimmer sweeping across. Still when the system asks for less
 /// motion.
 class SeaWater extends StatefulWidget {

@@ -191,3 +191,78 @@ h2 { font-size: 1.6rem; margin: 0; font-weight: 500; color: var(--muted); }
 @media (prefers-reduced-motion: reduce) {
   .sea-water { animation: none; }
 }
+
+/* Sea Siege turn cue: a gold banner, the target board glows, the other dims. */
+.sea-banner {
+  background: var(--gold);
+  color: #000;
+  font-size: 2rem;
+  font-weight: 800;
+  border-radius: 999px;
+  padding: 0.3rem 1.6rem;
+  text-align: center;
+}
+.sea-panel { transition: opacity 0.25s; }
+.sea-panel.dim { opacity: 0.45; }
+.sea-panel.target .sea-water { box-shadow: 0 0 calc(var(--sq) * 0.6) var(--gold); outline: 3px solid var(--gold); }
+.sea-crosshair {
+  display: inline-block;
+  width: 1em;
+  height: 1em;
+  margin-right: 0.4em;
+  vertical-align: -0.12em;
+  border: 0.14em solid var(--gold);
+  border-radius: 50%;
+  background: radial-gradient(circle, var(--gold) 0 18%, transparent 20%);
+}
+
+/* New shots: a ring on the square, and a toast over the board's bottom edge
+   that fades out. Both ignore taps and never resize the board. */
+.sea-flash {
+  position: absolute;
+  width: 20%;
+  height: 20%;
+  border: 3px solid #fff;
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 3;
+  opacity: 0;
+  animation: sea-flash 1s ease-out forwards;
+}
+@keyframes sea-flash {
+  from { transform: scale(0.4); opacity: 1; }
+  to { transform: scale(1); opacity: 0; }
+}
+.sea-toasts {
+  position: absolute;
+  left: 4%;
+  right: 4%;
+  bottom: 3%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.3rem;
+  pointer-events: none;
+  z-index: 4;
+}
+.sea-toast {
+  background: rgba(16, 16, 24, 0.9);
+  color: #fff;
+  border: 2px solid rgba(255, 255, 255, 0.4);
+  border-radius: 0.6rem;
+  padding: 0.3rem 0.8rem;
+  font-size: 1.1rem;
+  text-align: center;
+  opacity: 0;
+  animation: sea-toast 3s linear forwards;
+}
+.sea-toast.hit { border-color: var(--red); }
+@keyframes sea-toast {
+  0% { opacity: 0; }
+  5% { opacity: 1; }
+  75% { opacity: 1; }
+  100% { opacity: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sea-flash { display: none; }
+}

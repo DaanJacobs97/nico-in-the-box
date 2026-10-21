@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../net/protocol.dart';
 import '../game_views.dart';
+import 'sea_effects.dart';
 import 'sea_grid.dart';
 import 'seasiege_fleet.dart';
 
@@ -43,9 +44,10 @@ String describeShot(Json shot, String Function(String playerId) nameOf) {
 }
 
 /// Sea Siege on the shared screen: who is still placing, then every board
-/// (the host's first) on animated water with its shots and sunk ships,
-/// whose turn it is and the last shots. Boards sit side by side on a wide
-/// screen and stacked on a tall one.
+/// (the host's first) on animated water with its shots and sunk ships.
+/// A banner says who is firing at whom; the target board glows and the
+/// other dims. New shots pop up as toasts over the board they hit. Boards
+/// sit side by side on a wide screen and stacked on a tall one.
 class SeaSiegeTable extends StatelessWidget {
   const SeaSiegeTable({super.key, required this.ctx});
 
@@ -85,14 +87,19 @@ class SeaSiegeTable extends StatelessWidget {
         }
         final winner = table['winner'] as String?;
         final turn = table['turn'] as String?;
+        final target = seaTargetOf(table);
         final landscape = constraints.maxWidth >= constraints.maxHeight;
         return Padding(
           padding: EdgeInsets.all(12 * scale),
           child: Column(
             children: [
-              Text(
-                winner != null
+              TurnBanner(
+                key: const ValueKey('seasiege-turn'),
+                text: winner != null
                     ? '${ctx.nicknameOf(winner)} wins!'
+                    : target != null
+                    ? '${ctx.nicknameOf(turn!)} is firing at '
+                          "${ctx.nicknameOf(target)}'s fleet"
                     : "${ctx.nicknameOf(turn!)}'s turn to fire",
                 style: big,
               ),
@@ -100,60 +107,57 @@ class SeaSiegeTable extends StatelessWidget {
                 Text('A hit earns another shot', style: normal),
               SizedBox(height: 8 * scale),
               Expanded(
-                child: Flex(
-                  key: const ValueKey('sea-boards'),
-                  direction: landscape ? Axis.horizontal : Axis.vertical,
-                  children: [
-                    for (final id in hostFirst(order, ctx.lobby.hostId))
-                      Expanded(
-                        child: _BoardPanel(
-                          title: "${ctx.nicknameOf(id)}'s fleet",
-                          board: SeaBoard.fromJson(boards[id]! as Json),
-                          keyPrefix: 'table-$id',
-                          style: normal,
+                child: SeaShotFeed(
+                  log: log,
+                  builder: (context, fresh) => Flex(
+                    key: const ValueKey('sea-boards'),
+                    direction: landscape ? Axis.horizontal : Axis.vertical,
+                    children: [
+                      for (final id in hostFirst(order, ctx.lobby.hostId))
+                        Expanded(
+                          child: _panel(
+                            id,
+                            SeaBoard.fromJson(boards[id]! as Json),
+                            target: target,
+                            fresh: [
+                              for (final f in fresh)
+                                if (f.target == id) f,
+                            ],
+                            style: normal,
+                          ),
                         ),
-                      ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
-              for (final shot in log.reversed.take(2))
-                Text(describeShot(shot, ctx.nicknameOf), style: normal),
             ],
           ),
         );
       },
     );
   }
-}
 
-class _BoardPanel extends StatelessWidget {
-  const _BoardPanel({
-    required this.title,
-    required this.board,
-    required this.keyPrefix,
-    required this.style,
-  });
-
-  final String title;
-  final SeaBoard board;
-  final String keyPrefix;
-  final TextStyle style;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: [
-        Text(title, style: style.copyWith(fontWeight: FontWeight.w700)),
-        Expanded(
-          child: SeaGrid(
-            hits: board.hits,
-            misses: board.misses,
-            fleet: board.sunk,
-            sunk: board.sunkIds,
-            keyPrefix: keyPrefix,
-          ),
-        ),
-      ],
-    );
-  }
+  Widget _panel(
+    String id,
+    SeaBoard board, {
+    required String? target,
+    required List<FreshShot> fresh,
+    required TextStyle style,
+  }) => SeaBoardPanel(
+    title: "${ctx.nicknameOf(id)}'s fleet",
+    target: id == target,
+    dimmed: target != null && id != target,
+    toasts: fresh,
+    describe: (shot) => describeShot(shot, ctx.nicknameOf),
+    style: style,
+    board: SeaGrid(
+      hits: board.hits,
+      misses: board.misses,
+      fleet: board.sunk,
+      sunk: board.sunkIds,
+      highlighted: id == target,
+      flashes: fresh,
+      keyPrefix: 'table-$id',
+    ),
+  );
 }

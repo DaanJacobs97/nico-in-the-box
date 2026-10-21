@@ -833,3 +833,25 @@ host's grid first, animate the water, and draw sprites for every ship type.
   removed, the Caster turned to portrait and showed the stacked layout and wrecks (screenshots). That run then
   failed: the tablet's Wi-Fi re-associated, the Caster dropped, and later it was no longer found by scanning. That
   issue is unrelated and is to be looked at separately.
+
+### Second round: players' layout, turn cue, shot toasts
+
+**Request:** stack or place side by side on the players' screens too, make it clearer whose turn it is, and replace
+the shot feed at the bottom with disappearing messages in an overlay, so the boards keep their size. The messages
+must not cover squares a player can tap.
+
+**Decisions (confirmed):**
+- **Players' battle screen:** side by side in landscape (enemy left, yours right, the same size), stacked in
+  portrait as before. Placing is unchanged.
+- **Turn cue:** the board being fired at glows gold with a crosshair by its title, and the other board dims.
+  - **Shared screen:** a gold banner says "Ann is firing at Bob's fleet".
+  - **Your device:** "Your turn: fire!" pulses. While you wait it says "Bob is aiming at your fleet".
+  - **Free-for-all:** with more than one fleet left to pick from, nothing glows.
+- **Toasts over the board that was hit,** fading after 3 s, with the square flashing for the first second.
+  - On your device during your turn, toasts move over your own board.
+  - Dimming never fades a toast.
+  - Compact mode (a shared screen is on) shows no toasts on players' devices.
+  - Shots already fired when a screen opens are not replayed.
+- **Shot numbers:** each log entry gets `n` so screens can tell new shots from old ones. Protocol 6.
+- **The browser screen is rebuilt on every update,** so it remembers what it has seen and keeps each toast's
+  timing with a negative animation delay.

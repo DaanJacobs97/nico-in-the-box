@@ -2,13 +2,16 @@ import 'package:flutter/material.dart';
 
 import '../../net/protocol.dart';
 import '../game_views.dart';
+import 'sea_effects.dart';
 import 'sea_grid.dart';
 import 'seasiege_fleet.dart';
 import 'seasiege_table.dart';
 
 /// What a Sea Siege player sees: their own fleet while placing, then the
-/// enemy board to fire at above their own board. Both boards are inputs or
-/// private, so compact mode only drops the shot log.
+/// enemy board to fire at and their own board, stacked in portrait and side
+/// by side in landscape. The board being fired at glows; new shots show as
+/// toasts, never over the enemy board during your turn. Both boards are
+/// inputs or private, so compact mode only drops the toasts.
 class SeaSiegeView extends StatefulWidget {
   const SeaSiegeView({super.key, required this.ctx});
 
@@ -55,7 +58,8 @@ class _SeaSiegeViewState extends State<SeaSiegeView> {
       orElse: () => order.firstWhere((id) => id != ctx.myId),
     );
     final enemy = SeaBoard.fromJson(boards[enemyId]! as Json);
-    final log = view['log']! as List<Object?>;
+    final log = [for (final e in view['log']! as List<Object?>) e! as Json];
+    final target = seaTargetOf(view);
 
     final String status;
     if (winner != null) {
@@ -64,57 +68,111 @@ class _SeaSiegeViewState extends State<SeaSiegeView> {
           : '${ctx.nicknameOf(winner)} wins!';
     } else if (myTurn) {
       status = 'Your turn: fire!';
+    } else if (target == ctx.myId) {
+      status = '${ctx.nicknameOf(turn!)} is aiming at your fleet';
     } else {
       status = '${ctx.nicknameOf(turn!)} is aiming…';
     }
 
+    String describe(Json shot) => describeShot(shot, ctx.nicknameOf);
+
     return Column(
       children: [
         Padding(
-          padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
-          child: Text(
-            status,
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+          child: TurnBanner(
             key: const ValueKey('seasiege-status'),
-            style: theme.textTheme.headlineSmall,
+            text: status,
+            active: myTurn || winner == ctx.myId,
+            pulse: myTurn,
+            style: theme.textTheme.titleLarge,
           ),
         ),
-        Text("${ctx.nicknameOf(enemyId)}'s fleet"),
         Expanded(
-          flex: 3,
-          child: SeaGrid(
-            keyPrefix: 'sea-enemy',
-            hits: enemy.hits,
-            misses: enemy.misses,
-            fleet: enemy.sunk,
-            sunk: enemy.sunkIds,
-            onTap: myTurn
-                ? (cell) {
-                    if (enemy.isShot(cell)) return;
-                    ctx.sendAction({
-                      'type': 'fire',
-                      'target': enemyId,
-                      'cell': cell,
-                    });
-                  }
-                : null,
+          child: SeaShotFeed(
+            log: log,
+            builder: (context, fresh) {
+              // Toasts never cover the enemy board while you aim: during
+              // your turn every toast sits over your own board.
+              final onEnemy = [
+                for (final f in fresh)
+                  if (!myTurn && f.target == enemyId) f,
+              ];
+              final onOwn = [
+                for (final f in fresh)
+                  if (!onEnemy.contains(f)) f,
+              ];
+              final enemyPanel = SeaBoardPanel(
+                title: "${ctx.nicknameOf(enemyId)}'s fleet",
+                target: target == enemyId,
+                dimmed: target != null && target != enemyId,
+                toasts: ctx.compact ? const [] : onEnemy,
+                describe: describe,
+                board: SeaGrid(
+                  keyPrefix: 'sea-enemy',
+                  hits: enemy.hits,
+                  misses: enemy.misses,
+                  fleet: enemy.sunk,
+                  sunk: enemy.sunkIds,
+                  highlighted: target == enemyId,
+                  flashes: [
+                    for (final f in fresh)
+                      if (f.target == enemyId) f,
+                  ],
+                  onTap: myTurn
+                      ? (cell) {
+                          if (enemy.isShot(cell)) return;
+                          ctx.sendAction({
+                            'type': 'fire',
+                            'target': enemyId,
+                            'cell': cell,
+                          });
+                        }
+                      : null,
+                ),
+              );
+              final ownPanel = SeaBoardPanel(
+                title: 'Your fleet',
+                target: target == ctx.myId,
+                dimmed: target != null && target != ctx.myId,
+                toasts: ctx.compact ? const [] : onOwn,
+                describe: describe,
+                board: SeaGrid(
+                  keyPrefix: 'sea-own',
+                  hits: myBoard.hits,
+                  misses: myBoard.misses,
+                  fleet: [for (final s in fleet) Ship.fromJson(s)],
+                  sunk: myBoard.sunkIds,
+                  highlighted: target == ctx.myId,
+                  flashes: [
+                    for (final f in fresh)
+                      if (f.target == ctx.myId) f,
+                  ],
+                ),
+              );
+              return LayoutBuilder(
+                builder: (context, constraints) =>
+                    constraints.maxWidth > constraints.maxHeight
+                    // Landscape: side by side, the same size.
+                    ? Row(
+                        key: const ValueKey('sea-battle-row'),
+                        children: [
+                          Expanded(child: enemyPanel),
+                          Expanded(child: ownPanel),
+                        ],
+                      )
+                    // Portrait: the board you fire at on top, bigger.
+                    : Column(
+                        key: const ValueKey('sea-battle-column'),
+                        children: [
+                          Expanded(flex: 3, child: enemyPanel),
+                          Expanded(flex: 2, child: ownPanel),
+                        ],
+                      ),
+              );
+            },
           ),
         ),
-        const Text('Your fleet'),
-        Expanded(
-          flex: 2,
-          child: SeaGrid(
-            keyPrefix: 'sea-own',
-            hits: myBoard.hits,
-            misses: myBoard.misses,
-            fleet: [for (final s in fleet) Ship.fromJson(s)],
-            sunk: myBoard.sunkIds,
-          ),
-        ),
-        if (!ctx.compact && log.isNotEmpty)
-          Padding(
-            padding: const EdgeInsets.all(8),
-            child: Text(describeShot(log.last! as Json, ctx.nicknameOf)),
-          ),
       ],
     );
   }

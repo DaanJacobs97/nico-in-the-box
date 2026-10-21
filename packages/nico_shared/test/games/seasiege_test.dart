@@ -270,11 +270,21 @@ void main() {
       expect(board(s, 'b')['misses'], [99]);
       expect(s.tableView()['turn'], 'b');
       expect((s.tableView()['log']! as List).single, {
+        'n': 1,
         'shooter': 'a',
         'target': 'b',
         'cell': 99,
         'result': 'miss',
       });
+    });
+
+    test('shots are numbered, also past the five the log keeps', () {
+      final s = battle();
+      for (final cell in [90, 91, 92, 93, 94, 95, 96]) {
+        s.applyAction(s.tableView()['turn']! as String, fire(cell));
+      }
+      final log = (s.tableView()['log']! as List).cast<Json>();
+      expect([for (final e in log) e['n']], [3, 4, 5, 6, 7]);
     });
 
     test('a hit names the ship and passes the turn', () {
