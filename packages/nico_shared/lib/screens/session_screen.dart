@@ -9,6 +9,7 @@ import '../net/protocol.dart';
 import '../widgets/confirm_dialog.dart';
 import '../widgets/host_controls.dart';
 import 'lobby_view.dart';
+import 'screen_awake.dart';
 import 'shared_screen_view.dart';
 
 /// The room a player is in: the lobby, then the game. The host gets the
@@ -58,10 +59,13 @@ class _SessionScreenState extends State<SessionScreen> {
         ..showSnackBar(SnackBar(content: Text(message)));
     });
     _client.addListener(_onClientChanged);
+    // The screen stays on for as long as you're in the room.
+    ScreenAwake.hold();
   }
 
   @override
   void dispose() {
+    ScreenAwake.release();
     _client.removeListener(_onClientChanged);
     unawaited(_notices.cancel());
     super.dispose();

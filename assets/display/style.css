@@ -148,19 +148,121 @@ h2 { font-size: 1.6rem; margin: 0; font-weight: 500; color: var(--muted); }
 }
 #fullscreen:hover { opacity: 1; }
 
-/* Sea Siege */
-.sea-boards { display: flex; gap: 4vmin; justify-content: center; flex: 1; min-height: 0; width: 100%; }
+/* Sea Siege: boards side by side in landscape, stacked in portrait. */
+.sea-boards { --sq: min(5.2vmin, 3.6vw); display: flex; gap: 4vmin; justify-content: center; align-items: center; flex: 1; min-height: 0; width: 100%; }
+@media (orientation: portrait) {
+  .sea-boards { --sq: min(3.1vh, 7.5vw); flex-direction: column; gap: 2vh; }
+}
 .sea-panel { display: flex; flex-direction: column; align-items: center; gap: 0.5rem; min-height: 0; }
 .sea-panel h3 { margin: 0; font-size: 1.4rem; }
-.sea-grid {
-  display: grid;
-  grid-template-columns: repeat(11, min(5.2vmin, 3.6vw));
-  grid-auto-rows: min(5.2vmin, 3.6vw);
-  gap: 2px;
-}
+.sea-grid { display: grid; grid-template-columns: repeat(11, var(--sq)); grid-template-rows: repeat(11, var(--sq)); }
 .sea-label { display: flex; align-items: center; justify-content: center; color: var(--muted); font-size: 0.9rem; }
-.sea-cell { background: #1565c0; border-radius: 3px; display: flex; align-items: center; justify-content: center; }
-.sea-cell.sunk { background: #4e342e; }
-.peg { width: 45%; height: 45%; border-radius: 50%; }
+.sea-cell { border: 1px solid rgba(0, 0, 0, 0.25); display: flex; align-items: center; justify-content: center; }
+.sea-ship { position: absolute; height: 10%; transform-origin: 0 0; pointer-events: none; z-index: 1; }
+.peg { position: relative; z-index: 2; width: 45%; height: 45%; border-radius: 50%; border: 1px solid rgba(0, 0, 0, 0.55); }
 .peg.hit { background: var(--red); }
 .peg.miss { background: #e3f2fd; }
+
+/* Moving water: a light band sweeping across, two layers of wave lines
+   drifting opposite ways, over a deep-blue gradient. */
+.sea-water {
+  grid-column: 2 / span 10;
+  grid-row: 2 / span 10;
+  position: relative;
+  overflow: hidden;
+  display: grid;
+  grid-template: repeat(10, 1fr) / repeat(10, 1fr);
+  background:
+    linear-gradient(100deg, transparent 40%, rgba(255, 255, 255, 0.12) 50%, transparent 60%) 100% 0 / 300% 100%,
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='24' viewBox='0 0 120 24' preserveAspectRatio='none'%3E%3Cpath d='M0 12 Q30 3 60 12 T120 12' fill='none' stroke='white' stroke-opacity='.18' stroke-width='2'/%3E%3C/svg%3E") 0 0 / calc(var(--sq) * 3.4) calc(var(--sq) * 0.7),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='24' viewBox='0 0 120 24' preserveAspectRatio='none'%3E%3Cpath d='M0 12 Q30 5 60 12 T120 12' fill='none' stroke='white' stroke-opacity='.12' stroke-width='2'/%3E%3C/svg%3E") 0 calc(var(--sq) * 0.35) / calc(var(--sq) * 2.5) calc(var(--sq) * 0.7),
+    linear-gradient(135deg, #1e88e5, #1565c0 50%, #0d47a1);
+  animation: sea-drift 8s linear infinite;
+}
+@keyframes sea-drift {
+  to {
+    background-position:
+      0% 0,
+      calc(var(--sq) * 3.4) 0,
+      calc(var(--sq) * -2.5) calc(var(--sq) * 0.35),
+      0 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sea-water { animation: none; }
+}
+
+/* Sea Siege turn cue: a gold banner, the target board glows, the other dims. */
+.sea-banner {
+  background: var(--gold);
+  color: #000;
+  font-size: 2rem;
+  font-weight: 800;
+  border-radius: 999px;
+  padding: 0.3rem 1.6rem;
+  text-align: center;
+}
+.sea-panel { transition: opacity 0.25s; }
+.sea-panel.dim { opacity: 0.45; }
+.sea-panel.target .sea-water { box-shadow: 0 0 calc(var(--sq) * 0.6) var(--gold); outline: 3px solid var(--gold); }
+.sea-crosshair {
+  display: inline-block;
+  width: 1em;
+  height: 1em;
+  margin-right: 0.4em;
+  vertical-align: -0.12em;
+  border: 0.14em solid var(--gold);
+  border-radius: 50%;
+  background: radial-gradient(circle, var(--gold) 0 18%, transparent 20%);
+}
+
+/* New shots: a ring on the square, and a toast over the board's bottom edge
+   that fades out. Both ignore taps and never resize the board. */
+.sea-flash {
+  position: absolute;
+  width: 20%;
+  height: 20%;
+  border: 3px solid #fff;
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 3;
+  opacity: 0;
+  animation: sea-flash 1s ease-out forwards;
+}
+@keyframes sea-flash {
+  from { transform: scale(0.4); opacity: 1; }
+  to { transform: scale(1); opacity: 0; }
+}
+.sea-toasts {
+  position: absolute;
+  left: 4%;
+  right: 4%;
+  bottom: 3%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.3rem;
+  pointer-events: none;
+  z-index: 4;
+}
+.sea-toast {
+  background: rgba(16, 16, 24, 0.9);
+  color: #fff;
+  border: 2px solid rgba(255, 255, 255, 0.4);
+  border-radius: 0.6rem;
+  padding: 0.3rem 0.8rem;
+  font-size: 1.1rem;
+  text-align: center;
+  opacity: 0;
+  animation: sea-toast 3s linear forwards;
+}
+.sea-toast.hit { border-color: var(--red); }
+@keyframes sea-toast {
+  0% { opacity: 0; }
+  5% { opacity: 1; }
+  75% { opacity: 1; }
+  100% { opacity: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sea-flash { display: none; }
+}

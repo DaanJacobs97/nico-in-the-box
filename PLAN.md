@@ -799,3 +799,84 @@ Mac and is still a stub, so it isn't included.
    sources, firewall).
 4. **Dry run:** a `-rc` tag; install and play from the downloaded files on Windows and the tablet before the real
    release (0.3.1, since the icons and signing land after the `v0.3.0` tag).
+
+## Follow-up: Sea Siege visuals
+
+**Status:** built on `feature/seasiege-visuals`; PR held back until the owner has nothing more to add.
+
+**Request:** on the shared screen, stack the grids in portrait and put them side by side in landscape, show the
+host's grid first, animate the water, and draw sprites for every ship type.
+
+**Decisions (confirmed):**
+- **Sprites appear for players too:** your own fleet is drawn as ships while placing and in battle. The shared
+  screen still shows only sunk ships, as wrecks, so nothing secret leaks.
+- **One source of art:** `paintShip` in `seasiege_sprites.dart` draws each ship with plain shapes. Flutter paints
+  it directly, and `tool/sprites/` exports PNGs from it for the browser screen.
+  `test/games/seasiege_sprites_test.dart` fails if the PNGs fall behind the painter.
+- **Subtle animated water:** a slow shimmer and drifting wave lines (a `CustomPainter` in Flutter, CSS
+  backgrounds in the browser). First on the shared screen only; after the tablet test the owner asked for it on
+  players' boards too (app and browser client), moving like the screen. It stops when the system asks for reduced
+  motion.
+- **No "Afloat" list on the shared screen** (owner's request after the tablet test); the boards and the shot log
+  say enough.
+- **Layout follows the space the table actually has,** not the device orientation: wider than tall puts the boards
+  side by side. When the host's device is the shared screen, the host has no board and join order stays.
+- **The Caster may turn:** it used to lock itself to landscape on Android and iPad, so a tablet Caster never showed
+  the stacked layout. TVs are landscape anyway.
+- **Both boards are always the same size.** On the tablet Caster, a wrapped "Afloat" line made one board smaller.
+  The line is gone now, and a widget test checks both boards match at many widths.
+
+**Verified on the tablet** (Samsung SM-T590, USB tunnel, scripted second player, both rule settings):
+- **Chrome `/screen/`:** side by side in landscape, stacked in portrait, host first. The water moves, and wrecks
+  show both horizontal and vertical.
+- **Release-signed Caster from this branch:** a full run in landscape passed both games. After the lock was
+  removed, the Caster turned to portrait and showed the stacked layout and wrecks (screenshots). That run then
+  failed: the tablet's Wi-Fi re-associated, the Caster dropped, and later it was no longer found by scanning. That
+  issue is unrelated and is to be looked at separately.
+
+### Second round: players' layout, turn cue, shot toasts
+
+**Request:** stack or place side by side on the players' screens too, make it clearer whose turn it is, and replace
+the shot feed at the bottom with disappearing messages in an overlay, so the boards keep their size. The messages
+must not cover squares a player can tap.
+
+**Decisions (confirmed):**
+- **Players' battle screen:** side by side in landscape (enemy left, yours right, the same size), stacked in
+  portrait as before. Placing is unchanged.
+- **Turn cue:** the board being fired at glows gold with a crosshair by its title, and the other board dims.
+  - **Shared screen:** a gold banner says "Ann is firing at Bob's fleet".
+  - **Your device:** "Your turn: fire!" pulses. While you wait it says "Bob is aiming at your fleet".
+  - **Free-for-all:** with more than one fleet left to pick from, nothing glows.
+- **Toasts over the board that was hit,** fading after 3 s, with the square flashing for the first second.
+  - On your device during your turn, toasts move over your own board.
+  - Dimming never fades a toast.
+  - Compact mode (a shared screen is on) shows no toasts on players' devices.
+  - Shots already fired when a screen opens are not replayed.
+- **Shot numbers:** each log entry gets `n` so screens can tell new shots from old ones. Protocol 6.
+- **The browser screen is rebuilt on every update,** so it remembers what it has seen and keeps each toast's
+  timing with a negative animation delay.
+
+## Follow-up: keep the screen on while in a room
+
+**Status:** done. Apps keep the screen on; browser players get a lobby tip (option 1 of 3, chosen by the owner).
+
+**Decisions (confirmed):**
+- **Scope:** the screen stays on for the whole time you're in a room: lobby, game and results.
+  - `ScreenAwake` moved to `nico_shared`, and `SessionScreen` holds it.
+  - The host already held it through `HostedRoom`; the counter handles both holds.
+- **Browsers where supported.** The same code runs in the browser client.
+
+**Verified on the tablet:**
+- **App:** a screen wake lock for the app was taken when joining and dropped after leaving.
+  - Waiting out the timeout couldn't prove anything: the tablet has "Stay awake while charging" on and was
+    plugged in.
+- **Browser (Chrome, `http://192.168.0.156:47800/play/`):** no wake lock.
+  - The page isn't a secure context, so `navigator.wakeLock` is missing.
+  - wakelock_plus then falls back to a hidden looping video (NoSleep.js). Its data-URI video loads its metadata
+    but never decodes a frame (`readyState` 1, `currentTime` stuck at 0). Chrome doesn't count it as playing,
+    even when added to the page at 300 px.
+- **Browser outcome (owner's choice of three):**
+  - **Chosen:** browser players see a tip in the lobby ("Your screen may lock while you wait…"). The wake lock
+    call stays in place, so it starts working by itself if the host ever serves HTTPS.
+  - **Not chosen:** our own looping video, whether Chrome honours it is uncertain; HTTPS with a self-signed
+    certificate, which shows a full-page warning to every browser player.

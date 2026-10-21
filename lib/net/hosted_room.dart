@@ -7,8 +7,8 @@ import 'package:nico_native/discovery.dart';
 import 'package:nico_shared/games/game_session.dart';
 import 'package:nico_shared/net/game_client.dart';
 import 'package:nico_shared/net/protocol.dart';
+import 'package:nico_shared/screens/screen_awake.dart';
 
-import '../app/screen_awake.dart';
 import 'caster_link.dart';
 import 'display_frontend.dart';
 import 'game_server.dart';

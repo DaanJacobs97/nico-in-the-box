@@ -4,8 +4,28 @@ What each version of Nico in the Box added. Version numbers stay below 1.0 until
 bump the version in every `pubspec.yaml` (app, Caster, browser client and both packages) together, then tag the merge
 commit `vX.Y.Z`: pushing the tag builds the downloads (see "Release builds" in the README).
 
-The network protocol has its own number (`kProtocolVersion`, currently 5). It changes whenever a message changes,
+The network protocol has its own number (`kProtocolVersion`, currently 6). It changes whenever a message changes,
 so builds of different versions refuse to play together.
+
+## Unreleased
+
+- **Sea Siege looks the part:** every ship type has its own top-down sprite. Players see their fleet drawn as ships,
+  and the shared screen shows sunk ships as burnt-out wrecks. The water moves on every board, on players' devices
+  too. On the shared screen the host's board comes first, and the boards sit side by side on a wide screen and
+  stacked on a tall one, in the Caster and the browser alike. The shared screen no longer lists the ships still
+  afloat.
+- **Sea Siege: clearer turns and a tidier screen:**
+  - **Whose turn:** a gold banner says who is firing at whom. The board being fired at glows with a crosshair,
+    and the other board dims. On your own device, "Your turn: fire!" pulses.
+  - **Layout:** players' boards sit side by side when the device is in landscape.
+  - **Shot messages:** the text feed at the bottom is gone, so the boards no longer change size. New shots pop
+    up as short-lived messages over the board they hit, and the square flashes. On your turn these messages
+    never cover the board you tap.
+  - **Protocol 6:** shots in the log are numbered.
+- **Screens stay on in a room:** players' phones no longer lock while they're in a room (lobby, game and
+  results), just as the host's device already didn't. The normal timeout comes back when you leave. Browsers don't
+  allow this over the LAN's plain `http://`, so browser players see a tip in the lobby instead.
+- **The Caster turns with the device:** a tablet Caster can stand in portrait instead of being locked to landscape.
 
 ## 0.3.1 (2026-10-15)
 
