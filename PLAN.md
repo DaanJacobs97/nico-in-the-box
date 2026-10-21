@@ -858,7 +858,7 @@ must not cover squares a player can tap.
 
 ## Follow-up: keep the screen on while in a room
 
-**Status:** works in the apps; the browser is open.
+**Status:** done. Apps keep the screen on; browser players get a lobby tip (option 1 of 3, chosen by the owner).
 
 **Decisions (confirmed):**
 - **Scope:** the screen stays on for the whole time you're in a room: lobby, game and results.
@@ -875,3 +875,8 @@ must not cover squares a player can tap.
   - wakelock_plus then falls back to a hidden looping video (NoSleep.js). Its data-URI video loads its metadata
     but never decodes a frame (`readyState` 1, `currentTime` stuck at 0). Chrome doesn't count it as playing,
     even when added to the page at 300 px.
+- **Browser outcome (owner's choice of three):**
+  - **Chosen:** browser players see a tip in the lobby ("Your screen may lock while you wait…"). The wake lock
+    call stays in place, so it starts working by itself if the host ever serves HTTPS.
+  - **Not chosen:** our own looping video, whether Chrome honours it is uncertain; HTTPS with a self-signed
+    certificate, which shows a full-page warning to every browser player.

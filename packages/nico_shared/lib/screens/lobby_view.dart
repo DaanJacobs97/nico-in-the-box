@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../games/registry.dart';
@@ -15,6 +16,7 @@ class LobbyView extends StatelessWidget {
     this.hostFooter,
     this.hostScreenControls,
     this.casterAvailable = false,
+    this.showScreenLockTip = kIsWeb,
   });
 
   final GameClient client;
@@ -28,6 +30,11 @@ class LobbyView extends StatelessWidget {
 
   /// Whether the host can pick the Caster app as the shared screen.
   final bool casterAvailable;
+
+  /// Tells browser players their screen may lock: over the LAN's plain
+  /// http, browsers don't let a page keep the screen on (the apps do, see
+  /// `ScreenAwake`). On by default in the browser client.
+  final bool showScreenLockTip;
 
   @override
   Widget build(BuildContext context) {
@@ -107,6 +114,18 @@ class LobbyView extends StatelessWidget {
                           'hand and buttons.'
                     : 'No screen is connected yet, so you will see the whole '
                           'table here.',
+              ),
+            ),
+          ),
+        if (showScreenLockTip)
+          const Card(
+            child: ListTile(
+              key: ValueKey('screen-lock-tip'),
+              leading: Icon(Icons.screen_lock_portrait),
+              title: Text('Your screen may lock while you wait'),
+              subtitle: Text(
+                'Browsers can only keep it on for secure (https) pages. '
+                'Set a longer screen timeout, or tap now and then.',
               ),
             ),
           ),

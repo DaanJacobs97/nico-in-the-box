@@ -240,6 +240,36 @@ void main() {
       });
     });
 
+    testWidgets('only browser players get the screen-lock tip', (tester) async {
+      final room = _FakeRoom();
+      await tester.runAsync(() => room.start(graceMs: 5000));
+      final client = await openSession(tester, room);
+      await tester.runAsync(() => until(client, () => client.lobby != null));
+      await tester.pump();
+      expect(find.byType(LobbyView), findsOneWidget);
+      const tip = ValueKey('screen-lock-tip');
+      expect(find.byKey(tip), findsNothing, reason: 'the apps keep it on');
+
+      // Tall enough that the whole lobby list is built.
+      tester.view.physicalSize = const Size(800, 2400);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      // A fresh tree: otherwise the pushed room screen stays on top.
+      await tester.pumpWidget(const SizedBox());
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: LobbyView(client: client, showScreenLockTip: true),
+          ),
+        ),
+      );
+      expect(find.byKey(tip), findsOneWidget);
+      await tester.runAsync(() async {
+        await client.leave();
+        await room.stop();
+      });
+    });
+
     testWidgets('the banner goes away once the seat is back', (tester) async {
       final room = _FakeRoom()..resumeDelay = const Duration(milliseconds: 300);
       await tester.runAsync(() => room.start(graceMs: 5000));
