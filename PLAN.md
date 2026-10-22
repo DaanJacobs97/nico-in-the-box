@@ -886,7 +886,8 @@ must not cover squares a player can tap.
 
 ## Follow-up: Color Clash update
 
-**Status:** built on `feature/colorclash-update`; PR held back until the owner has tested it.
+**Status:** done. The owner played it on the Windows app and the tablet (app and Caster) from release builds of
+this branch: "works great".
 
 **Request:** new art for Wild and Wild +4, players' screens use all their space when a shared screen is on,
 swipe a card up to play it, and two options: stacking +2 and +4, and keeping your turn after drawing one (both
