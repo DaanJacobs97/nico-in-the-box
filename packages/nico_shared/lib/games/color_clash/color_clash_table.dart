@@ -3,15 +3,9 @@ import 'package:flutter/material.dart';
 import '../../net/protocol.dart';
 import '../game_views.dart';
 import 'clash_card.dart';
+import 'clash_card_face.dart';
 
-/// Card colors on screen.
-Color colorOf(CardColor color) => switch (color) {
-  CardColor.red => const Color(0xFFE53935),
-  CardColor.yellow => const Color(0xFFFDD835),
-  CardColor.green => const Color(0xFF43A047),
-  CardColor.blue => const Color(0xFF1E88E5),
-  CardColor.wild => const Color(0xFF212121),
-};
+export 'clash_card_face.dart';
 
 /// The public part of the table: everyone's card counts in turn order, the
 /// draw and discard piles, the active color, direction, status and log.
@@ -45,6 +39,7 @@ class ClashTableArea extends StatelessWidget {
     final top = ClashCard.fromJson(table['top']! as Json);
     final color = CardColor.values.byName(table['color']! as String);
     final log = (table['log']! as List<Object?>).cast<String>();
+    final penalty = table['penalty'] as int? ?? 0;
 
     return Column(
       children: [
@@ -79,6 +74,7 @@ class ClashTableArea extends StatelessWidget {
                       _DrawPile(
                         key: const ValueKey('draw-pile'),
                         count: table['drawPile']! as int,
+                        penalty: penalty,
                         onTap: onDraw,
                         scale: scale,
                       ),
@@ -102,6 +98,10 @@ class ClashTableArea extends StatelessWidget {
                             radius: 12 * scale,
                             backgroundColor: colorOf(color),
                           ),
+                          if (penalty > 0) ...[
+                            SizedBox(height: 8 * scale),
+                            ClashPenaltyBadge(penalty: penalty, scale: scale),
+                          ],
                         ],
                       ),
                     ],
@@ -142,11 +142,16 @@ class ColorClashTable extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final turn = ctx.table['turn'] as String?;
+    final penalty = ctx.table['penalty'] as int? ?? 0;
     return LayoutBuilder(
       builder: (context, constraints) => ClashTableArea(
         table: ctx.table,
         nameOf: ctx.nicknameOf,
-        status: turn == null ? '' : "${ctx.nicknameOf(turn)}'s turn",
+        status: turn == null
+            ? ''
+            : penalty > 0
+            ? '${ctx.nicknameOf(turn)}: stack or draw $penalty'
+            : "${ctx.nicknameOf(turn)}'s turn",
         // Grow with the screen; a TV gets roughly double size.
         scale: (constraints.biggest.shortestSide / 450).clamp(1.0, 2.5),
         logLines: 5,
@@ -192,9 +197,18 @@ class _PlayerChip extends StatelessWidget {
 }
 
 class _DrawPile extends StatelessWidget {
-  const _DrawPile({super.key, required this.count, this.onTap, this.scale = 1});
+  const _DrawPile({
+    super.key,
+    required this.count,
+    this.penalty = 0,
+    this.onTap,
+    this.scale = 1,
+  });
 
   final int count;
+
+  /// Cards a draw takes now (a pending stack), or 0 for the usual one.
+  final int penalty;
   final VoidCallback? onTap;
   final double scale;
 
@@ -219,69 +233,40 @@ class _DrawPile extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 4),
-        Text(onTap != null ? 'Draw ($count)' : '$count left'),
+        Text(
+          onTap == null
+              ? '$count left'
+              : penalty > 0
+              ? 'Draw $penalty'
+              : 'Draw ($count)',
+        ),
       ],
     );
   }
 }
 
-class ClashCardFace extends StatelessWidget {
-  const ClashCardFace({
-    super.key,
-    required this.card,
-    required this.width,
-    this.activeColor,
-    this.onTap,
-  });
+/// "+6": the penalty waiting for the player to move, unless they stack.
+class ClashPenaltyBadge extends StatelessWidget {
+  const ClashPenaltyBadge({super.key, required this.penalty, this.scale = 1});
 
-  final ClashCard card;
-  final double width;
-
-  /// For a wild on the discard pile, the color that was chosen.
-  final CardColor? activeColor;
-  final VoidCallback? onTap;
+  final int penalty;
+  final double scale;
 
   @override
   Widget build(BuildContext context) {
-    final background = colorOf(card.color);
-    final foreground = card.color == CardColor.yellow
-        ? Colors.black87
-        : Colors.white;
-    final symbol = switch (card.kind) {
-      CardKind.number => '${card.value}',
-      CardKind.skip => '⊘',
-      CardKind.reverse => '⇄',
-      CardKind.drawTwo => '+2',
-      CardKind.wild => 'W',
-      CardKind.wildDrawFour => '+4',
-    };
-    final ring = card.isWild && activeColor != null
-        ? colorOf(activeColor!)
-        : Colors.white;
-
-    return Material(
-      color: background,
-      elevation: onTap != null ? 6 : 2,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(width * 0.14),
-        side: BorderSide(color: ring, width: width * 0.05),
+    return Container(
+      key: const ValueKey('penalty-badge'),
+      padding: EdgeInsets.symmetric(horizontal: 8 * scale, vertical: 2 * scale),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.error,
+        borderRadius: BorderRadius.circular(12 * scale),
       ),
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: onTap,
-        child: SizedBox(
-          width: width,
-          height: width * 1.5,
-          child: Center(
-            child: Text(
-              symbol,
-              style: TextStyle(
-                color: foreground,
-                fontSize: width * 0.42,
-                fontWeight: FontWeight.w900,
-              ),
-            ),
-          ),
+      child: Text(
+        '+$penalty',
+        style: TextStyle(
+          color: Theme.of(context).colorScheme.onError,
+          fontWeight: FontWeight.w900,
+          fontSize: 16 * scale,
         ),
       ),
     );

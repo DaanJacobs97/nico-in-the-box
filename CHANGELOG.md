@@ -9,6 +9,14 @@ automatically, so builds from different merges refuse to play together.
 
 ## Unreleased
 
+- **Color Clash refresh:**
+  - **New Wild cards:** a grid of all four colors, with "+4" on a Wild +4. On the pile, the chosen color stays
+    bright.
+  - **Swipe to play:** drag a card up and let go; it follows your finger. Tapping still works.
+  - **Bigger hand with a shared screen:** your device shows your cards large, fanned to fit, with the card to
+    match and any pending penalty above them.
+  - **New game options,** both on by default: stack +2 and +4 (a +2 on a +2, a Wild +4 on either; the next player
+    stacks or draws the total), and play after drawing a penalty instead of losing your turn.
 - **The protocol number sets itself:** every pull request into `main` gets the next `kProtocolVersion`
   automatically, committed to its branch by a workflow. A CI check blocks a PR whose number isn't main's + 1. Two
   people bumping to the same number at once can no longer slip through.

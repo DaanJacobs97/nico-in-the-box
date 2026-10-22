@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../net/protocol.dart';
 import '../game_views.dart';
 import 'clash_card.dart';
+import 'clash_hand.dart';
 import 'color_clash_table.dart';
 
 class ColorClashView extends StatelessWidget {
@@ -21,6 +22,7 @@ class ColorClashView extends StatelessWidget {
     final playable = (view['playable']! as List<Object?>).cast<int>().toSet();
     final pendingDrawn = view['pendingDrawn'] as int?;
     final vulnerable = view['vulnerable'] as String?;
+    final penalty = view['penalty'] as int? ?? 0;
     final myTurn = turn == ctx.myId;
     final canDraw = myTurn && pendingDrawn == null;
     final theme = Theme.of(context);
@@ -29,40 +31,74 @@ class ColorClashView extends StatelessWidget {
         : myTurn
         ? (pendingDrawn != null
               ? 'Play the card you drew, or pass'
+              : penalty > 0
+              ? (playable.isEmpty ? 'Draw $penalty' : 'Stack, or draw $penalty')
               : 'Your turn!')
         : "${ctx.nicknameOf(turn)}'s turn";
 
-    Future<void> playCard(ClashCard card) async {
+    Future<bool> playCard(ClashCard card) async {
       if (!card.isWild) {
         ctx.sendAction({'type': 'play', 'cardId': card.id});
-        return;
+        return true;
       }
       final chosen = await _pickColor(context);
-      if (chosen != null) {
-        ctx.sendAction({
-          'type': 'play',
-          'cardId': card.id,
-          'color': chosen.name,
-        });
-      }
+      if (chosen == null) return false;
+      ctx.sendAction({'type': 'play', 'cardId': card.id, 'color': chosen.name});
+      return true;
     }
 
     void draw() => ctx.sendAction({'type': 'draw'});
 
-    return Column(
-      children: [
-        if (ctx.compact) ...[
-          // The table is on the shared screen; keep just a status line.
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: Text(
-              status,
-              key: const ValueKey('compact-status'),
-              style: theme.textTheme.headlineSmall,
+    final buttons = Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 8),
+      child: Wrap(
+        spacing: 8,
+        runSpacing: 8,
+        alignment: WrapAlignment.center,
+        children: [
+          if (ctx.compact)
+            FilledButton.icon(
+              key: const ValueKey('draw-button'),
+              icon: const Icon(Icons.style),
+              label: Text(penalty > 0 && myTurn ? 'Draw $penalty' : 'Draw'),
+              onPressed: canDraw ? draw : null,
             ),
+          FilledButton.tonalIcon(
+            icon: const Icon(Icons.campaign),
+            label: const Text('Last card!'),
+            onPressed: view['canCallLast'] == true
+                ? () => ctx.sendAction({'type': 'callLast'})
+                : null,
           ),
-          const Spacer(),
-        ] else
+          if (pendingDrawn != null)
+            OutlinedButton.icon(
+              icon: const Icon(Icons.skip_next),
+              label: const Text('Pass'),
+              onPressed: () => ctx.sendAction({'type': 'pass'}),
+            ),
+          if (vulnerable != null && vulnerable != ctx.myId)
+            FilledButton.icon(
+              style: FilledButton.styleFrom(
+                backgroundColor: theme.colorScheme.error,
+                foregroundColor: theme.colorScheme.onError,
+              ),
+              icon: const Icon(Icons.pan_tool),
+              label: Text('Catch ${ctx.nicknameOf(vulnerable)}!'),
+              onPressed: () => ctx.sendAction({'type': 'catch'}),
+            ),
+        ],
+      ),
+    );
+    final handView = ClashHand(
+      cards: hand,
+      playable: playable,
+      dimUnplayable: myTurn,
+      onPlay: playCard,
+    );
+
+    if (!ctx.compact) {
+      return Column(
+        children: [
           Expanded(
             child: ClashTableArea(
               table: view,
@@ -71,72 +107,55 @@ class ColorClashView extends StatelessWidget {
               onDraw: canDraw ? draw : null,
             ),
           ),
+          buttons,
+          const SizedBox(height: 8),
+          SizedBox(height: 150, child: handView),
+        ],
+      );
+    }
+
+    // The table is on the shared screen: a status line with the card to
+    // match, the buttons, and the hand as big as the screen allows.
+    final top = ClashCard.fromJson(view['top']! as Json);
+    final color = CardColor.values.byName(view['color']! as String);
+    return Column(
+      children: [
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 8),
-          child: Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            alignment: WrapAlignment.center,
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+          child: Row(
             children: [
-              if (ctx.compact)
-                FilledButton.icon(
-                  key: const ValueKey('draw-button'),
-                  icon: const Icon(Icons.style),
-                  label: const Text('Draw'),
-                  onPressed: canDraw ? draw : null,
-                ),
-              FilledButton.tonalIcon(
-                icon: const Icon(Icons.campaign),
-                label: const Text('Last card!'),
-                onPressed: view['canCallLast'] == true
-                    ? () => ctx.sendAction({'type': 'callLast'})
-                    : null,
+              ClashCardFace(
+                key: const ValueKey('compact-top-card'),
+                card: top,
+                width: 44,
+                activeColor: color,
               ),
-              if (pendingDrawn != null)
-                OutlinedButton.icon(
-                  icon: const Icon(Icons.skip_next),
-                  label: const Text('Pass'),
-                  onPressed: () => ctx.sendAction({'type': 'pass'}),
+              const SizedBox(width: 10),
+              Column(
+                children: [
+                  CircleAvatar(radius: 10, backgroundColor: colorOf(color)),
+                  if (penalty > 0) ...[
+                    const SizedBox(height: 6),
+                    ClashPenaltyBadge(penalty: penalty),
+                  ],
+                ],
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Text(
+                  status,
+                  key: const ValueKey('compact-status'),
+                  style: theme.textTheme.headlineSmall,
                 ),
-              if (vulnerable != null && vulnerable != ctx.myId)
-                FilledButton.icon(
-                  style: FilledButton.styleFrom(
-                    backgroundColor: theme.colorScheme.error,
-                    foregroundColor: theme.colorScheme.onError,
-                  ),
-                  icon: const Icon(Icons.pan_tool),
-                  label: Text('Catch ${ctx.nicknameOf(vulnerable)}!'),
-                  onPressed: () => ctx.sendAction({'type': 'catch'}),
-                ),
+              ),
             ],
           ),
         ),
-        const SizedBox(height: 8),
-        SizedBox(
-          height: 150,
-          child: ListView.separated(
-            key: const ValueKey('hand-list'),
-            scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.fromLTRB(12, 16, 12, 12),
-            itemCount: hand.length,
-            separatorBuilder: (_, _) => const SizedBox(width: 6),
-            itemBuilder: (context, i) {
-              final card = hand[i];
-              final canPlay = playable.contains(card.id);
-              return AnimatedSlide(
-                duration: const Duration(milliseconds: 150),
-                offset: canPlay ? const Offset(0, -0.08) : Offset.zero,
-                child: Opacity(
-                  opacity: myTurn && !canPlay ? 0.55 : 1,
-                  child: ClashCardFace(
-                    key: ValueKey('hand-card-${card.id}'),
-                    card: card,
-                    width: 76,
-                    onTap: canPlay ? () => playCard(card) : null,
-                  ),
-                ),
-              );
-            },
+        buttons,
+        Expanded(
+          child: Padding(
+            padding: const EdgeInsets.only(top: 8, bottom: 12),
+            child: handView,
           ),
         ),
       ],
