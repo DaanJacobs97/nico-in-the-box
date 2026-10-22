@@ -880,3 +880,32 @@ must not cover squares a player can tap.
     call stays in place, so it starts working by itself if the host ever serves HTTPS.
   - **Not chosen:** our own looping video, whether Chrome honours it is uncertain; HTTPS with a self-signed
     certificate, which shows a full-page warning to every browser player.
+
+# Automatic protocol version
+
+**Problem:** two branches that both bump `kProtocolVersion` from 5 to 6 merge silently, because Git sees the same
+edit on both sides. Builds with and without the second branch's changes would then both claim protocol 6 and
+connect, then misbehave. This came up with a friend's game branch started before #35 (which went to 6).
+
+**Decisions (confirmed):**
+- **Nobody edits the number.** Every PR into `main` gets main's version + 1, even docs-only ones; the owner tests
+  with release builds or builds from one branch, so that costs nothing.
+- **No tokens or secrets.** The "Set protocol version" workflow commits to the PR's own branch, never to `main`,
+  so the branch protection holds.
+  - Pushes with the built-in token don't start other workflows, so it then starts CI with `workflow_dispatch`, the
+    one kind of run that token may start.
+- **Safety net:** the CI job "Protocol version" (`tool/protocol_version.dart check`) must be a required check on
+  `main`. It catches fork PRs (their branch can't be pushed to) and failed runs, and says which number to set.
+- **Branch protection on `main`:** "Require branches to be up to date before merging" is on, so the number is
+  always worked out against the newest `main`.
+
+**Known costs:**
+- **`git pull` after the bot's commit** before pushing again.
+- **Rare conflict:** if two PRs merge while a third is open, updating the third conflicts on the version line.
+  Either side will do; the workflow then sets the right number.
+- **"Awaiting approval" runs:** GitHub also creates `pull_request` runs for the bot's commit and holds them for
+  approval. They aren't needed (the started CI run covers the commit) and don't block merging. Approving them just
+  runs CI again, and the workflow finds the number already right.
+
+**Not covered:** a changed message shape is no longer detected separately. It doesn't need to be, since every PR
+bumps anyway.

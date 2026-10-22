@@ -1,5 +1,6 @@
 // Scaffolds a new game: engine, player view, Flutter table, browser table,
-// tests, registration, code map rows and a protocol version bump.
+// tests, registration and code map rows. (kProtocolVersion is set by the PR
+// workflow, see tool/protocol_version.dart.)
 //
 //   dart run tool/new_game.dart <id> "<Name>" [minPlayers] [maxPlayers]
 //   dart run tool/new_game.dart dicewar "Dice War" 2 6
@@ -87,14 +88,6 @@ void main(List<String> args) {
     return '${s.substring(0, last.end)}\n'
         '<script src="games/$id.js"></script>${s.substring(last.end)}';
   });
-  var version = 0;
-  _edit(_protocol, (s) {
-    final pattern = RegExp(r'const int kProtocolVersion = (\d+);');
-    final match = pattern.firstMatch(s)!;
-    version = int.parse(match.group(1)!) + 1;
-    return s.replaceFirst(pattern, 'const int kProtocolVersion = $version;');
-  });
-
   final dartFiles = [gameFile, viewFile, engineTest, viewTest, _registry];
   final format = Process.runSync('dart', [
     'format',
@@ -132,7 +125,8 @@ Created "$name" ($id, $min-$max players) with placeholder rules:
   $engineTest
   $viewTest
 Registered it in registry.dart, game_views.dart and index.html, added it to
-docs/CODE_MAP.md and bumped kProtocolVersion to $version.
+docs/CODE_MAP.md. Leave kProtocolVersion alone: your pull request gets the next
+number automatically.
 
 Next (docs/ADDING_A_GAME.md walks through each):
   1. Write the rules in ${id}_game.dart. Keep private data out of tableView().
@@ -148,7 +142,6 @@ const _usage =
 const _gamesDir = 'packages/nico_shared/lib/games';
 const _registry = '$_gamesDir/registry.dart';
 const _gameViews = '$_gamesDir/game_views.dart';
-const _protocol = 'packages/nico_shared/lib/net/protocol.dart';
 const _codeMap = 'docs/CODE_MAP.md';
 
 Never _fail(String message) {
