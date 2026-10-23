@@ -10,6 +10,7 @@ dependencies:
   flutter:
     sdk: flutter
   shared_preferences: ^2.3.2
+  vector_math: ^2.1.4
   wakelock_plus: ^1.8.1
   web_socket_channel: ^3.0.1
 
@@ -20,3 +21,10 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+  assets:
+    - assets/tacticalvoxelrpg/slimes/acid/
+    - assets/tacticalvoxelrpg/slimes/dark/
+    - assets/tacticalvoxelrpg/slimes/fire/
+    - assets/tacticalvoxelrpg/slimes/plasma/
+    - assets/tacticalvoxelrpg/slimes/water/
+    - assets/tacticalvoxelrpg/characters/

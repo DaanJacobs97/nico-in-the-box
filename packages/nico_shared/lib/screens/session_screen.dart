@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../games/game_views.dart';
 import '../games/registry.dart';
@@ -46,6 +47,7 @@ class SessionScreen extends StatefulWidget {
 class _SessionScreenState extends State<SessionScreen> {
   late final StreamSubscription<String> _notices;
   bool _exiting = false;
+  bool _immersiveTactical = false;
 
   GameClient get _client => widget.client;
 
@@ -59,6 +61,7 @@ class _SessionScreenState extends State<SessionScreen> {
         ..showSnackBar(SnackBar(content: Text(message)));
     });
     _client.addListener(_onClientChanged);
+    WidgetsBinding.instance.addPostFrameCallback((_) => _syncSystemUi());
     // The screen stays on for as long as you're in the room.
     ScreenAwake.hold();
   }
@@ -68,10 +71,14 @@ class _SessionScreenState extends State<SessionScreen> {
     ScreenAwake.release();
     _client.removeListener(_onClientChanged);
     unawaited(_notices.cancel());
+    if (_immersiveTactical) {
+      unawaited(SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge));
+    }
     super.dispose();
   }
 
   void _onClientChanged() {
+    _syncSystemUi();
     final reason = _client.disconnectReason;
     if (reason == null || reason == DisconnectReason.left) return;
     final message = switch (reason) {
@@ -82,6 +89,20 @@ class _SessionScreenState extends State<SessionScreen> {
       DisconnectReason.left => '',
     };
     unawaited(_exit(message: message));
+  }
+
+  void _syncSystemUi() {
+    final lobby = _client.lobby;
+    final immersive =
+        lobby?.gameId == 'tacticalvoxelrpg' &&
+        lobby?.phase == RoomPhase.playing;
+    if (_immersiveTactical == immersive) return;
+    _immersiveTactical = immersive;
+    unawaited(
+      SystemChrome.setEnabledSystemUIMode(
+        immersive ? SystemUiMode.immersiveSticky : SystemUiMode.edgeToEdge,
+      ),
+    );
   }
 
   /// Leaves the room (closing it if we host) and returns to the home screen.
@@ -126,10 +147,61 @@ class _SessionScreenState extends State<SessionScreen> {
         listenable: _client,
         builder: (context, _) {
           final lobby = _client.lobby;
+          final tacticalBattle =
+              lobby?.gameId == 'tacticalvoxelrpg' &&
+              lobby?.phase == RoomPhase.playing;
           return Scaffold(
+            extendBodyBehindAppBar: tacticalBattle,
             appBar: AppBar(
-              title: Text(lobby?.roomName ?? 'Connecting…'),
+              backgroundColor: tacticalBattle ? Colors.transparent : null,
+              elevation: tacticalBattle ? 0 : null,
+              surfaceTintColor: tacticalBattle ? Colors.transparent : null,
+              automaticallyImplyLeading: !tacticalBattle,
+              title: tacticalBattle
+                  ? const Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          'ASHEN OATH',
+                          style: TextStyle(
+                            fontFamily: 'Georgia',
+                            fontSize: 18,
+                            letterSpacing: 5,
+                          ),
+                        ),
+                        Text(
+                          'THE HOLLOW CAMPAIGN',
+                          style: TextStyle(
+                            fontSize: 8,
+                            letterSpacing: 3,
+                            color: Color(0xff929789),
+                          ),
+                        ),
+                      ],
+                    )
+                  : Text(lobby?.roomName ?? 'Connecting…'),
               actions: [
+                if (tacticalBattle) ...[
+                  const Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 10),
+                    child: Center(
+                      child: Text(
+                        'TACTICAL PROTOTYPE',
+                        style: TextStyle(
+                          fontSize: 8,
+                          letterSpacing: 2,
+                          color: Color(0xff959b8e),
+                        ),
+                      ),
+                    ),
+                  ),
+                  IconButton(
+                    tooltip: 'Game rules',
+                    onPressed: () => _showTacticalRules(context),
+                    icon: const Icon(Icons.help_outline, size: 20),
+                  ),
+                ],
                 if (_client.isHost && lobby != null)
                   HostControlsMenu(client: _client, onCloseRoom: _exit),
               ],
@@ -152,6 +224,29 @@ class _SessionScreenState extends State<SessionScreen> {
             ),
           );
         },
+      ),
+    );
+  }
+
+  void _showTacticalRules(BuildContext context) {
+    showDialog<void>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: const Color(0xff19221c),
+        title: const Text('Every oath has a cost.'),
+        content: const Text(
+          'Activate a unit to play its own five-card hand. Each unit gets '
+          '2 action points per round. Drag a unit card into the battlefield '
+          'to activate it, then drag an action card into the map to choose '
+          'its target. Each unit acts once before the enemy phase. You can '
+          'retain one card for each unit between rounds.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Close'),
+          ),
+        ],
       ),
     );
   }
