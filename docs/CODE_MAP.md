@@ -63,6 +63,10 @@ Lines are approximate, so you can tell big files from small ones.
 | `lib/widgets/join_info.dart` | 111 | Host lobby card: addresses, `/screen` URL, `/play` QR code, Windows firewall hint |
 | `lib/widgets/caster_picker.dart` | 165 | Host lobby "Choose screen": Casters found, manual address, connected Caster |
 | `android/app/src/main/kotlin/com/daanjacobs97/nico_in_the_box/MainActivity.kt` | 50 | Android side of the multicast lock |
+| `macos/Runner/AppDelegate.swift` | 13 | macOS app delegate for the Flutter host app |
+| `macos/Runner/MainFlutterWindow.swift` | 15 | macOS window that attaches the Flutter view controller |
+| `macos/Flutter/GeneratedPluginRegistrant.swift` | 16 | Generated macOS plugin registration |
+| `macos/RunnerTests/RunnerTests.swift` | 12 | Generated macOS runner smoke-test entry point |
 
 ### `packages/nico_shared/`: shared by every app (web-safe)
 
@@ -86,6 +90,15 @@ Lines are approximate, so you can tell big files from small ones.
 | `packages/nico_shared/lib/games/seasiege/seasiege_game.dart` | 249 | Sea Siege engine: placing (shuffle, move, ready) then battle; `shootAgain` option; free-for-all-ready (target per shot); `custom` test constructor |
 | `packages/nico_shared/lib/games/seasiege/seasiege_view.dart` | 290 | Sea Siege player view: placing (drag with preview, double-tap to turn, tap ship then square, Rotate, Shuffle, Ready; nudges to fit), then enemy board above own board |
 | `packages/nico_shared/lib/games/seasiege/seasiege_table.dart` | 316 | `SeaGrid` (10×10 board used by both views; whole-board tap, double-tap and drag, preview), `SeaBoard`, `describeShot`, `SeaSiegeTable` (shared screen) |
+| `packages/nico_shared/lib/games/tacticalvoxelrpg/tacticalvoxelrpg_game.dart` | 613 | Tactical Voxel RPG engine: squads, card activations, terrain movement profiles, combat, traps and solo AI |
+| `packages/nico_shared/lib/games/tacticalvoxelrpg/tacticalvoxelrpg_cards.dart` | 298 | Tactical RPG card definitions, private draw/discard hands, card actions, attacks and retention |
+| `packages/nico_shared/lib/games/tacticalvoxelrpg/tacticalvoxelrpg_map.dart` | 404 | Seeded 40×30 biome generator with rivers, cliffs, roads, spawn clearings and weighted pathfinding |
+| `packages/nico_shared/lib/games/tacticalvoxelrpg/tacticalvoxelrpg_movement.dart` | 125 | Character-weighted route validation, movement range and tactical AI pathing |
+| `packages/nico_shared/lib/games/tacticalvoxelrpg/tacticalvoxelrpg_sprite.dart` | 138 | Sprite-sheet frame playback for enemy idle, walk, attack, special and hurt animations |
+| `packages/nico_shared/lib/games/tacticalvoxelrpg/tacticalvoxelrpg_cell.dart` | 397 | Tactical map cells, unit/card widgets, terrain overlays and zoom controls |
+| `packages/nico_shared/lib/games/tacticalvoxelrpg/tacticalvoxelrpg_view.dart` | 429 | Mobile tactics view: unit activation, action hand, route, pan and zoom controls |
+| `packages/nico_shared/lib/games/tacticalvoxelrpg/tacticalvoxelrpg_board.dart` | 272 | Tactical board widget: grid interaction and queued per-tile movement animations |
+| `packages/nico_shared/lib/games/tacticalvoxelrpg/tacticalvoxelrpg_table.dart` | 239 | Shared-screen battlefield, damage numbers, health bars, camera follow and zoom controls |
 | `packages/nico_shared/lib/screens/session_screen.dart` | 282 | **`SessionScreen`**: lobby → game → result, notices, leaving, host-as-screen area, "Reconnecting…" banner |
 | `packages/nico_shared/lib/screens/lobby_view.dart` | 215 | Lobby: game, players (away ones marked), Single game screen settings (host), pinned Start button |
 | `packages/nico_shared/lib/screens/shared_screen_view.dart` | 138 | `SharedScreenView`: draws a `DisplayState` (lobby / table / result) |
@@ -123,10 +136,11 @@ Lines are approximate, so you can tell big files from small ones.
 |---|---:|---|
 | `assets/display/index.html` | 22 | Page shell; loads `app.js` and one script per game |
 | `assets/display/app.js` | 133 | `NicoDisplay`: `/display` WebSocket, reconnect, lobby/result, safe `el()` DOM helper, `register()` |
-| `assets/display/style.css` | 153 | TV-scaled styles |
+| `assets/display/style.css` | 242 | TV-scaled styles, including Tactical Voxel RPG biomes, teams, enlarged sprite animations and damage numbers |
 | `assets/display/games/tictactoe.js` | 36 | Tic Tac Toe table renderer |
 | `assets/display/games/colorclash.js` | 54 | Color Clash table renderer |
 | `assets/display/games/seasiege.js` | 64 | Sea Siege table renderer (placing status, both boards, last shots) |
+| `assets/display/games/tacticalvoxelrpg.js` | 112 | Tactical Voxel RPG browser room map, enemy sprites, animation and team health renderer |
 
 ### `tool/`: scripts
 
@@ -190,7 +204,7 @@ Lines are approximate, so you can tell big files from small ones.
 | Suite | Run from | Covers |
 |---|---|---|
 | `test/` (app) | repo root | server and client over real loopback sockets (`net/server_client_test.dart`), reconnects (`net/reconnect_test.dart` on the server, `net/reconnect_client_test.dart` for the client and its banner), display feed (`net/display_feed_test.dart`), web routes (`net/web_routes_test.dart`), Caster link (`net/caster_link_test.dart`), hosted room (`net/hosted_room_test.dart`), game options over the wire (`net/game_options_test.dart`), home/dialog widgets (`widget_test.dart`), game registry (`games/registry_consistency_test.dart`), this map (`docs/code_map_test.dart`) |
-| `packages/nico_shared/test/` | that folder | engines (`games/tictactoe_test.dart`, `games/color_clash_test.dart`, incl. privacy), protocol (`net/protocol_test.dart`), game options and their editor (`games/game_options_test.dart`), shared screens (`widgets/shared_screen_test.dart`), Sea Siege (`games/seasiege_test.dart`, `widgets/seasiege_view_test.dart`). Also runs in Chrome in CI |
+| `packages/nico_shared/test/` | that folder | engines (`games/tictactoe_test.dart`, `games/color_clash_test.dart`, incl. privacy), protocol (`net/protocol_test.dart`), game options and their editor (`games/game_options_test.dart`), shared screens (`widgets/shared_screen_test.dart`), Sea Siege (`games/seasiege_test.dart`, `widgets/seasiege_view_test.dart`), Tactical Voxel RPG (`games/tacticalvoxelrpg_test.dart`, `widgets/tacticalvoxelrpg_view_test.dart`). Also runs in Chrome in CI |
 | `packages/nico_native/test/` | that folder | `discovery_test.dart`, `caster_scanner_test.dart` |
 | `caster/test/` | that folder | `cast_server_test.dart`, `idle_screen_test.dart` |
 | `web_client/test/` | that folder | `web_join_test.dart` |
@@ -199,7 +213,7 @@ Lines are approximate, so you can tell big files from small ones.
 ## 6. Folders to skip
 
 These are big, generated or irrelevant to most tasks. Don't read them unless the task is specifically about them:
-- `android/`, `ios/`, `windows/` and the same folders under `caster/` and `web_client/` (Flutter platform scaffolding;
+- `android/`, `ios/`, `windows/`, `macos/` and the same folders under `caster/` and `web_client/` (Flutter platform scaffolding;
   the only hand-edited file is `MainActivity.kt` above, plus manifests and Info.plist for permissions)
 - `build/`, `.dart_tool/`, `assets/generated/` (build output)
 - `pubspec.lock` files (generated)
