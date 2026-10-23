@@ -33,6 +33,11 @@ flutter:
     # Shared screen page served at /screen/ (lightweight HTML/JS).
     - assets/display/
     - assets/display/games/
+    - assets/display/games/tacticalvoxelrpg/slimes/acid/
+    - assets/display/games/tacticalvoxelrpg/slimes/dark/
+    - assets/display/games/tacticalvoxelrpg/slimes/fire/
+    - assets/display/games/tacticalvoxelrpg/slimes/plasma/
+    - assets/display/games/tacticalvoxelrpg/slimes/water/
 
 # App icons, drawn by tool/icons/draw_icons_test.dart. Regenerate with
 # `dart run flutter_launcher_icons` after redrawing.

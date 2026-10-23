@@ -164,3 +164,79 @@ h2 { font-size: 1.6rem; margin: 0; font-weight: 500; color: var(--muted); }
 .peg { width: 45%; height: 45%; border-radius: 50%; }
 .peg.hit { background: var(--red); }
 .peg.miss { background: #e3f2fd; }
+
+/* Tactical Voxel RPG */
+.tvrpg-game { gap: 0.55rem; padding: 0.8rem; }
+.tvrpg-heading { text-align: center; }
+.tvrpg-heading h2 { color: var(--accent); font-size: 1rem; letter-spacing: 0.18em; }
+.tvrpg-heading .status { font-size: 1.8rem; }
+.tvrpg-heading .log { font-size: 0.9rem; }
+.tvrpg-viewport { flex: 1; min-height: 0; width: 100%; overflow: auto; display: grid; place-items: center; }
+.tvrpg-map {
+  display: grid;
+  grid-template-columns: repeat(40, min(3.2vmin, 1.45vw));
+  grid-auto-rows: min(3.2vmin, 1.45vw);
+  gap: 2px;
+  padding: 0.3rem;
+  background: #100e14;
+  border: 2px solid #4e4755;
+  border-radius: 0.4rem;
+}
+.tvrpg-cell {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(0, 0, 0, 0.5);
+  box-shadow: inset 0 -0.2rem rgba(0, 0, 0, 0.28);
+}
+.tvrpg-cell.terrain-water { background: #235f8c; }
+.tvrpg-cell.terrain-cliff { background: repeating-linear-gradient(0deg, #34313c 0 8px, #544d5b 8px 10px); }
+.tvrpg-cell.terrain-grass { background: #607b4c; }
+.tvrpg-cell.terrain-deepGrass { background: #748844; }
+.tvrpg-cell.terrain-forest { background: #294c3b; }
+.tvrpg-cell.terrain-rock { background: #817b72; }
+.tvrpg-cell.terrain-marsh { background: #576a50; }
+.tvrpg-cell.terrain-path { background: #94816a; }
+.tvrpg-cell.terrain-bank { background: #89785d; }
+.tvrpg-cell.terrain-bridge { background: #aa8256; }
+.tvrpg-cell.terrain-brush { background: #718051; }
+.tvrpg-cell.biome-highland { filter: saturate(.8) brightness(.93); }
+.tvrpg-cell.biome-wetland { box-shadow: inset 0 -0.2rem rgba(28, 54, 61, .45); }
+.tvrpg-cell.biome-ecotone { filter: saturate(.85); }
+.tvrpg-cell.planned { background-image: linear-gradient(rgba(72, 231, 242, .2), rgba(72, 231, 242, .2)); }
+.tvrpg-cell.hero { outline: 2px solid #ffd166; outline-offset: -4px; }
+.tvrpg-cell.enemy { z-index: 2; outline: 2px solid #ff695b; outline-offset: -4px; }
+.tvrpg-cell.trapped { background-image: radial-gradient(circle, rgba(255, 98, 0, .65) 0 10%, transparent 12%); }
+.tvrpg-sprite { color: #fff; font-size: 1.4rem; line-height: 1; font-weight: 1000; text-shadow: 2px 2px #18202b, -2px -2px #18202b, 2px -2px #18202b, -2px 2px #18202b; }
+.tvrpg-cell.hero .tvrpg-sprite { color: #ffd166; }
+.tvrpg-cell.enemy .tvrpg-sprite { color: #ff695b; }
+.tvrpg-sprite.slime-sprite {
+  position: absolute;
+  z-index: 3;
+  left: 50%;
+  top: 50%;
+  display: block;
+  width: 180%;
+  height: 180%;
+  transform: translate(-50%, -93.75%);
+  pointer-events: none;
+  background-repeat: no-repeat;
+  background-position: 0 0;
+  background-size: 900% 100%;
+  image-rendering: pixelated;
+}
+.tvrpg-sprite.slime-idle { animation: tvrpg-slime-strip var(--duration) steps(var(--frames)) infinite; }
+.tvrpg-sprite.slime-once { animation: tvrpg-slime-strip var(--duration) steps(var(--frames)) 1 both; }
+.tvrpg-trap { color: #ff7b36; font-size: 1.6rem; font-weight: 900; }
+.tvrpg-hp { position: absolute; bottom: 0.02rem; right: 0.08rem; font-size: 0.48rem; font-weight: 900; text-shadow: 1px 1px #000; }
+.tvrpg-damage { position: absolute; z-index: 2; top: -0.4rem; color: #ff625b; font-size: 1.3rem; font-weight: 1000; text-shadow: 0 2px #180e13, 1px 0 #180e13, -1px 0 #180e13; animation: tvrpg-float 1.1s ease-out both; }
+.tvrpg-roster { display: flex; flex-wrap: wrap; justify-content: center; gap: 0.35rem 0.7rem; width: 100%; }
+.tvrpg-unit { width: min(13rem, 30vw); font-size: 0.72rem; }
+.tvrpg-unit.hero { color: #ffd166; }
+.tvrpg-unit.enemy { color: #ff8375; }
+.tvrpg-unit-name, .tvrpg-unit-stats { display: block; text-align: center; }
+.tvrpg-health-bar { height: 0.35rem; margin-top: 0.15rem; background: #352d38; border: 1px solid #0008; }
+.tvrpg-health-bar span { display: block; height: 100%; background: currentColor; transition: width 0.4s ease; }
+@keyframes tvrpg-float { from { opacity: 1; transform: translateY(0) scale(1.1); } to { opacity: 0; transform: translateY(-1.4rem) scale(.8); } }
+@keyframes tvrpg-slime-strip { from { background-position: 0 0; } to { background-position: 100% 0; } }
