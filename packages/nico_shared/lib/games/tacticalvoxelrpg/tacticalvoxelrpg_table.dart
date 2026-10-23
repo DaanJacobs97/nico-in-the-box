@@ -72,6 +72,8 @@ class _TacticalVoxelRPGTableState extends State<TacticalVoxelRPGTable> {
     final action = table['lastAction'];
     final damage = _lastDamage(action);
     final turn = table['turn'] as String?;
+    final mapWidth = table['width'] as int? ?? tacticalMapWidth;
+    final mapHeight = table['height'] as int? ?? tacticalMapHeight;
     final title = table['winner'] != null
         ? (table['winner'] == tacticalAiId ? 'AI victory' : 'Mission complete')
         : turn == null
@@ -81,95 +83,110 @@ class _TacticalVoxelRPGTableState extends State<TacticalVoxelRPGTable> {
       builder: (context, constraints) {
         final scale = (constraints.biggest.shortestSide / 600).clamp(1.0, 1.8);
         _viewportWidth = constraints.maxWidth;
-        _viewportHeight = constraints.maxHeight - 100 * scale;
-        _tileSize = min(32, _viewportWidth / tacticalMapWidth);
-        final width = _tileSize * tacticalMapWidth;
-        final height = _tileSize * tacticalMapHeight;
-        return Column(
+        _viewportHeight = constraints.maxHeight;
+        _tileSize = min(
+          48,
+          min(_viewportWidth / mapWidth, _viewportHeight / mapHeight),
+        );
+        final width = _tileSize * mapWidth;
+        final height = _tileSize * mapHeight;
+        return Stack(
+          fit: StackFit.expand,
           children: [
-            Padding(
-              padding: EdgeInsets.all(8 * scale),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text(
-                    title,
-                    style: TextStyle(
-                      fontSize: 24 * scale,
-                      fontWeight: FontWeight.bold,
-                    ),
+            Positioned.fill(
+              child: InteractiveViewer(
+                transformationController: _camera,
+                constrained: false,
+                minScale: 0.6,
+                maxScale: 1.8,
+                boundaryMargin: EdgeInsets.all(max(width, height) / 2),
+                child: SizedBox(
+                  width: width,
+                  height: height,
+                  child: _TacticalBoard(
+                    tiles: tiles,
+                    units: units,
+                    traps: traps,
+                    reachable: const [],
+                    route: const [],
+                    friendlyOwner: null,
+                    lastAction: action,
+                    recentActions: _objects(table['recentActions']),
+                    attackMode: false,
+                    tileSize: _tileSize,
+                    mapWidth: mapWidth,
+                    mapHeight: mapHeight,
                   ),
-                  SizedBox(width: 20 * scale),
-                  Text(
-                    'Round ${table['round']}',
-                    style: TextStyle(fontSize: 16 * scale),
-                  ),
-                  if (damage != null) ...[
-                    SizedBox(width: 18 * scale),
-                    Text(
-                      '−${damage['damage']} HP  ·  ${damage['targetHp']} remaining',
-                      key: const ValueKey('tacticalvoxelrpg-damage-summary'),
-                      style: TextStyle(
-                        color: const Color(0xffff7168),
-                        fontSize: 16 * scale,
-                      ),
-                    ),
-                  ],
-                ],
+                ),
               ),
             ),
-            Expanded(
-              child: Stack(
-                fit: StackFit.expand,
-                children: [
-                  Positioned.fill(
-                    child: InteractiveViewer(
-                      transformationController: _camera,
-                      constrained: false,
-                      minScale: 0.6,
-                      maxScale: 1.8,
-                      boundaryMargin: EdgeInsets.all(max(width, height) / 2),
-                      child: SizedBox(
-                        width: width,
-                        height: height,
-                        child: _TacticalBoard(
-                          tiles: tiles,
-                          units: units,
-                          traps: traps,
-                          reachable: const [],
-                          route: const [],
-                          friendlyOwner: null,
-                          lastAction: action,
-                          recentActions: _objects(table['recentActions']),
-                          attackMode: false,
-                          tileSize: _tileSize,
+            Positioned(
+              top: 12 * scale,
+              left: 12 * scale,
+              right: 12 * scale,
+              child: Center(
+                child: _OverlayPanel(
+                  padding: EdgeInsets.symmetric(
+                    horizontal: 18 * scale,
+                    vertical: 10 * scale,
+                  ),
+                  child: Wrap(
+                    alignment: WrapAlignment.center,
+                    spacing: 18 * scale,
+                    runSpacing: 4,
+                    children: [
+                      Text(
+                        title,
+                        style: TextStyle(
+                          fontSize: 22 * scale,
+                          fontWeight: FontWeight.bold,
                         ),
                       ),
-                    ),
+                      Text(
+                        'Round ${table['round']}',
+                        style: TextStyle(fontSize: 16 * scale),
+                      ),
+                      if (damage != null)
+                        Text(
+                          '−${damage['damage']} HP  ·  ${damage['targetHp']} remaining',
+                          key: const ValueKey(
+                            'tacticalvoxelrpg-damage-summary',
+                          ),
+                          style: TextStyle(
+                            color: const Color(0xffff7168),
+                            fontSize: 16 * scale,
+                          ),
+                        ),
+                    ],
                   ),
-                  Positioned(
-                    right: 14 * scale,
-                    bottom: 14 * scale,
-                    child: _MapZoomControls(
-                      keyPrefix: 'tacticalvoxelrpg-table',
-                      onZoomIn: () => _zoomBy(1.2),
-                      onZoomOut: () => _zoomBy(0.83),
-                      onReset: _resetZoom,
-                    ),
-                  ),
-                ],
+                ),
               ),
             ),
-            Padding(
-              padding: EdgeInsets.all(8 * scale),
-              child: Wrap(
-                alignment: WrapAlignment.center,
-                spacing: 14 * scale,
-                runSpacing: 4,
-                children: [
-                  for (final unit in units)
-                    _UnitHealth(unit: unit, scale: scale),
-                ],
+            Positioned(
+              right: 12 * scale,
+              top: 92 * scale,
+              child: _MapZoomControls(
+                keyPrefix: 'tacticalvoxelrpg-table',
+                onZoomIn: () => _zoomBy(1.2),
+                onZoomOut: () => _zoomBy(0.83),
+                onReset: _resetZoom,
+              ),
+            ),
+            Positioned(
+              left: 12 * scale,
+              right: 12 * scale,
+              bottom: 10 * scale,
+              child: _OverlayPanel(
+                padding: EdgeInsets.all(10 * scale),
+                child: Wrap(
+                  alignment: WrapAlignment.center,
+                  spacing: 14 * scale,
+                  runSpacing: 4,
+                  children: [
+                    for (final unit in units)
+                      _UnitHealth(unit: unit, scale: scale),
+                  ],
+                ),
               ),
             ),
           ],

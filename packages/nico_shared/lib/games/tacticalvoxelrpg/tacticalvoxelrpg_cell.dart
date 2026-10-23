@@ -1,5 +1,23 @@
 part of 'tacticalvoxelrpg_view.dart';
 
+class _OverlayPanel extends StatelessWidget {
+  const _OverlayPanel({
+    required this.child,
+    this.padding = const EdgeInsets.all(8),
+  });
+
+  final Widget child;
+  final EdgeInsetsGeometry padding;
+
+  @override
+  Widget build(BuildContext context) => Material(
+    color: const Color(0xe61c1825),
+    borderRadius: BorderRadius.circular(12),
+    elevation: 8,
+    child: Padding(padding: padding, child: child),
+  );
+}
+
 class _ActionButton extends StatelessWidget {
   const _ActionButton({
     super.key,

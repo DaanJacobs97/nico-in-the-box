@@ -281,12 +281,14 @@ void main() {
       ),
     );
     await pumpAt(tester, const Size(400, 800), view());
-    await tester.tap(
-      find.byKey(const ValueKey('tacticalvoxelrpg-activate-p1-closeCombat')),
-    );
+    await tester.tap(find.byKey(const ValueKey('tacticalvoxelrpg-cell-3-3')));
     await tester.pumpWidget(MaterialApp(home: Scaffold(body: view())));
     await tester.tap(find.text('Strides').first);
     await tester.pump();
+    expect(
+      find.text('Drag across the map to plot the active unit’s Strides route'),
+      findsOneWidget,
+    );
     final from = tester.getCenter(
       find.byKey(const ValueKey('tacticalvoxelrpg-cell-3-3')),
     );

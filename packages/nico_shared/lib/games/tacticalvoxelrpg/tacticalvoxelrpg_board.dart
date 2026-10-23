@@ -12,9 +12,8 @@ class _TacticalBoard extends StatefulWidget {
     required this.recentActions,
     required this.attackMode,
     required this.tileSize,
-    this.onDown,
-    this.onMove,
-    this.onUp,
+    required this.mapWidth,
+    required this.mapHeight,
   });
 
   final List<Map<String, Object?>> tiles;
@@ -27,16 +26,14 @@ class _TacticalBoard extends StatefulWidget {
   final List<Map<String, Object?>> recentActions;
   final bool attackMode;
   final double tileSize;
-  final void Function(GridPoint?)? onDown;
-  final void Function(GridPoint?)? onMove;
-  final void Function(GridPoint?, Map<String, Object?>?)? onUp;
+  final int mapWidth;
+  final int mapHeight;
 
   @override
   State<_TacticalBoard> createState() => _TacticalBoardState();
 }
 
 class _TacticalBoardState extends State<_TacticalBoard> {
-  final GlobalKey _canvasKey = GlobalKey();
   String? _movingUnitId;
   Offset? _movingPosition;
   final List<Map<String, Object?>> _movementQueue = [];
@@ -44,7 +41,7 @@ class _TacticalBoardState extends State<_TacticalBoard> {
   int _lastSeenEvent = 0;
   bool _movementActive = false;
 
-  double get _tilePitch => widget.tileSize + 1 / tacticalMapWidth;
+  double get _tilePitch => widget.tileSize + 1 / widget.mapWidth;
   double get _tileExtent => _tilePitch - 1;
 
   double _spriteLeft(double x) =>
@@ -145,92 +142,63 @@ class _TacticalBoardState extends State<_TacticalBoard> {
     if (!_movementActive) setState(() {});
   }
 
-  GridPoint? _pointAt(Offset global) {
-    final box = _canvasKey.currentContext?.findRenderObject();
-    if (box is! RenderBox) return null;
-    final local = box.globalToLocal(global);
-    final x = (local.dx / _tilePitch).floor();
-    final y = (local.dy / _tilePitch).floor();
-    if (x < 0 || x >= tacticalMapWidth || y < 0 || y >= tacticalMapHeight) {
-      return null;
-    }
-    return GridPoint(x, y);
-  }
-
-  Map<String, Object?>? _unitAt(GridPoint? point) =>
-      point == null ? null : _unitAtUnits(widget.units, point);
-
   @override
   Widget build(BuildContext context) => Center(
-    child: Listener(
-      onPointerDown: (event) {
-        if (!_movementActive) widget.onDown?.call(_pointAt(event.position));
-      },
-      onPointerMove: (event) {
-        if (!_movementActive) widget.onMove?.call(_pointAt(event.position));
-      },
-      onPointerUp: (event) {
-        if (_movementActive) return;
-        final point = _pointAt(event.position);
-        widget.onUp?.call(point, _unitAt(point));
-      },
-      child: SizedBox(
-        key: _canvasKey,
-        width: widget.tileSize * tacticalMapWidth,
-        height: widget.tileSize * tacticalMapHeight,
-        child: Stack(
-          fit: StackFit.expand,
-          clipBehavior: Clip.none,
-          children: [
-            GridView.builder(
-              physics: const NeverScrollableScrollPhysics(),
-              padding: EdgeInsets.zero,
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: tacticalMapWidth,
-                mainAxisSpacing: 1,
-                crossAxisSpacing: 1,
-              ),
-              itemCount: tacticalMapWidth * tacticalMapHeight,
-              itemBuilder: (context, index) {
-                final x = index % tacticalMapWidth;
-                final y = index ~/ tacticalMapWidth;
-                final point = GridPoint(x, y);
-                final tile = widget.tiles[index];
-                final unit = _unitAtUnits(widget.units, point);
-                final trap = widget.traps.any(
-                  (entry) => entry['x'] == x && entry['y'] == y,
-                );
-                return _VoxelCell(
-                  key: ValueKey('tacticalvoxelrpg-cell-$x-$y'),
-                  terrain: tile['terrain'] as String,
-                  unit: unit,
-                  showUnit:
-                      unit?['sprite'] is! String &&
-                      unit?['id'] != _movingUnitId &&
-                      !_queuedStarts.containsKey(unit?['id']),
-                  trap: trap,
-                  reachable: widget.reachable.contains(point),
-                  route: widget.route.contains(point),
-                  attackTarget:
-                      widget.attackMode &&
-                      unit != null &&
-                      unit['owner'] != widget.friendlyOwner,
-                  damage: _lastDamageForCell(point, widget.lastAction),
-                  damageEvent: _lastEvent(widget.lastAction),
-                  unitAnimation: _slimeAnimationFor(unit, widget.lastAction),
-                  tileSize: widget.tileSize,
-                );
-              },
+    child: SizedBox(
+      width: widget.tileSize * widget.mapWidth,
+      height: widget.tileSize * widget.mapHeight,
+      child: Stack(
+        fit: StackFit.expand,
+        clipBehavior: Clip.none,
+        children: [
+          GridView.builder(
+            physics: const NeverScrollableScrollPhysics(),
+            padding: EdgeInsets.zero,
+            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: widget.mapWidth,
+              mainAxisSpacing: 1,
+              crossAxisSpacing: 1,
             ),
-            for (final unit in widget.units.where(
-              (unit) =>
-                  unit['sprite'] is String ||
-                  unit['id'] == _movingUnitId ||
-                  _queuedStarts.containsKey(unit['id']),
-            ))
-              _unitOverlay(unit),
-          ],
-        ),
+            itemCount: widget.mapWidth * widget.mapHeight,
+            itemBuilder: (context, index) {
+              final x = index % widget.mapWidth;
+              final y = index ~/ widget.mapWidth;
+              final point = GridPoint(x, y);
+              final tile = widget.tiles[index];
+              final unit = _unitAtUnits(widget.units, point);
+              final trap = widget.traps.any(
+                (entry) => entry['x'] == x && entry['y'] == y,
+              );
+              return _VoxelCell(
+                key: ValueKey('tacticalvoxelrpg-cell-$x-$y'),
+                terrain: tile['terrain'] as String,
+                unit: unit,
+                showUnit:
+                    unit?['sprite'] is! String &&
+                    unit?['id'] != _movingUnitId &&
+                    !_queuedStarts.containsKey(unit?['id']),
+                trap: trap,
+                reachable: widget.reachable.contains(point),
+                route: widget.route.contains(point),
+                attackTarget:
+                    widget.attackMode &&
+                    unit != null &&
+                    unit['owner'] != widget.friendlyOwner,
+                damage: _lastDamageForCell(point, widget.lastAction),
+                damageEvent: _lastEvent(widget.lastAction),
+                unitAnimation: _slimeAnimationFor(unit, widget.lastAction),
+                tileSize: widget.tileSize,
+              );
+            },
+          ),
+          for (final unit in widget.units.where(
+            (unit) =>
+                unit['sprite'] is String ||
+                unit['id'] == _movingUnitId ||
+                _queuedStarts.containsKey(unit['id']),
+          ))
+            _unitOverlay(unit),
+        ],
       ),
     ),
   );

@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../games/game_views.dart';
 import '../games/registry.dart';
@@ -45,6 +46,7 @@ class SessionScreen extends StatefulWidget {
 class _SessionScreenState extends State<SessionScreen> {
   late final StreamSubscription<String> _notices;
   bool _exiting = false;
+  bool _immersiveTactical = false;
 
   GameClient get _client => widget.client;
 
@@ -58,16 +60,21 @@ class _SessionScreenState extends State<SessionScreen> {
         ..showSnackBar(SnackBar(content: Text(message)));
     });
     _client.addListener(_onClientChanged);
+    WidgetsBinding.instance.addPostFrameCallback((_) => _syncSystemUi());
   }
 
   @override
   void dispose() {
     _client.removeListener(_onClientChanged);
     unawaited(_notices.cancel());
+    if (_immersiveTactical) {
+      unawaited(SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge));
+    }
     super.dispose();
   }
 
   void _onClientChanged() {
+    _syncSystemUi();
     final reason = _client.disconnectReason;
     if (reason == null || reason == DisconnectReason.left) return;
     final message = switch (reason) {
@@ -78,6 +85,20 @@ class _SessionScreenState extends State<SessionScreen> {
       DisconnectReason.left => '',
     };
     unawaited(_exit(message: message));
+  }
+
+  void _syncSystemUi() {
+    final lobby = _client.lobby;
+    final immersive =
+        lobby?.gameId == 'tacticalvoxelrpg' &&
+        lobby?.phase == RoomPhase.playing;
+    if (_immersiveTactical == immersive) return;
+    _immersiveTactical = immersive;
+    unawaited(
+      SystemChrome.setEnabledSystemUIMode(
+        immersive ? SystemUiMode.immersiveSticky : SystemUiMode.edgeToEdge,
+      ),
+    );
   }
 
   /// Leaves the room (closing it if we host) and returns to the home screen.
@@ -122,8 +143,15 @@ class _SessionScreenState extends State<SessionScreen> {
         listenable: _client,
         builder: (context, _) {
           final lobby = _client.lobby;
+          final tacticalBattle =
+              lobby?.gameId == 'tacticalvoxelrpg' &&
+              lobby?.phase == RoomPhase.playing;
           return Scaffold(
+            extendBodyBehindAppBar: tacticalBattle,
             appBar: AppBar(
+              backgroundColor: tacticalBattle ? Colors.transparent : null,
+              elevation: tacticalBattle ? 0 : null,
+              surfaceTintColor: tacticalBattle ? Colors.transparent : null,
               title: Text(lobby?.roomName ?? 'Connecting…'),
               actions: [
                 if (_client.isHost && lobby != null)
