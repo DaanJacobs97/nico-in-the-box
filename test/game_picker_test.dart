@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nico_in_the_box/net/game_server.dart';
 import 'package:nico_in_the_box/screens/host_setup_screen.dart';
+import 'package:nico_shared/games/blackjack/blackjack_game.dart';
 import 'package:nico_shared/games/color_clash/color_clash_game.dart';
 import 'package:nico_shared/games/game_session.dart';
 import 'package:nico_shared/games/registry.dart';
@@ -50,6 +51,7 @@ void main() {
         [
           'card: colorclash',
           'grid: tictactoe, seasiege',
+          'gambling: blackjack',
           'adventure: tacticalvoxelrpg',
         ],
       );
@@ -91,7 +93,6 @@ void main() {
     Finder header(GameCategory c) => find.byKey(ValueKey('category-${c.name}'));
     Finder tile(GameDefinition g) => find.byKey(ValueKey('pick-game-${g.id}'));
     expect(header(GameCategory.board), findsNothing);
-    expect(header(GameCategory.gambling), findsNothing);
 
     // Top to bottom: each header, then its games.
     final order = [
@@ -100,6 +101,8 @@ void main() {
       header(GameCategory.grid),
       tile(ticTacToeDefinition),
       tile(seaSiegeDefinition),
+      header(GameCategory.gambling),
+      tile(blackjackDefinition),
       header(GameCategory.adventure),
       tile(tacticalVoxelRPGDefinition),
     ];
@@ -148,6 +151,7 @@ void main() {
     for (final c in [
       GameCategory.card,
       GameCategory.grid,
+      GameCategory.gambling,
       GameCategory.adventure,
     ]) {
       expect(menuHeader(c), findsOneWidget);

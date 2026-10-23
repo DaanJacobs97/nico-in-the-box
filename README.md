@@ -27,6 +27,7 @@ automatically and join with a nickname. No internet connection and no accounts a
 | Tic Tac Toe | 2 | The classic game, with the host against one other player |
 | Color Clash | 2–4 | An Uno-style card game: match by color or number, with Skip, Reverse, Draw Two and Wild cards. Swipe a card up to play it. The host chooses whether +2 and +4 can be stacked, and whether drawing them costs your turn |
 | Sea Siege | 2 | Battleship-style: hide five ships, then take turns firing at the enemy grid. The host can let a hit earn another shot |
+| Blackjack | 2–8 | Play seat by seat against an AI dealer with one deck: hit, stand, double, split. The host picks "First to x wins" or "Most chips after x hands" (x = 3, 5, 10 or 20) |
 
 ## Platforms
 
@@ -141,7 +142,7 @@ Then use `--dart-define=JOIN_IP=127.0.0.1` on that device, or open `http://127.0
 its browser. Discovery doesn't go through the tunnel, so this tests everything except finding the room.
 
 **Only one device free?** Use the scripted player as the other seat. It joins over the real protocol and plays Tic
-Tac Toe, Color Clash and Sea Siege until the room closes:
+Tac Toe, Color Clash, Sea Siege and Blackjack until the room closes:
 
 ```bash
 flutter test tool/bot/lan_bot_test.dart --dart-define=HOST=<host ip>

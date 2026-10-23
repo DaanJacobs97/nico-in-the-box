@@ -74,6 +74,7 @@ void main() {
             'tictactoe' => _ticTacToeMove(view, me.playerId),
             'colorclash' => _colorClashMove(view, me.playerId),
             'seasiege' => _seaSiegeMove(view, me.playerId),
+            'blackjack' => _blackjackMove(view, me.playerId),
             _ => null,
           };
           if (action == null) {
@@ -147,6 +148,20 @@ Json? _colorClashMove(Json view, String me) {
   }
   if (view['pendingDrawn'] != null) return {'type': 'pass'};
   return {'type': 'draw'};
+}
+
+/// Bets the minimum or taps Deal; hits below 17, otherwise stands.
+Json? _blackjackMove(Json view, String me) {
+  final actions = (view['actions']! as List<Object?>).cast<String>();
+  if (actions.contains('bet')) return {'type': 'bet', 'amount': 10};
+  if (actions.contains('deal')) return {'type': 'deal'};
+  if (!actions.contains('hit')) return null;
+  final turn = view['turn']! as Json;
+  final seat = (view['seats']! as List<Object?>).cast<Json>().firstWhere(
+    (s) => s['id'] == me,
+  );
+  final hand = (seat['hands']! as List<Object?>)[turn['hand']! as int]! as Json;
+  return {'type': (hand['total']! as int) < 17 ? 'hit' : 'stand'};
 }
 
 final _random = Random();

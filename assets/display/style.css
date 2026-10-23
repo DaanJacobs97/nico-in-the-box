@@ -392,3 +392,43 @@ h2 { font-size: 1.6rem; margin: 0; font-weight: 500; color: var(--muted); }
 @media (prefers-reduced-motion: reduce) {
   .sea-flash { display: none; }
 }
+
+/* Blackjack */
+.pcard {
+  width: 5vmin;
+  height: 7vmin;
+  border-radius: 0.6vmin;
+  background: #fff;
+  color: #212121;
+  border: 1px solid #bdbdbd;
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-size: 2.4vmin;
+  font-weight: 800;
+  line-height: 1;
+}
+.pcard.red { color: #d32f2f; }
+.pcard.back { background: #1565c0; border: 0.4vmin solid #fff; }
+.cards { display: flex; gap: 0.6vmin; justify-content: center; flex-wrap: wrap; }
+.bj-dealer { display: flex; flex-direction: column; align-items: center; gap: 0.8vmin; }
+.bj-dealer .pcard { width: 8vmin; height: 11.2vmin; font-size: 3.6vmin; }
+.bj-dealer .name, .bj-seat .name { font-size: 1.4rem; font-weight: 700; }
+.bj-seats { display: flex; flex-wrap: wrap; gap: 1.2vmin; justify-content: center; }
+.bj-seat {
+  background: var(--panel);
+  border: 3px solid transparent;
+  border-radius: 1rem;
+  padding: 1vmin 1.4vmin;
+  min-width: 17vmin;
+  text-align: center;
+}
+.bj-seat.turn { border-color: var(--accent); }
+.bj-hand { margin-top: 0.8vmin; }
+.bj-hand.active { font-weight: 700; }
+.bj-result { display: inline-block; margin-top: 0.4vmin; padding: 0 0.8rem; border-radius: 1rem; font-weight: 800; color: #fff; }
+.bj-result.bj { background: #ffb300; }
+.bj-result.win { background: #43a047; }
+.bj-result.push { background: #757575; }
+.bj-result.lose { background: var(--red); }

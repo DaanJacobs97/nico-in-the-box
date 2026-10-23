@@ -1,3 +1,4 @@
+import 'blackjack/blackjack_game.dart';
 import 'color_clash/color_clash_game.dart';
 import 'game_session.dart';
 import 'seasiege/seasiege_game.dart';
@@ -10,6 +11,7 @@ const List<GameDefinition> availableGames = [
   colorClashDefinition,
   seaSiegeDefinition,
   tacticalVoxelRPGDefinition,
+  blackjackDefinition,
 ];
 
 GameDefinition? gameById(String id) {

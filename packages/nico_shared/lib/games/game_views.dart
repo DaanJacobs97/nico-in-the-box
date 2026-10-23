@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../net/protocol.dart';
+import 'blackjack/blackjack_view.dart';
 import 'color_clash/color_clash_table.dart';
 import 'color_clash/color_clash_view.dart';
 import 'seasiege/seasiege_table.dart';
@@ -41,6 +42,7 @@ final Map<String, GameViewBuilder> gameViews = {
   'colorclash': (ctx) => ColorClashView(ctx: ctx),
   'seasiege': (ctx) => SeaSiegeView(ctx: ctx),
   'tacticalvoxelrpg': (ctx) => TacticalVoxelRPGView(ctx: ctx),
+  'blackjack': (ctx) => BlackjackView(ctx: ctx),
 };
 
 /// What a shared screen needs to draw a game's table.
@@ -62,4 +64,5 @@ final Map<String, GameTableBuilder> gameTables = {
   'colorclash': (ctx) => ColorClashTable(ctx: ctx),
   'seasiege': (ctx) => SeaSiegeTable(ctx: ctx),
   'tacticalvoxelrpg': (ctx) => TacticalVoxelRPGTable(ctx: ctx),
+  'blackjack': (ctx) => BlackjackTable(ctx: ctx),
 };

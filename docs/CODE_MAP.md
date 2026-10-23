@@ -108,6 +108,10 @@ Lines are approximate, so you can tell big files from small ones.
 | `packages/nico_shared/lib/games/tacticalvoxelrpg/tacticalvoxelrpg_board.dart` | 285 | Dimension-aware battlefield grid and queued per-tile movement animations |
 | `packages/nico_shared/lib/games/tacticalvoxelrpg/tacticalvoxelrpg_route.dart` | 57 | Route planning helpers for tile-by-tile drag paths and terrain-weighted tap-to-plan routes |
 | `packages/nico_shared/lib/games/tacticalvoxelrpg/tacticalvoxelrpg_table.dart` | 272 | Full-screen shared battlefield with overlaid status, damage, health, camera and zoom controls |
+| `packages/nico_shared/lib/games/blackjack/blackjack_game.dart` | 447 | Blackjack engine: bets or Deal, seat-by-seat hit/stand/double/split, AI dealer (stands on 17, checks for blackjack), one deck reshuffled below 20 cards, Mode and x (hands) options; `custom` test constructor with a stacked deck |
+| `packages/nico_shared/lib/games/blackjack/blackjack_cards.dart` | 53 | `PlayingCard`, 52-card `buildDeck`, `handValue` (soft aces), `isNatural` |
+| `packages/nico_shared/lib/games/blackjack/blackjack_view.dart` | 152 | Blackjack player view: bet/Deal and move buttons; full (table) or compact (dealer + own seat) |
+| `packages/nico_shared/lib/games/blackjack/blackjack_table.dart` | 334 | `BlackjackTable` (shared screen), `BlackjackTableArea`, dealer, seats, hands, `PlayingCardFace` |
 | `packages/nico_shared/lib/screens/session_screen.dart` | 391 | **`SessionScreen`**: lobby → game → result, notices, leaving, host-as-screen area, "Reconnecting…" banner, immersive tactical UI; keeps the screen on while open |
 | `packages/nico_shared/lib/screens/screen_awake.dart` | 28 | `ScreenAwake`: reference-counted wake lock while hosting or in a room (apps, and browsers where allowed) |
 | `packages/nico_shared/lib/screens/lobby_view.dart` | 253 | Lobby: game (host's Change game menu grouped by category), players (away ones marked), Single game screen settings (host), screen-lock tip (browsers), pinned Start button |
@@ -147,11 +151,12 @@ Lines are approximate, so you can tell big files from small ones.
 |---|---:|---|
 | `assets/display/index.html` | 22 | Page shell; loads `app.js` and one script per game |
 | `assets/display/app.js` | 133 | `NicoDisplay`: `/display` WebSocket, reconnect, lobby/result, safe `el()` DOM helper, `register()` |
-| `assets/display/style.css` | 378 | TV-scaled styles (incl. Sea Siege's portrait/landscape boards, moving water, turn banner, target glow, toasts and flash; tactical terrain, character portrait animations and damage numbers) |
+| `assets/display/style.css` | 417 | TV-scaled styles (incl. Blackjack's cards and seats, Sea Siege's portrait/landscape boards, moving water, turn banner, target glow, toasts and flash; tactical terrain, character portrait animations and damage numbers) |
 | `assets/display/games/tictactoe.js` | 36 | Tic Tac Toe table renderer |
 | `assets/display/games/colorclash.js` | 69 | Color Clash table renderer (wild grid, pending penalty) |
 | `assets/display/games/seasiege.js` | 129 | Sea Siege table renderer (placing status, turn banner and target glow, host's board first, wrecks from `games/seasiege/*.png`, toasts and flash for new shots, remembered across redraws) |
 | `assets/display/games/tacticalvoxelrpg.js` | 127 | Tactical Voxel RPG browser battlefield with character portraits, animation and team health renderer (portraits from `/art/tacticalvoxelrpg/`) |
+| `assets/display/games/blackjack.js` | 77 | Blackjack table renderer (dealer with face-down hole card, seats, hands, results) |
 
 ### `tool/`: scripts
 
@@ -219,7 +224,7 @@ Lines are approximate, so you can tell big files from small ones.
 | Suite | Run from | Covers |
 |---|---|---|
 | `test/` (app) | repo root | server and client over real loopback sockets (`net/server_client_test.dart`), reconnects (`net/reconnect_test.dart` on the server, `net/reconnect_client_test.dart` for the client and its banner), display feed (`net/display_feed_test.dart`), web routes (`net/web_routes_test.dart`), game art served to browsers and no copies in `assets/display/` (`net/game_art_test.dart`), Caster link (`net/caster_link_test.dart`), hosted room (`net/hosted_room_test.dart`), game options over the wire (`net/game_options_test.dart`), home/dialog widgets (`widget_test.dart`), game pickers grouped by category (`game_picker_test.dart`), game registry (`games/registry_consistency_test.dart`), Sea Siege sprite PNGs up to date (`games/seasiege_sprites_test.dart`), protocol version rule incl. a real-git replay of two branches bumping to the same number (`test/tool/protocol_version_test.dart`), this map (`docs/code_map_test.dart`) |
-| `packages/nico_shared/test/` | that folder | engines (`games/tictactoe_test.dart`, `games/color_clash_test.dart`, incl. privacy; its options in `games/color_clash_options_test.dart`), protocol (`net/protocol_test.dart`), game options and their editor (`games/game_options_test.dart`), shared screens (`widgets/shared_screen_test.dart`), Sea Siege (`games/seasiege_test.dart`, `widgets/seasiege_view_test.dart`), Color Clash views (`widgets/color_clash_view_test.dart`: wild art, fanned hand, swipe to play, penalty), Tactical Voxel RPG (`games/tacticalvoxelrpg_test.dart`, `widgets/tacticalvoxelrpg_view_test.dart`). Also runs in Chrome in CI |
+| `packages/nico_shared/test/` | that folder | engines (`games/tictactoe_test.dart`, `games/color_clash_test.dart`, incl. privacy; its options in `games/color_clash_options_test.dart`), protocol (`net/protocol_test.dart`), game options and their editor (`games/game_options_test.dart`), shared screens (`widgets/shared_screen_test.dart`), Sea Siege (`games/seasiege_test.dart`, `widgets/seasiege_view_test.dart`), Color Clash views (`widgets/color_clash_view_test.dart`: wild art, fanned hand, swipe to play, penalty), Tactical Voxel RPG (`games/tacticalvoxelrpg_test.dart`, `widgets/tacticalvoxelrpg_view_test.dart`), Blackjack (`games/blackjack_test.dart`, `widgets/blackjack_view_test.dart`). Also runs in Chrome in CI |
 | `packages/nico_native/test/` | that folder | `discovery_test.dart`, `caster_scanner_test.dart` |
 | `caster/test/` | that folder | `cast_server_test.dart`, `idle_screen_test.dart` |
 | `web_client/test/` | that folder | `web_join_test.dart` |

@@ -9,6 +9,11 @@ automatically, so builds from different merges refuse to play together.
 
 ## Unreleased
 
+- **Blackjack:** 2–8 players against an AI dealer with one deck, seat by seat: hit, stand, double and split. The
+  host picks the mode, "First to x wins" or "Most chips after x hands" (everyone starts with 1,000 chips and bets
+  10–500), and x (3, 5, 10 or 20). It's the first game under Gambling games.
+- **Game options can be choices:** besides on/off switches, a game can offer a pick-one option (shown as a row of
+  buttons for the host). Blackjack's Mode and x use it.
 - **Games sorted by kind:** the host's game list (when creating a room and in the lobby's Change game menu) groups
   games under Card games (Color Clash), Grid games (Tic Tac Toe, Sea Siege) and Adventure games (Tactical Voxel
   RPG). Board games and Gambling games appear once a game uses them.

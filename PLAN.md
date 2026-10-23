@@ -1036,3 +1036,30 @@ Toe and Sea Siege and one for 2D games like Tactical Voxel RPG.
   selectable) in the lobby's Change game menu.
 - **`category` is required in `GameDefinition`,** so a new game can't leave it out. It's static and never sent
   over the network. The engine side stays pure Dart: the icons live in `game_category_header.dart`.
+
+# Blackjack
+
+**Status:** built on `feature/blackjack`.
+
+**Request:** a gambling game, Blackjack for up to 8 players, with the dealer always AI and one deck. Options: first
+to win x hands, or most earnings after x hands.
+
+**Decisions (confirmed):**
+- **Choice options:** game options gain a pick-one type (`GameOption.choice`), so the host picks the Mode (First to
+  x wins / Most chips) and x (3, 5, 10, 20). Values are a bool or a choice id; engines read them with
+  `options.flag` and `options.choice`.
+- **Bets only in the chips mode:** everyone starts with 1,000 chips and bets 10–500 in steps of 10. In the wins
+  mode there are no chips: a hand is won, lost or pushed.
+- **Moves:** hit, stand, double, split.
+  - Double: on a first two cards, chips mode only (without stakes it would only mean "take one card and stop").
+  - Split: one pair of the same rank, once. Split aces get one card each, and a 21 there isn't blackjack.
+  - No insurance or surrender.
+- **The dealer** stands on 17 (soft 17 too) and checks for blackjack when showing an ace or a ten. Blackjack pays
+  3:2.
+- **Turns:** play goes seat by seat. Bets and Deal are tapped by everyone at once; the hand is dealt when all are
+  in, since the engine has no timers. The first seat moves each round.
+- **One deck,** reshuffled before a hand when fewer than 20 cards are left.
+- **2–8 players.**
+- **A broke player sits out** (chips mode); if everyone is broke, the game ends early.
+- **Ties share the win** in both modes.
+- **Privacy:** every card is face up except the dealer's hole card, which isn't sent until the dealer plays.
