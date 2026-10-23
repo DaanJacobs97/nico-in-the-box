@@ -47,7 +47,10 @@ void main() {
       ),
     );
     expect(tester.takeException(), isNull);
-    expect(find.text('Your turn · choose an available unit'), findsOneWidget);
+    expect(
+      find.text('Choose a hero to begin their activation.'),
+      findsOneWidget,
+    );
     expect(
       find.byKey(const ValueKey('tacticalvoxelrpg-cell-3-3')),
       findsOneWidget,
@@ -154,13 +157,21 @@ void main() {
     final moving = tester.getCenter(actor);
     expect(moving.dx, greaterThan(start.dx));
     expect(moving.dx, lessThan(waypoint.dx));
-    await tester.pump(const Duration(milliseconds: 700));
+    for (var i = 0; i < 3; i++) {
+      await tester.pump(const Duration(milliseconds: 250));
+    }
+    final character = find.byKey(
+      const ValueKey('tacticalvoxelrpg-sprite-p1-closeCombat'),
+    );
+    final destination = find.byKey(const ValueKey('tacticalvoxelrpg-cell-4-4'));
+    expect(character, findsOneWidget);
     expect(
-      find.descendant(
-        of: find.byKey(const ValueKey('tacticalvoxelrpg-cell-4-4')),
-        matching: find.text('V'),
-      ),
-      findsOneWidget,
+      tester.getCenter(character).dx,
+      closeTo(tester.getCenter(destination).dx, 1),
+    );
+    expect(
+      tester.getBottomRight(character).dy,
+      closeTo(tester.getBottomRight(destination).dy, 1),
     );
     expect(tester.takeException(), isNull);
   });
@@ -283,10 +294,25 @@ void main() {
     await pumpAt(tester, const Size(400, 800), view());
     await tester.tap(find.byKey(const ValueKey('tacticalvoxelrpg-cell-3-3')));
     await tester.pumpWidget(MaterialApp(home: Scaffold(body: view())));
-    await tester.tap(find.text('Strides').first);
-    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 260));
+    final activeUnit = (session.viewFor('p1')['units']! as List<Object?>)
+        .cast<Json>()
+        .firstWhere((unit) => unit['id'] == 'p1-closeCombat');
+    final strides = (activeUnit['hand']! as List<Object?>)
+        .cast<Json>()
+        .firstWhere((card) => card['kind'] == 'move');
+    final stridesCard = find.byKey(
+      ValueKey('tacticalvoxelrpg-draggable-card-${strides['id']}'),
+    );
+    expect(tester.widget<Draggable>(stridesCard).maxSimultaneousDrags, 1);
+    final cardCenter = tester.getCenter(stridesCard);
+    final boardTarget = tester.getCenter(
+      find.byKey(const ValueKey('tacticalvoxelrpg-cell-6-6')),
+    );
+    await tester.drag(stridesCard, boardTarget - cardCenter);
+    await tester.pump(const Duration(milliseconds: 300));
     expect(
-      find.text('Drag across the map to plot the active unit’s Strides route'),
+      find.text('Drag a route from the active hero to a highlighted tile.'),
       findsOneWidget,
     );
     final from = tester.getCenter(
@@ -365,10 +391,7 @@ void main() {
     final spriteSize = tester.getSize(spriteFinder);
     expect(spriteSize.width, greaterThan(cellRect.width * 1.5));
     expect((spriteRect.center.dx - cellRect.center.dx).abs(), lessThan(1));
-    expect(
-      (spriteRect.top + spriteRect.height * 120 / 128 - cellRect.bottom).abs(),
-      lessThan(1),
-    );
+    expect((spriteRect.bottom - cellRect.bottom).abs(), lessThan(1));
     await tester.pump(const Duration(milliseconds: 250));
     expect(tester.takeException(), isNull);
   });

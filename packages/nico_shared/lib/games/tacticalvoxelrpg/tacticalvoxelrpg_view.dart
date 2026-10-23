@@ -14,6 +14,9 @@ part 'tacticalvoxelrpg_cell.dart';
 part 'tacticalvoxelrpg_table.dart';
 part 'tacticalvoxelrpg_board.dart';
 part 'tacticalvoxelrpg_route.dart';
+part 'tacticalvoxelrpg_hud.dart';
+part 'tacticalvoxelrpg_hud_cards.dart';
+part 'tacticalvoxelrpg_hud_presenters.dart';
 
 class TacticalVoxelRPGView extends StatefulWidget {
   const TacticalVoxelRPGView({super.key, required this.ctx});
@@ -29,6 +32,7 @@ class _TacticalVoxelRPGViewState extends State<TacticalVoxelRPGView> {
   final GlobalKey _mapViewportKey = GlobalKey();
   String? _mode;
   bool _drawingRoute = false;
+  bool _ignoreNextMapUp = false;
   int? _selectedCardId;
   final List<GridPoint> _draftRoute = [];
 
@@ -241,6 +245,7 @@ class _TacticalVoxelRPGViewState extends State<TacticalVoxelRPGView> {
   }
 
   @override
+  @override
   Widget build(BuildContext context) {
     final view = widget.ctx.view;
     final units = _objects(view['units']);
@@ -252,36 +257,39 @@ class _TacticalVoxelRPGViewState extends State<TacticalVoxelRPGView> {
     final canAct = view['canAct'] == true;
     final turn = view['turn'] as String?;
     final damage = _lastDamage(view['lastAction']);
-    final status = view['winner'] != null
-        ? (view['winner'] == widget.ctx.myId ? 'Victory!' : 'Defeat')
-        : canAct && active == null
-        ? 'Your turn · choose an available unit'
-        : canAct && _mode == 'route'
-        ? 'Drag across the map to plot the active unit’s Strides route'
-        : canAct && (_mode == 'attack' || _mode == 'skill')
-        ? 'Choose an enemy inside the selected card’s range'
-        : canAct && _mode == 'trap'
-        ? activeRoute.isEmpty
-              ? 'Choose an empty tile 1–3 steps away for the snare'
-              : 'Tap an empty tile on the planned route, or within 3 steps'
-        : canAct
-        ? '${active?['name']} is active · play its cards, then finish the unit'
-        : turn == null
-        ? 'Battle'
-        : '${widget.ctx.lobby.nicknameOf(turn)}’s turn';
-    final energy = active?['energy'] as int? ?? 0;
-    final hand = _objects(active?['hand']);
-    final selectedCard = hand
-        .where((card) => card['id'] == _selectedCardId)
-        .firstOrNull;
     final ownUnits = units
         .where((unit) => unit['owner'] == widget.ctx.myId)
         .toList();
+    final portraitUnit =
+        active ??
+        ownUnits.where((unit) => unit['completed'] != true).firstOrNull ??
+        ownUnits.firstOrNull;
     final mapWidth = view['width'] as int? ?? tacticalMapWidth;
     final mapHeight = view['height'] as int? ?? tacticalMapHeight;
+    final phase = turn == tacticalAiId
+        ? 'ENEMY PHASE'
+        : '${widget.ctx.lobby.nicknameOf(turn ?? widget.ctx.myId).toUpperCase()} PHASE';
+    final status = view['winner'] != null
+        ? (view['winner'] == widget.ctx.myId ? 'Victory!' : 'Defeat')
+        : canAct && active == null
+        ? 'Choose a hero to begin their activation.'
+        : canAct && _mode == 'route'
+        ? 'Drag a route from the active hero to a highlighted tile.'
+        : canAct && (_mode == 'attack' || _mode == 'skill')
+        ? 'Choose an enemy inside the selected card’s range.'
+        : canAct && _mode == 'trap'
+        ? activeRoute.isEmpty
+              ? 'Choose an empty tile 1–3 steps away for the snare.'
+              : 'Tap an empty tile on the planned route, or within 3 steps.'
+        : canAct
+        ? '${active?['name']} is committed. Play actions, then finish the unit.'
+        : turn == null
+        ? 'Select a card to command your unit.'
+        : '${widget.ctx.lobby.nicknameOf(turn)}’s turn.';
 
     return LayoutBuilder(
       builder: (context, constraints) {
+        final compact = constraints.maxWidth < 900;
         final tileSize = min(
           72.0,
           min(
@@ -289,288 +297,297 @@ class _TacticalVoxelRPGViewState extends State<TacticalVoxelRPGView> {
             constraints.maxHeight / mapHeight,
           ),
         );
-        final endRoundButton = _ActionButton(
-          key: const ValueKey('tacticalvoxelrpg-end-turn'),
-          label: 'End round',
-          icon: Icons.skip_next,
-          enabled: canAct && view['canEndTurn'] == true,
-          onPressed: () => widget.ctx.sendAction({'type': 'endTurn'}),
-        );
+        final attackTargets = <String>{};
+        if (active != null && (_mode == 'attack' || _mode == 'skill')) {
+          final minimum = _mode == 'skill' ? 1 : active['minimumRange'] as int;
+          final maximum = _mode == 'skill' ? 4 : active['range'] as int;
+          for (final target in units.where(
+            (unit) => unit['owner'] != widget.ctx.myId,
+          )) {
+            final distance =
+                ((target['x'] as int) - (active['x'] as int)).abs() +
+                ((target['y'] as int) - (active['y'] as int)).abs();
+            if (distance >= minimum && distance <= maximum) {
+              attackTargets.add(target['id'] as String);
+            }
+          }
+        }
+        final trapTargets = <GridPoint>{};
+        if (active != null && _mode == 'trap') {
+          for (var y = 0; y < mapHeight; y++) {
+            for (var x = 0; x < mapWidth; x++) {
+              final point = GridPoint(x, y);
+              final distance =
+                  (x - (active['x'] as int)).abs() +
+                  (y - (active['y'] as int)).abs();
+              final tile = tiles[y * mapWidth + x];
+              final occupied =
+                  _unitAtUnits(units, point) != null ||
+                  traps.any((trap) => trap['x'] == x && trap['y'] == y);
+              if (distance >= 1 &&
+                  distance <= 3 &&
+                  tile['passable'] == true &&
+                  !occupied) {
+                trapTargets.add(point);
+              }
+            }
+          }
+        }
         return Stack(
           fit: StackFit.expand,
           children: [
             Positioned.fill(
-              child: Listener(
-                key: _mapViewportKey,
-                behavior: HitTestBehavior.opaque,
-                onPointerDown: (event) {
-                  final point = _mapPointAt(
-                    event.position,
-                    tileSize,
-                    mapWidth,
-                    mapHeight,
-                  );
-                  _pointerDown(point);
+              child: DragTarget<_TacticalDragPayload>(
+                onWillAcceptWithDetails: (details) {
+                  final payload = details.data;
+                  if (payload.cardId != null) {
+                    return canAct && active?['id'] == payload.unitId;
+                  }
+                  final unit = units
+                      .where((entry) => entry['id'] == payload.unitId)
+                      .firstOrNull;
+                  return canAct &&
+                      active == null &&
+                      unit != null &&
+                      unit['owner'] == widget.ctx.myId &&
+                      unit['completed'] != true;
                 },
-                onPointerMove: (event) {
-                  final point = _mapPointAt(
-                    event.position,
-                    tileSize,
-                    mapWidth,
-                    mapHeight,
-                  );
-                  _pointerMove(point);
+                onAcceptWithDetails: (details) {
+                  final payload = details.data;
+                  _ignoreNextMapUp = true;
+                  if (payload.cardId == null) {
+                    widget.ctx.sendAction({
+                      'type': 'selectUnit',
+                      'unit': payload.unitId,
+                    });
+                    return;
+                  }
+                  final card = _objects(active?['hand'])
+                      .where((entry) => entry['id'] == payload.cardId)
+                      .firstOrNull;
+                  if (card != null) _selectCard(card);
                 },
-                onPointerUp: (event) {
-                  final point = _mapPointAt(
-                    event.position,
-                    tileSize,
-                    mapWidth,
-                    mapHeight,
-                  );
-                  _pointerUp(
-                    point,
-                    point == null ? null : _unitAtUnits(units, point),
-                  );
-                },
-                child: InteractiveViewer(
-                  transformationController: _mapTransform,
-                  constrained: false,
-                  panEnabled: _mode == 'pan',
-                  scaleEnabled: _mode == 'pan',
-                  minScale: 0.7,
-                  maxScale: 2.4,
-                  boundaryMargin: const EdgeInsets.all(180),
-                  child: _TacticalBoard(
-                    tiles: tiles,
-                    units: units,
-                    traps: traps,
-                    reachable: reachable,
-                    route: [...activeRoute, ..._draftRoute],
-                    friendlyOwner: widget.ctx.myId,
-                    lastAction: view['lastAction'],
-                    recentActions: _objects(view['recentActions']),
-                    attackMode: _mode == 'attack' || _mode == 'skill',
-                    tileSize: tileSize,
-                    mapWidth: mapWidth,
-                    mapHeight: mapHeight,
-                  ),
-                ),
-              ),
-            ),
-            Positioned(
-              top: 64,
-              left: 8,
-              right: 8,
-              child: SafeArea(
-                bottom: false,
-                child: IgnorePointer(
-                  child: _OverlayPanel(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 14,
-                      vertical: 9,
-                    ),
-                    child: Row(
+                builder:
+                    (
+                      BuildContext context,
+                      List<_TacticalDragPayload?> candidates,
+                      List<dynamic> rejected,
+                    ) => Stack(
+                      fit: StackFit.expand,
                       children: [
-                        Expanded(
-                          child: Text(
-                            status,
-                            key: const ValueKey('tacticalvoxelrpg-status'),
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                            style: Theme.of(context).textTheme.titleMedium,
+                        Listener(
+                          key: _mapViewportKey,
+                          behavior: HitTestBehavior.opaque,
+                          onPointerDown: (event) {
+                            _ignoreNextMapUp = false;
+                            _pointerDown(
+                              _mapPointAt(
+                                event.position,
+                                tileSize,
+                                mapWidth,
+                                mapHeight,
+                              ),
+                            );
+                          },
+                          onPointerMove: (event) => _pointerMove(
+                            _mapPointAt(
+                              event.position,
+                              tileSize,
+                              mapWidth,
+                              mapHeight,
+                            ),
+                          ),
+                          onPointerUp: (event) {
+                            if (_ignoreNextMapUp) {
+                              _ignoreNextMapUp = false;
+                              return;
+                            }
+                            final point = _mapPointAt(
+                              event.position,
+                              tileSize,
+                              mapWidth,
+                              mapHeight,
+                            );
+                            _pointerUp(
+                              point,
+                              point == null ? null : _unitAtUnits(units, point),
+                            );
+                          },
+                          child: InteractiveViewer(
+                            transformationController: _mapTransform,
+                            alignment: Alignment.center,
+                            constrained: false,
+                            panEnabled: _mode == 'pan',
+                            scaleEnabled: _mode == 'pan',
+                            minScale: 0.7,
+                            maxScale: 2.4,
+                            boundaryMargin: const EdgeInsets.all(180),
+                            child: _TacticalBoard(
+                              tiles: tiles,
+                              units: units,
+                              traps: traps,
+                              reachable: reachable,
+                              route: [...activeRoute, ..._draftRoute],
+                              lastAction: view['lastAction'],
+                              recentActions: _objects(view['recentActions']),
+                              attackTargets: attackTargets,
+                              trapTargets: trapTargets,
+                              tileSize: tileSize,
+                              mapWidth: mapWidth,
+                              mapHeight: mapHeight,
+                            ),
                           ),
                         ),
-                        const SizedBox(width: 12),
-                        Text('Round ${view['round']}'),
+                        if (candidates.isNotEmpty)
+                          Positioned.fill(
+                            child: IgnorePointer(
+                              child: DecoratedBox(
+                                decoration: BoxDecoration(
+                                  border: Border.all(
+                                    color: const Color(0xffd6bd84),
+                                    width: 3,
+                                  ),
+                                  color: const Color(0x22101513),
+                                ),
+                              ),
+                            ),
+                          ),
                       ],
                     ),
+              ),
+            ),
+            Positioned.fill(
+              child: IgnorePointer(
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: const [
+                        Color(0x4d101513),
+                        Color(0x00101513),
+                        Color(0x00101513),
+                        Color(0xb30d1311),
+                      ],
+                      stops: [0, 0.18, 0.54, compact ? 0.8 : 0.88],
+                    ),
                   ),
                 ),
               ),
             ),
+            Positioned(
+              left: 28,
+              top: 78,
+              child: IgnorePointer(
+                child: SizedBox(
+                  width: compact ? 230 : 330,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const _HudLabel('CURRENT OBJECTIVE'),
+                      const SizedBox(height: 5),
+                      Text(
+                        status,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontFamily: 'Georgia',
+                          fontSize: 17,
+                          color: Color(0xffe0d5b4),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            Positioned(
+              top: 70,
+              left: 0,
+              right: 0,
+              child: Center(
+                child: _BattleStatusCard(
+                  phase: phase,
+                  turn: (view['round'] as int? ?? 0) + 1,
+                ),
+              ),
+            ),
+            Positioned(
+              left: 28,
+              top: 150,
+              child: _SquadHealthRow(units: ownUnits, activeId: active?['id']),
+            ),
+            if (!compact && portraitUnit != null)
+              Positioned(
+                right: 25,
+                top: 105,
+                child: _TacticalPortraitPanel(
+                  unit: portraitUnit,
+                  action: view['lastAction'],
+                ),
+              ),
             if (damage != null)
               Positioned(
-                top: 118,
-                left: 12,
-                right: 12,
-                child: SafeArea(
-                  bottom: false,
-                  child: Center(
-                    child: _OverlayPanel(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 7,
-                      ),
-                      child: Text(
-                        '${damage['damage']} damage · ${damage['targetHp']} HP remaining',
-                        key: const ValueKey('tacticalvoxelrpg-damage-summary'),
-                        style: const TextStyle(
-                          color: Color(0xfff46f62),
-                          fontWeight: FontWeight.bold,
-                        ),
+                left: 0,
+                right: 0,
+                bottom: compact ? 345 : 350,
+                child: Center(
+                  child: _OverlayPanel(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 7,
+                    ),
+                    child: Text(
+                      '−${damage['damage']} HP  ·  ${damage['targetHp']} remaining',
+                      key: const ValueKey('tacticalvoxelrpg-damage-summary'),
+                      style: const TextStyle(
+                        color: Color(0xfff46f62),
+                        fontWeight: FontWeight.bold,
                       ),
                     ),
                   ),
                 ),
               ),
-            if (active != null || canAct)
-              Positioned(
-                left: 8,
-                right: 8,
-                bottom: 8,
-                child: SafeArea(
-                  top: false,
-                  child: _OverlayPanel(
-                    padding: const EdgeInsets.fromLTRB(8, 6, 8, 8),
-                    child: active == null
-                        ? Row(
-                            children: [
-                              Expanded(
-                                child: SizedBox(
-                                  height: 112,
-                                  child: ListView(
-                                    scrollDirection: Axis.horizontal,
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 4,
-                                      vertical: 4,
-                                    ),
-                                    children: [
-                                      for (final unit in ownUnits.where(
-                                        (unit) => unit['completed'] != true,
-                                      ))
-                                        _UnitActivationCard(
-                                          unit: unit,
-                                          onTap: () => widget.ctx.sendAction({
-                                            'type': 'selectUnit',
-                                            'unit': unit['id'],
-                                          }),
-                                        ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                              endRoundButton,
-                            ],
-                          )
-                        : Column(
-                            mainAxisSize: MainAxisSize.min,
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                '${active['name']} · HP ${active['hp']}/${active['maxHp']} · '
-                                'AP $energy/${active['maxEnergy']} · Move ${active['movement']} · '
-                                'Mana ${active['mana']}/${active['maxMana']} · ${active['weapon']}',
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: Theme.of(context).textTheme.bodySmall,
-                              ),
-                              const SizedBox(height: 3),
-                              Row(
-                                children: [
-                                  const Text('ACTION HAND'),
-                                  const SizedBox(width: 12),
-                                  Expanded(
-                                    child: Text(
-                                      '${hand.length} hand · ${active['drawCount']} draw · '
-                                      '${active['discardCount']} discard',
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                      textAlign: TextAlign.right,
-                                      style: Theme.of(context)
-                                          .textTheme
-                                          .labelSmall,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              SizedBox(
-                                height: min(166, constraints.maxHeight * 0.25),
-                                child: ListView(
-                                  scrollDirection: Axis.horizontal,
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 4,
-                                  ),
-                                  children: [
-                                    for (final card in hand)
-                                      _TacticalHandCard(
-                                        card: card,
-                                        movement: active['movement'] as int,
-                                        selected: card['id'] == _selectedCardId,
-                                        retained:
-                                            card['id'] ==
-                                            active['retainedCardId'],
-                                        onTap: () => _selectCard(card),
-                                        onRetain: () => widget.ctx.sendAction({
-                                          'type': 'retainCard',
-                                          'unit': active['id'],
-                                          'cardId': card['id'],
-                                        }),
-                                      ),
-                                  ],
-                                ),
-                              ),
-                              Wrap(
-                                alignment: WrapAlignment.center,
-                                spacing: 6,
-                                runSpacing: 4,
-                                children: [
-                                  if (selectedCard?['kind'] == 'move')
-                                    _ActionButton(
-                                      key: const ValueKey(
-                                        'tacticalvoxelrpg-move',
-                                      ),
-                                      label: 'Play Strides',
-                                      icon: Icons.route,
-                                      enabled:
-                                          canAct &&
-                                          energy >=
-                                              (selectedCard?['cost'] as int) &&
-                                          activeRoute.isNotEmpty,
-                                      onPressed: () => _useCard(
-                                        active,
-                                        selectedCard!,
-                                        path: activeRoute,
-                                      ),
-                                    ),
-                                  _ActionButton(
-                                    key: const ValueKey(
-                                      'tacticalvoxelrpg-finish-unit',
-                                    ),
-                                    label: 'Finish unit',
-                                    icon: Icons.check_circle_outline,
-                                    enabled: canAct,
-                                    onPressed: () => _finishActive(active),
-                                  ),
-                                  endRoundButton,
-                                ],
-                              ),
-                            ],
-                          ),
-                  ),
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: 0,
+              child: SafeArea(
+                top: false,
+                child: _TacticalHud(
+                  units: units,
+                  ownerId: widget.ctx.myId,
+                  active: active,
+                  hand: _objects(active?['hand']),
+                  selectedCardId: _selectedCardId,
+                  mode: _mode,
+                  canAct: canAct,
+                  canEndTurn: view['canEndTurn'] == true,
+                  onActivate: (id) =>
+                      widget.ctx.sendAction({'type': 'selectUnit', 'unit': id}),
+                  onSelectCard: _selectCard,
+                  onRetainCard: (id) => widget.ctx.sendAction({
+                    'type': 'retainCard',
+                    'unit': active?['id'],
+                    'cardId': id,
+                  }),
+                  onPan: () =>
+                      setState(() => _mode = _mode == 'pan' ? null : 'pan'),
+                  onFinish: () {
+                    if (active != null) _finishActive(active);
+                  },
+                  onEndTurn: () => widget.ctx.sendAction({'type': 'endTurn'}),
                 ),
               ),
+            ),
             Positioned(
-              right: 8,
+              right: compact ? 8 : 230,
               top: 72,
               child: _MapZoomControls(
                 keyPrefix: 'tacticalvoxelrpg',
                 onZoomIn: () => _zoomMap(1.25),
                 onZoomOut: () => _zoomMap(0.8),
                 onReset: _resetMapZoom,
-              ),
-            ),
-            Positioned(
-              right: 68,
-              top: 72,
-              child: _ActionButton(
-                key: const ValueKey('tacticalvoxelrpg-pan-map'),
-                label: _mode == 'pan' ? 'Stop panning' : 'Pan map',
-                icon: Icons.pan_tool_alt,
-                selected: _mode == 'pan',
-                enabled: true,
-                onPressed: () =>
-                    setState(() => _mode = _mode == 'pan' ? null : 'pan'),
               ),
             ),
           ],

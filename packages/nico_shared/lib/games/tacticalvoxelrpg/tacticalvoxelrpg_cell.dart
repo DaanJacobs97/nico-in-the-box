@@ -18,181 +18,6 @@ class _OverlayPanel extends StatelessWidget {
   );
 }
 
-class _ActionButton extends StatelessWidget {
-  const _ActionButton({
-    super.key,
-    required this.label,
-    required this.icon,
-    required this.enabled,
-    required this.onPressed,
-    this.selected = false,
-  });
-
-  final String label;
-  final IconData icon;
-  final bool enabled;
-  final bool selected;
-  final VoidCallback onPressed;
-
-  @override
-  Widget build(BuildContext context) => FilledButton.tonalIcon(
-    onPressed: enabled ? onPressed : null,
-    icon: Icon(icon, size: 18),
-    label: Text(label),
-    style: selected
-        ? FilledButton.styleFrom(
-            backgroundColor: Theme.of(context).colorScheme.primaryContainer,
-          )
-        : null,
-  );
-}
-
-class _UnitActivationCard extends StatelessWidget {
-  const _UnitActivationCard({required this.unit, required this.onTap});
-
-  final Map<String, Object?> unit;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.symmetric(horizontal: 4),
-    child: SizedBox(
-      width: 126,
-      child: OutlinedButton(
-        key: ValueKey('tacticalvoxelrpg-activate-${unit['id']}'),
-        onPressed: onTap,
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text(
-              unit['name'] as String,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(fontSize: 12),
-            ),
-            Text(
-              '${unit['hp']}/${unit['maxHp']} HP',
-              style: const TextStyle(fontSize: 10),
-            ),
-            Text(
-              '${unit['energy']} AP · ${unit['handSize']} cards',
-              style: const TextStyle(fontSize: 9),
-            ),
-          ],
-        ),
-      ),
-    ),
-  );
-}
-
-class _TacticalHandCard extends StatelessWidget {
-  const _TacticalHandCard({
-    required this.card,
-    required this.movement,
-    required this.selected,
-    required this.retained,
-    required this.onTap,
-    required this.onRetain,
-  });
-
-  final Map<String, Object?> card;
-  final int movement;
-  final bool selected;
-  final bool retained;
-  final VoidCallback onTap;
-  final VoidCallback onRetain;
-
-  @override
-  Widget build(BuildContext context) {
-    final border = selected
-        ? const Color(0xffe5cd98)
-        : retained
-        ? const Color(0xffb9a270)
-        : const Color(0xff66705b);
-    final description = (card['text'] as String).replaceAll(
-      '{mov}',
-      '$movement',
-    );
-    return SizedBox(
-      width: 132,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 2),
-        child: Material(
-          color: selected ? const Color(0xff344137) : const Color(0xff202a23),
-          borderRadius: BorderRadius.circular(9),
-          child: InkWell(
-            onTap: onTap,
-            borderRadius: BorderRadius.circular(9),
-            child: Container(
-              decoration: BoxDecoration(
-                border: Border.all(color: border, width: selected ? 2 : 1),
-                borderRadius: BorderRadius.circular(9),
-              ),
-              padding: const EdgeInsets.fromLTRB(9, 8, 9, 6),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          card['type'] as String,
-                          style: const TextStyle(fontSize: 8, letterSpacing: 1),
-                        ),
-                      ),
-                      Text('${card['cost']} AP'),
-                    ],
-                  ),
-                  Expanded(
-                    child: Center(
-                      child: Text(
-                        card['icon'] as String,
-                        style: const TextStyle(
-                          fontSize: 32,
-                          color: Color(0xffc1bd9f),
-                        ),
-                      ),
-                    ),
-                  ),
-                  Text(
-                    card['name'] as String,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(fontFamily: 'Georgia', fontSize: 13),
-                  ),
-                  const SizedBox(height: 3),
-                  Text(
-                    description,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(fontSize: 9, height: 1.25),
-                  ),
-                  Align(
-                    alignment: Alignment.centerRight,
-                    child: InkWell(
-                      onTap: onRetain,
-                      child: Padding(
-                        padding: const EdgeInsets.only(top: 3, left: 8),
-                        child: Text(
-                          retained ? '◆ RETAINED' : '◇ RETAIN',
-                          style: const TextStyle(
-                            fontSize: 8,
-                            color: Color(0xffbcad88),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
 class _MapZoomControls extends StatelessWidget {
   const _MapZoomControls({
     required this.keyPrefix,
@@ -279,6 +104,7 @@ class _VoxelCell extends StatelessWidget {
     required this.reachable,
     required this.route,
     required this.attackTarget,
+    this.trapTarget = false,
     required this.damage,
     required this.damageEvent,
     required this.unitAnimation,
@@ -292,6 +118,7 @@ class _VoxelCell extends StatelessWidget {
   final bool reachable;
   final bool route;
   final bool attackTarget;
+  final bool trapTarget;
   final int? damage;
   final int? damageEvent;
   final String unitAnimation;
@@ -334,10 +161,14 @@ class _VoxelCell extends StatelessWidget {
     final unitColor = ai ? const Color(0xffff7168) : const Color(0xffffd166);
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: color,
+        color: trapTarget
+            ? Color.lerp(color, const Color(0xffc3a868), 0.22)
+            : color,
         border: Border.all(
           color: route
               ? Colors.cyanAccent
+              : trapTarget
+              ? const Color(0xffd6bd84)
               : attackTarget
               ? Colors.redAccent
               : reachable
@@ -345,7 +176,7 @@ class _VoxelCell extends StatelessWidget {
               : wall
               ? const Color(0xff524d5b)
               : const Color(0xff211e25),
-          width: route || attackTarget ? 2 : 1,
+          width: route || attackTarget || trapTarget ? 2 : 1,
         ),
         boxShadow: wall
             ? const [

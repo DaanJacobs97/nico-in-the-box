@@ -152,8 +152,52 @@ class _SessionScreenState extends State<SessionScreen> {
               backgroundColor: tacticalBattle ? Colors.transparent : null,
               elevation: tacticalBattle ? 0 : null,
               surfaceTintColor: tacticalBattle ? Colors.transparent : null,
-              title: Text(lobby?.roomName ?? 'Connecting…'),
+              automaticallyImplyLeading: !tacticalBattle,
+              title: tacticalBattle
+                  ? const Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          'ASHEN OATH',
+                          style: TextStyle(
+                            fontFamily: 'Georgia',
+                            fontSize: 18,
+                            letterSpacing: 5,
+                          ),
+                        ),
+                        Text(
+                          'THE HOLLOW CAMPAIGN',
+                          style: TextStyle(
+                            fontSize: 8,
+                            letterSpacing: 3,
+                            color: Color(0xff929789),
+                          ),
+                        ),
+                      ],
+                    )
+                  : Text(lobby?.roomName ?? 'Connecting…'),
               actions: [
+                if (tacticalBattle) ...[
+                  const Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 10),
+                    child: Center(
+                      child: Text(
+                        'TACTICAL PROTOTYPE',
+                        style: TextStyle(
+                          fontSize: 8,
+                          letterSpacing: 2,
+                          color: Color(0xff959b8e),
+                        ),
+                      ),
+                    ),
+                  ),
+                  IconButton(
+                    tooltip: 'Game rules',
+                    onPressed: () => _showTacticalRules(context),
+                    icon: const Icon(Icons.help_outline, size: 20),
+                  ),
+                ],
                 if (_client.isHost && lobby != null)
                   HostControlsMenu(client: _client, onCloseRoom: _exit),
               ],
@@ -176,6 +220,29 @@ class _SessionScreenState extends State<SessionScreen> {
             ),
           );
         },
+      ),
+    );
+  }
+
+  void _showTacticalRules(BuildContext context) {
+    showDialog<void>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: const Color(0xff19221c),
+        title: const Text('Every oath has a cost.'),
+        content: const Text(
+          'Activate a unit to play its own five-card hand. Each unit gets '
+          '2 action points per round. Drag a unit card into the battlefield '
+          'to activate it, then drag an action card into the map to choose '
+          'its target. Each unit acts once before the enemy phase. You can '
+          'retain one card for each unit between rounds.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Close'),
+          ),
+        ],
       ),
     );
   }
