@@ -90,17 +90,20 @@ Lines are approximate, so you can tell big files from small ones.
 | `packages/nico_shared/lib/games/seasiege/seasiege_game.dart` | 249 | Sea Siege engine: placing (shuffle, move, ready) then battle; `shootAgain` option; free-for-all-ready (target per shot); `custom` test constructor |
 | `packages/nico_shared/lib/games/seasiege/seasiege_view.dart` | 290 | Sea Siege player view: placing (drag with preview, double-tap to turn, tap ship then square, Rotate, Shuffle, Ready; nudges to fit), then enemy board above own board |
 | `packages/nico_shared/lib/games/seasiege/seasiege_table.dart` | 316 | `SeaGrid` (10×10 board used by both views; whole-board tap, double-tap and drag, preview), `SeaBoard`, `describeShot`, `SeaSiegeTable` (shared screen) |
-| `packages/nico_shared/lib/games/tacticalvoxelrpg/tacticalvoxelrpg_game.dart` | 613 | Tactical Voxel RPG engine: squads, card activations, terrain movement profiles, combat, traps and solo AI |
-| `packages/nico_shared/lib/games/tacticalvoxelrpg/tacticalvoxelrpg_cards.dart` | 298 | Tactical RPG card definitions, private draw/discard hands, card actions, attacks and retention |
+| `packages/nico_shared/lib/games/tacticalvoxelrpg/tacticalvoxelrpg_game.dart` | 633 | Tactical Voxel RPG engine: squads, card activations, terrain movement profiles, combat, traps and solo AI |
+| `packages/nico_shared/lib/games/tacticalvoxelrpg/tacticalvoxelrpg_cards.dart` | 310 | Tactical RPG card definitions, private draw/discard hands, card actions, attacks and retention |
 | `packages/nico_shared/lib/games/tacticalvoxelrpg/tacticalvoxelrpg_map.dart` | 481 | Seeded 40×30 multiplayer and 15×15 solo biome maps with rivers, cliffs, roads and spawn clearings |
-| `packages/nico_shared/lib/games/tacticalvoxelrpg/tacticalvoxelrpg_movement.dart` | 125 | Character-weighted route validation, movement range and tactical AI pathing |
-| `packages/nico_shared/lib/games/tacticalvoxelrpg/tacticalvoxelrpg_sprite.dart` | 138 | Sprite-sheet frame playback for enemy idle, walk, attack, special and hurt animations |
-| `packages/nico_shared/lib/games/tacticalvoxelrpg/tacticalvoxelrpg_cell.dart` | 442 | Tactical map cells, unit/card widgets, terrain overlays, zoom and translucent overlay panels |
-| `packages/nico_shared/lib/games/tacticalvoxelrpg/tacticalvoxelrpg_view.dart` | 581 | Full-screen mobile battlefield with overlaid unit activation, action cards, route and zoom controls |
-| `packages/nico_shared/lib/games/tacticalvoxelrpg/tacticalvoxelrpg_board.dart` | 241 | Dimension-aware tactical grid and queued per-tile movement animations |
+| `packages/nico_shared/lib/games/tacticalvoxelrpg/tacticalvoxelrpg_movement.dart` | 151 | Character-weighted route validation, movement range and tactical AI pathing |
+| `packages/nico_shared/lib/games/tacticalvoxelrpg/tacticalvoxelrpg_sprite.dart` | 275 | Slime sprite-sheet playback and character portrait idle, walk, attack and hurt animations |
+| `packages/nico_shared/lib/games/tacticalvoxelrpg/tacticalvoxelrpg_cell.dart` | 273 | Tactical map cells, terrain overlays, damage numbers and map zoom controls |
+| `packages/nico_shared/lib/games/tacticalvoxelrpg/tacticalvoxelrpg_view.dart` | 592 | Full-screen battlefield, character art, drag targets, route controls, attack range and camera handling |
+| `packages/nico_shared/lib/games/tacticalvoxelrpg/tacticalvoxelrpg_hud.dart` | 433 | Art-directed three-column tactical HUD, health strip, selected portrait, phase badge and pile browser |
+| `packages/nico_shared/lib/games/tacticalvoxelrpg/tacticalvoxelrpg_hud_cards.dart` | 335 | Art-directed squad and action card faces with drag-to-play feedback |
+| `packages/nico_shared/lib/games/tacticalvoxelrpg/tacticalvoxelrpg_hud_presenters.dart` | 227 | Selected hero portrait, squad health strip and battle phase badge |
+| `packages/nico_shared/lib/games/tacticalvoxelrpg/tacticalvoxelrpg_board.dart` | 285 | Dimension-aware battlefield grid and queued per-tile movement animations |
 | `packages/nico_shared/lib/games/tacticalvoxelrpg/tacticalvoxelrpg_route.dart` | 57 | Route planning helpers for tile-by-tile drag paths and terrain-weighted tap-to-plan routes |
 | `packages/nico_shared/lib/games/tacticalvoxelrpg/tacticalvoxelrpg_table.dart` | 272 | Full-screen shared battlefield with overlaid status, damage, health, camera and zoom controls |
-| `packages/nico_shared/lib/screens/session_screen.dart` | 282 | **`SessionScreen`**: lobby → game → result, notices, leaving, host-as-screen area, "Reconnecting…" banner |
+| `packages/nico_shared/lib/screens/session_screen.dart` | 420 | **`SessionScreen`**: lobby → game → result, reconnecting, immersive tactical UI and host controls |
 | `packages/nico_shared/lib/screens/lobby_view.dart` | 215 | Lobby: game, players (away ones marked), Single game screen settings (host), pinned Start button |
 | `packages/nico_shared/lib/screens/shared_screen_view.dart` | 138 | `SharedScreenView`: draws a `DisplayState` (lobby / table / result) |
 | `packages/nico_shared/lib/widgets/display_settings_editor.dart` | 103 | Single game screen switch + "where is the screen" choice (`ScreenChoice`) |
@@ -137,11 +140,11 @@ Lines are approximate, so you can tell big files from small ones.
 |---|---:|---|
 | `assets/display/index.html` | 22 | Page shell; loads `app.js` and one script per game |
 | `assets/display/app.js` | 133 | `NicoDisplay`: `/display` WebSocket, reconnect, lobby/result, safe `el()` DOM helper, `register()` |
-| `assets/display/style.css` | 242 | TV-scaled styles, including Tactical Voxel RPG biomes, teams, enlarged sprite animations and damage numbers |
+| `assets/display/style.css` | 265 | TV-scaled styles, including tactical terrain, character portrait animations and damage numbers |
 | `assets/display/games/tictactoe.js` | 36 | Tic Tac Toe table renderer |
 | `assets/display/games/colorclash.js` | 54 | Color Clash table renderer |
 | `assets/display/games/seasiege.js` | 64 | Sea Siege table renderer (placing status, both boards, last shots) |
-| `assets/display/games/tacticalvoxelrpg.js` | 112 | Tactical Voxel RPG browser room map, enemy sprites, animation and team health renderer |
+| `assets/display/games/tacticalvoxelrpg.js` | 135 | Tactical Voxel RPG browser battlefield with character portraits, animation and team health renderer |
 
 ### `tool/`: scripts
 
