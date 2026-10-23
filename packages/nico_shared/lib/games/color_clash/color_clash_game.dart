@@ -10,6 +10,22 @@ const colorClashDefinition = GameDefinition(
   description: 'Match colors and numbers, empty your hand first.',
   minPlayers: 2,
   maxPlayers: 4,
+  options: [
+    GameOption(
+      id: 'stacking',
+      label: 'Stack +2 and +4',
+      description:
+          'Answer a +2 with a +2, or any draw with a Wild +4; the next player '
+          'draws the total.',
+      defaultValue: true,
+    ),
+    GameOption(
+      id: 'playAfterPenalty',
+      label: 'Play after drawing a penalty',
+      description: 'Off: drawing +2 or +4 also skips your turn.',
+      defaultValue: true,
+    ),
+  ],
   createSession: _create,
 );
 
@@ -18,7 +34,13 @@ GameSession _create(
   int round,
   Random random,
   GameOptions options,
-) => ColorClashSession(players, random: random, round: round);
+) => ColorClashSession(
+  players,
+  random: random,
+  round: round,
+  stacking: options['stacking'] ?? true,
+  playAfterPenalty: options['playAfterPenalty'] ?? true,
+);
 
 const handSize = 7;
 const lastCardPenalty = 2;
@@ -29,19 +51,25 @@ const lastCardPenalty = 2;
 /// - `{'type': 'play', 'cardId': int, 'color'?: 'red'|'yellow'|'green'|'blue'}`
 ///   (`color` is required for Wild cards)
 /// - `{'type': 'draw'}` draws one card. If it can be played the player may
-///   play it or `pass`; otherwise the turn ends.
+///   play it or `pass`; otherwise the turn ends. With a penalty pending it
+///   draws the whole penalty instead.
 /// - `{'type': 'pass'}` only after drawing a playable card.
 /// - `{'type': 'callLast'}` when holding one card, or two on your turn.
 /// - `{'type': 'catch'}` makes a player who reached one card without calling
 ///   draw [lastCardPenalty]. Possible until the next play or draw.
 ///
-/// No stacking and no Wild Draw Four challenges. Reverse acts as Skip with
-/// two players. The starting player rotates every round.
+/// With [stacking], a +2 or +4 becomes a pending penalty the next player
+/// either stacks on (+2 on a +2, a Wild +4 on either) or draws in full. With
+/// [playAfterPenalty], drawing a penalty doesn't cost the turn. No Wild Draw
+/// Four challenges. Reverse acts as Skip with two players. The starting
+/// player rotates every round.
 class ColorClashSession implements GameSession {
   ColorClashSession(
     List<PlayerInfo> players, {
     required Random random,
     int round = 0,
+    this.stacking = false,
+    this.playAfterPenalty = false,
   }) : _players = players,
        _random = random,
        _turnIndex = round % players.length {
@@ -73,6 +101,8 @@ class ColorClashSession implements GameSession {
     CardColor? color,
     this._turnIndex = 0,
     Random? random,
+    this.stacking = false,
+    this.playAfterPenalty = false,
   }) : _players = players,
        _random = random ?? Random(0) {
     for (final p in players) {
@@ -82,6 +112,15 @@ class ColorClashSession implements GameSession {
     _discard.addAll(discard);
     _color = color ?? discard.last.color;
   }
+
+  /// The "Stack +2 and +4" option.
+  final bool stacking;
+
+  /// The "Play after drawing a penalty" option.
+  final bool playAfterPenalty;
+
+  /// Cards the current player must draw unless they stack (with [stacking]).
+  int _penalty = 0;
 
   final List<PlayerInfo> _players;
   final Random _random;
@@ -142,7 +181,12 @@ class ColorClashSession implements GameSession {
     return drawn;
   }
 
-  bool _canPlay(ClashCard card) => card.canPlayOn(_top, _color);
+  bool _canPlay(ClashCard card) {
+    if (_penalty == 0) return card.canPlayOn(_top, _color);
+    // A pending penalty can only be answered by stacking on it.
+    return card.kind == CardKind.wildDrawFour ||
+        (card.kind == CardKind.drawTwo && _top.kind == CardKind.drawTwo);
+  }
 
   @override
   bool get isOver => _winner != null;
@@ -270,18 +314,31 @@ class ColorClashSession implements GameSession {
           _advance();
         }
       case CardKind.drawTwo:
-        _penalizeNext(2);
+        _penalize(2);
       case CardKind.wildDrawFour:
-        _penalizeNext(4);
+        _penalize(4);
     }
   }
 
-  /// The next player draws [count] cards and loses their turn.
-  void _penalizeNext(int count) {
+  /// The next player draws [count] cards, or with [stacking] faces a pending
+  /// penalty they can stack on. Without [playAfterPenalty] drawing also costs
+  /// them their turn.
+  void _penalize(int count) {
+    if (stacking) {
+      _penalty += count;
+      _advance();
+      _addLog('${_name(_currentId)} must draw $_penalty or stack');
+      return;
+    }
     final victim = _players[_indexAfter(1)].id;
     final drawn = _draw(victim, count);
-    _addLog('${_name(victim)} draws ${drawn.length} and is skipped');
-    _advance(2);
+    if (playAfterPenalty) {
+      _addLog('${_name(victim)} draws ${drawn.length}');
+      _advance();
+    } else {
+      _addLog('${_name(victim)} draws ${drawn.length} and is skipped');
+      _advance(2);
+    }
   }
 
   void _drawForTurn(String playerId) {
@@ -289,6 +346,17 @@ class ColorClashSession implements GameSession {
       throw const GameActionException('Play the card you drew, or pass.');
     }
     _vulnerable = null;
+    if (_penalty > 0) {
+      final drawn = _draw(playerId, _penalty);
+      _penalty = 0;
+      if (playAfterPenalty) {
+        _addLog('${_name(playerId)} draws ${drawn.length}');
+      } else {
+        _addLog('${_name(playerId)} draws ${drawn.length} and is skipped');
+        _advance();
+      }
+      return;
+    }
     final drawn = _draw(playerId, 1);
     if (drawn.isEmpty) {
       _addLog('${_name(playerId)} could not draw and passes');
@@ -327,6 +395,7 @@ class ColorClashSession implements GameSession {
     'top': _top.toJson(),
     'color': _color.name,
     'drawPile': _drawPile.length,
+    'penalty': _penalty,
     'vulnerable': _vulnerable,
     'winner': _winner,
     'log': List.of(_log),

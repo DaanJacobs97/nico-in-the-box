@@ -3,8 +3,11 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nico_shared/games/game_views.dart';
+import 'package:nico_shared/games/seasiege/sea_effects.dart';
+import 'package:nico_shared/games/seasiege/sea_grid.dart';
 import 'package:nico_shared/games/seasiege/seasiege_fleet.dart';
 import 'package:nico_shared/games/seasiege/seasiege_game.dart';
+import 'package:nico_shared/games/seasiege/seasiege_sprites.dart';
 import 'package:nico_shared/games/seasiege/seasiege_view.dart';
 import 'package:nico_shared/net/protocol.dart';
 import 'package:nico_shared/screens/shared_screen_view.dart';
@@ -208,10 +211,10 @@ void main() {
     ) async {
       final sent = <Json>[];
       await pumpAt(tester, phone, placing(sent));
-      Color colorOf(int index) =>
+      Color? colorOf(int index) =>
           ((tester.widget<Container>(cell('sea-own', index)).decoration!
                   as BoxDecoration)
-              .color)!;
+              .color);
 
       // Move in small steps, as a finger does.
       Future<void> glide(TestGesture g, Offset from, Offset to) async {
@@ -313,24 +316,127 @@ void main() {
 
       final waiting = battle('b');
       await pumpAt(tester, phone, viewOf(waiting, sent: sent));
-      expect(find.text('Bob is aiming…'), findsOneWidget);
+      expect(find.text('Bob is aiming at your fleet'), findsOneWidget);
       await tester.tap(cell('sea-enemy', 0));
       expect(sent, isEmpty);
     });
 
-    testWidgets('compact view keeps both boards but drops the log', (
+    testWidgets('boards are stacked in portrait, side by side in landscape', (
+      tester,
+    ) async {
+      await pumpAt(tester, phone, viewOf(battle('a')));
+      expect(find.byKey(const ValueKey('sea-battle-column')), findsOneWidget);
+      final enemy = tester.getCenter(cell('sea-enemy', 0));
+      expect(enemy.dy, lessThan(tester.getCenter(cell('sea-own', 0)).dy));
+
+      await pumpAt(tester, const Size(800, 400), viewOf(battle('a')));
+      expect(tester.takeException(), isNull);
+      expect(find.byKey(const ValueKey('sea-battle-row')), findsOneWidget);
+      expect(
+        tester.getCenter(cell('sea-enemy', 0)).dx,
+        lessThan(tester.getCenter(cell('sea-own', 0)).dx),
+      );
+      expect(
+        tester.getSize(cell('sea-enemy', 0)),
+        tester.getSize(cell('sea-own', 0)),
+      );
+    });
+
+    testWidgets('the board being fired at glows and the other dims', (
+      tester,
+    ) async {
+      SeaGrid grid(String prefix) => tester.widget<SeaGrid>(
+        find.byWidgetPredicate((w) => w is SeaGrid && w.keyPrefix == prefix),
+      );
+      double opacityOf(String prefix) => tester
+          .widget<AnimatedOpacity>(
+            find.ancestor(
+              of: cell(prefix, 0),
+              matching: find.byType(AnimatedOpacity),
+            ),
+          )
+          .opacity;
+
+      await pumpAt(tester, phone, viewOf(battle('a')));
+      expect(grid('sea-enemy').highlighted, isTrue);
+      expect(grid('sea-own').highlighted, isFalse);
+      expect(opacityOf('sea-enemy'), 1);
+      expect(opacityOf('sea-own'), lessThan(1));
+      expect(
+        tester.widget<TurnBanner>(find.byType(TurnBanner)),
+        isA<TurnBanner>()
+            .having((b) => b.active, 'active', isTrue)
+            .having((b) => b.pulse, 'pulse', isTrue),
+      );
+
+      await pumpAt(tester, phone, viewOf(battle('b')));
+      expect(grid('sea-enemy').highlighted, isFalse);
+      expect(grid('sea-own').highlighted, isTrue);
+      expect(opacityOf('sea-enemy'), lessThan(1));
+      expect(tester.widget<TurnBanner>(find.byType(TurnBanner)).pulse, isFalse);
+    });
+
+    testWidgets('a new shot pops up as a toast, flashes, then goes away', (
+      tester,
+    ) async {
+      final session = battle('b');
+      await pumpAt(tester, phone, viewOf(session));
+      session.applyAction('b', fire(41)); // hits Ann's cruiser
+      await pumpAt(tester, phone, viewOf(session));
+      await tester.pump(const Duration(milliseconds: 300));
+      expect(find.text('Bob fired at B5: Hit! Cruiser.'), findsOneWidget);
+      expect(find.byKey(const ValueKey('sea-own-flash-1')), findsOneWidget);
+      await tester.pump(const Duration(seconds: 3));
+      expect(find.textContaining('fired at'), findsNothing);
+    });
+
+    testWidgets('shots already fired when the screen opens are not replayed', (
       tester,
     ) async {
       final session = battle('a')..applyAction('a', fire(41));
       await pumpAt(tester, phone, viewOf(session));
-      expect(find.text('Ann fired at B5: Hit! Cruiser.'), findsNothing);
-      expect(find.text('You fired at B5: Hit! Cruiser.'), findsOneWidget);
+      await tester.pump(const Duration(milliseconds: 300));
+      expect(find.textContaining('fired at'), findsNothing);
+    });
 
+    testWidgets('on your turn, toasts never cover the enemy board', (
+      tester,
+    ) async {
+      final session = SeaSiegeSession.custom(
+        const [ann, bob],
+        fleets: {'a': rowsFleet, 'b': rowsFleet},
+        shootAgain: true,
+      );
+      // Portrait, then landscape; each shot hits the carrier (A1, B1), so
+      // Ann keeps the turn.
+      for (final (size, target) in [(phone, 0), (const Size(800, 400), 1)]) {
+        await pumpAt(tester, size, viewOf(session));
+        session.applyAction('a', fire(target));
+        await pumpAt(tester, size, viewOf(session));
+        await tester.pump(const Duration(milliseconds: 300));
+        final toast = find.textContaining('You fired at');
+        expect(toast, findsOneWidget);
+        final enemyBoard = tester
+            .getRect(cell('sea-enemy', 0))
+            .expandToInclude(tester.getRect(cell('sea-enemy', 99)));
+        expect(enemyBoard.overlaps(tester.getRect(toast)), isFalse);
+        await tester.pump(const Duration(seconds: 3));
+      }
+    });
+
+    testWidgets('compact view keeps both boards but shows no toasts', (
+      tester,
+    ) async {
+      final session = battle('b');
       await pumpAt(tester, phone, viewOf(session, compact: true));
+      session.applyAction('b', fire(41));
+      await pumpAt(tester, phone, viewOf(session, compact: true));
+      await tester.pump(const Duration(milliseconds: 300));
       expect(tester.takeException(), isNull);
       expect(find.textContaining('fired at'), findsNothing);
       expect(cell('sea-enemy', 0), findsOneWidget);
       expect(cell('sea-own', 0), findsOneWidget);
+      await tester.pump(const Duration(seconds: 3));
     });
   });
 
@@ -352,7 +458,7 @@ void main() {
       expect(find.text('Bob: ready'), findsOneWidget);
     });
 
-    testWidgets('in battle it shows both boards and the last shot', (
+    testWidgets('in battle it shows who fires at whom and both boards', (
       tester,
     ) async {
       final session =
@@ -365,20 +471,180 @@ void main() {
             ..applyAction('a', fire(81));
       await pumpScreen(tester, session.tableView());
       expect(tester.takeException(), isNull);
-      expect(find.text("Ann's turn to fire"), findsOneWidget);
+      expect(find.text("Ann is firing at Bob's fleet"), findsOneWidget);
       expect(find.text('A hit earns another shot'), findsOneWidget);
       expect(find.text("Ann's fleet"), findsOneWidget);
       expect(find.text("Bob's fleet"), findsOneWidget);
+      expect(find.byKey(const ValueKey('sea-target-badge')), findsOneWidget);
       expect(
-        find.text('Ann fired at B9: Hit! Destroyer sunk!'),
-        findsOneWidget,
+        find.textContaining('fired at'),
+        findsNothing,
+        reason: 'no shot feed, and old shots are not replayed',
       );
-      expect(
-        find.text('Afloat: Carrier, Battleship, Cruiser, Submarine'),
-        findsOneWidget,
-      );
+      expect(find.textContaining('Afloat'), findsNothing);
       expect(cell('table-b', 80), findsOneWidget);
     });
+
+    testWidgets('a new shot shows as a toast over the board it hit', (
+      tester,
+    ) async {
+      final session = SeaSiegeSession.custom(
+        const [ann, bob],
+        fleets: {'a': rowsFleet, 'b': rowsFleet},
+      );
+      await pumpScreen(tester, session.tableView());
+      session.applyAction('a', fire(80));
+      await pumpScreen(tester, session.tableView());
+      await tester.pump(const Duration(milliseconds: 300));
+      final toast = find.text('Ann fired at A9: Hit! Destroyer.');
+      expect(toast, findsOneWidget);
+      final bobBoard = tester
+          .getRect(cell('table-b', 0))
+          .expandToInclude(tester.getRect(cell('table-b', 99)));
+      expect(bobBoard.overlaps(tester.getRect(toast)), isTrue);
+      expect(find.byKey(const ValueKey('table-b-flash-1')), findsOneWidget);
+      expect(
+        tester.getSize(cell('table-a', 0)),
+        tester.getSize(cell('table-b', 0)),
+        reason: 'toasts never resize the boards',
+      );
+      await tester.pump(const Duration(seconds: 3));
+      expect(toast, findsNothing);
+    });
+
+    testWidgets('only sunk ships are drawn, as wrecks on moving water', (
+      tester,
+    ) async {
+      final session =
+          SeaSiegeSession.custom(
+              const [ann, bob],
+              fleets: {'a': rowsFleet, 'b': rowsFleet},
+              shootAgain: true,
+            )
+            ..applyAction('a', fire(80))
+            ..applyAction('a', fire(81))
+            ..applyAction('a', fire(0));
+      await pumpScreen(tester, session.tableView());
+      final wreck = tester.widget<ShipSprite>(
+        find.byKey(const ValueKey('table-b-ship-destroyer')),
+      );
+      expect(wreck.sunk, isTrue);
+      expect(find.byType(ShipSprite), findsOneWidget, reason: 'afloat: hidden');
+      expect(find.byType(SeaWater), findsNWidgets(2));
+    });
+
+    Future<void> pumpBattle(
+      WidgetTester tester,
+      Size size, {
+      String hostId = 'a',
+    }) {
+      final session = SeaSiegeSession.custom(
+        const [ann, bob],
+        fleets: {'a': rowsFleet, 'b': rowsFleet},
+      );
+      return pumpAt(
+        tester,
+        size,
+        SharedScreenView(
+          state: DisplayState(
+            lobby: LobbyState(
+              roomName: 'Party',
+              gameId: 'seasiege',
+              players: const [ann, bob],
+              minPlayers: 2,
+              maxPlayers: 2,
+              hostId: hostId,
+              hostName: '',
+              phase: RoomPhase.playing,
+            ),
+            gameId: 'seasiege',
+            table: session.tableView(),
+          ),
+        ),
+      );
+    }
+
+    testWidgets('boards sit side by side in landscape, stacked in portrait', (
+      tester,
+    ) async {
+      Axis direction() => tester
+          .widget<Flex>(find.byKey(const ValueKey('sea-boards')))
+          .direction;
+      await pumpBattle(tester, const Size(1920, 1080));
+      expect(direction(), Axis.horizontal);
+      await pumpBattle(tester, const Size(1080, 1920));
+      expect(tester.takeException(), isNull);
+      expect(direction(), Axis.vertical);
+    });
+
+    testWidgets('both boards are the same size at any width', (tester) async {
+      final session =
+          SeaSiegeSession.custom(
+              const [ann, bob],
+              fleets: {'a': rowsFleet, 'b': rowsFleet},
+              shootAgain: true,
+            )
+            ..applyAction('a', fire(80))
+            ..applyAction('a', fire(81));
+      // Ann has lost a ship and Bob hasn't; their boards still match.
+      for (var width = 1000.0; width <= 2400; width += 100) {
+        await pumpAt(
+          tester,
+          Size(width, 800),
+          SharedScreenView(
+            state: DisplayState(
+              lobby: lobby,
+              gameId: 'seasiege',
+              table: session.tableView(),
+            ),
+          ),
+        );
+        expect(tester.takeException(), isNull);
+        expect(
+          tester.getSize(cell('table-a', 0)),
+          tester.getSize(cell('table-b', 0)),
+          reason: 'at $width px wide',
+        );
+      }
+    });
+
+    testWidgets("the host's board comes first", (tester) async {
+      Offset at(String text) => tester.getCenter(find.text(text));
+      await pumpBattle(tester, const Size(1920, 1080), hostId: 'b');
+      expect(at("Bob's fleet").dx, lessThan(at("Ann's fleet").dx));
+      await pumpBattle(tester, const Size(1080, 1920), hostId: 'b');
+      expect(at("Bob's fleet").dy, lessThan(at("Ann's fleet").dy));
+      await pumpBattle(tester, const Size(1920, 1080));
+      expect(at("Ann's fleet").dx, lessThan(at("Bob's fleet").dx));
+    });
+  });
+
+  testWidgets('players see their own fleet as sprites on moving water', (
+    tester,
+  ) async {
+    final session =
+        SeaSiegeSession.custom(
+            const [ann, bob],
+            fleets: {'a': rowsFleet, 'b': rowsFleet},
+            turn: 'b',
+            shootAgain: true,
+          )
+          ..applyAction('b', fire(80))
+          ..applyAction('b', fire(81));
+    await pumpAt(tester, phone, viewOf(session));
+    for (final type in ShipType.values) {
+      expect(find.byKey(ValueKey('sea-own-ship-${type.name}')), findsOneWidget);
+    }
+    expect(
+      tester
+          .widget<ShipSprite>(
+            find.byKey(const ValueKey('sea-own-ship-destroyer')),
+          )
+          .sunk,
+      isTrue,
+    );
+    expect(find.byKey(const ValueKey('sea-enemy-ship-carrier')), findsNothing);
+    expect(find.byType(SeaWater), findsNWidgets(2));
   });
 }
 

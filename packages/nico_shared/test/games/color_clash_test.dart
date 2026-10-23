@@ -455,9 +455,15 @@ void main() {
   });
 
   test('a random game played by bots always finishes legally', () {
-    for (var seed = 0; seed < 25; seed++) {
+    for (var seed = 0; seed < 100; seed++) {
       final random = Random(seed);
-      final game = ColorClashSession([a, b, c], random: random);
+      // Every combination of the two options, 25 games each.
+      final game = ColorClashSession(
+        [a, b, c],
+        random: random,
+        stacking: seed.isOdd,
+        playAfterPenalty: seed % 4 >= 2,
+      );
       var moves = 0;
       while (!game.isOver && moves < 5000) {
         final turn = turnOf(game)!;

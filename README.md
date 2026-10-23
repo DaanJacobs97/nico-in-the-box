@@ -25,7 +25,7 @@ automatically and join with a nickname. No internet connection and no accounts a
 | Game | Players | Description |
 |---|---|---|
 | Tic Tac Toe | 2 | The classic game, with the host against one other player |
-| Color Clash | 2–4 | An Uno-style card game: match by color or number, with Skip, Reverse, Draw Two and Wild cards |
+| Color Clash | 2–4 | An Uno-style card game: match by color or number, with Skip, Reverse, Draw Two and Wild cards. Swipe a card up to play it. The host chooses whether +2 and +4 can be stacked, and whether drawing them costs your turn |
 | Sea Siege | 2 | Battleship-style: hide five ships, then take turns firing at the enemy grid. The host can let a hit earn another shot |
 
 ## Platforms
@@ -227,9 +227,9 @@ placeholder rules that already pass the checks.
 - Keep each pull request focused on one feature or fix. New pull requests start from
   [the template](.github/pull_request_template.md): fill in what changed, which checks ran and what you tested on
   devices.
-- If you change a message shape or add a game, bump `kProtocolVersion` in
-  `packages/nico_shared/lib/net/protocol.dart` so old and new app builds refuse to talk to each other instead of
-  misbehaving.
+- Don't edit `kProtocolVersion` by hand: every pull request into `main` gets main's version + 1 automatically, so
+  builds from different merges refuse to talk to each other instead of misbehaving. After the bot's "Set protocol
+  version" commit lands on your branch, `git pull` before pushing again.
 
 ## License
 

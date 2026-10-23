@@ -8,8 +8,6 @@ NicoDisplay.register('colorclash', (table, lobby, { el, nameOf }) => {
     skip: '⊘',
     reverse: '⇄',
     drawTwo: '+2',
-    wild: 'W',
-    wildDrawFour: '+4',
   };
 
   const players = el('div', { class: 'chips' });
@@ -28,12 +26,28 @@ NicoDisplay.register('colorclash', (table, lobby, { el, nameOf }) => {
   }
 
   const top = table.top;
-  const symbol = top.kind === 'number' ? String(top.value) : SYMBOLS[top.kind];
-  // A wild shows the color that was chosen as its border.
-  const card = el('div', { class: `card bg-${top.color}${top.color === 'yellow' ? ' yellow' : ''}` }, symbol);
-  if (top.color === 'wild') card.style.borderColor = `var(--${table.color})`;
+  let card;
+  if (top.color === 'wild') {
+    // A grid of the four colors; the chosen one stays bright and colors the
+    // border. A Wild +4 has "+4" on top.
+    const grid = el('div', { class: 'wild-grid' });
+    for (const color of ['red', 'yellow', 'green', 'blue']) {
+      grid.append(el('div', { class: `bg-${color}${color === table.color ? '' : ' faded'}` }));
+    }
+    card = el('div', { class: 'card bg-wild wild' }, grid);
+    if (top.kind === 'wildDrawFour') card.append(el('div', { class: 'plus4' }, '+4'));
+    card.style.borderColor = `var(--${table.color})`;
+  } else {
+    const symbol = top.kind === 'number' ? String(top.value) : SYMBOLS[top.kind];
+    card = el('div', { class: `card bg-${top.color}${top.color === 'yellow' ? ' yellow' : ''}` }, symbol);
+  }
 
-  const status = table.turn ? `${nameOf(lobby, table.turn)}'s turn` : '';
+  const penalty = table.penalty || 0;
+  const status = !table.turn
+    ? ''
+    : penalty > 0
+      ? `${nameOf(lobby, table.turn)}: stack or draw ${penalty}`
+      : `${nameOf(lobby, table.turn)}'s turn`;
   const log = el('div', { class: 'log' });
   for (const entry of table.log.slice(-5).reverse()) log.append(el('div', {}, entry));
 
@@ -50,7 +64,8 @@ NicoDisplay.register('colorclash', (table, lobby, { el, nameOf }) => {
         'div',
         { class: 'side' },
         el('div', {}, table.direction === 1 ? '↻' : '↺'),
-        el('div', { class: `dot bg-${table.color}` })
+        el('div', { class: `dot bg-${table.color}` }),
+        penalty > 0 ? el('div', { class: 'penalty' }, `+${penalty}`) : ''
       )
     ),
     el('div', { class: 'status' }, status),

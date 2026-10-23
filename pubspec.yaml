@@ -15,7 +15,6 @@ dependencies:
   nico_shared:
     path: packages/nico_shared
   qr_flutter: ^4.1.0
-  wakelock_plus: ^1.8.1
 
 dev_dependencies:
   flutter_test:
@@ -39,6 +38,8 @@ flutter:
     - assets/display/games/tacticalvoxelrpg/slimes/plasma/
     - assets/display/games/tacticalvoxelrpg/slimes/water/
     - assets/display/games/tacticalvoxelrpg/characters/
+    # Sea Siege ship sprites, drawn by tool/sprites/draw_sprites_test.dart.
+    - assets/display/games/seasiege/
 
 # App icons, drawn by tool/icons/draw_icons_test.dart. Regenerate with
 # `dart run flutter_launcher_icons` after redrawing.

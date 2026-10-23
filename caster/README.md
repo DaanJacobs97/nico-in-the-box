@@ -12,7 +12,8 @@ Android and Android TV (it appears in the TV launcher), with iOS as an untested 
 4. When the host closes the room or disconnects, the Caster returns to waiting.
 
 A Caster shows one room at a time. Other hosts see it as *In use* and are refused with a "busy" message. The screen
-stays awake and in landscape. Tap the pencil to rename it; the name is remembered.
+stays awake and turns with the device (Sea Siege stacks its boards on a tall screen). Tap the pencil to rename it;
+the name is remembered.
 
 ## Network
 

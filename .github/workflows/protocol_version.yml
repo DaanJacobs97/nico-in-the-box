@@ -1,0 +1,62 @@
+name: Set protocol version
+
+# Every pull request into main gets kProtocolVersion = main's + 1, so builds
+# from different merges never claim the same protocol (see
+# tool/protocol_version.dart). Nobody bumps it by hand.
+#
+# The commit is pushed to the PR's own branch, never to main, so the branch
+# protection on main still holds. Pushes made with the built-in token don't
+# start other workflows, so CI is then started by hand on the branch (the one
+# kind of run that token may start), and it reports on the new commit.
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, reopened, synchronize, ready_for_review]
+
+permissions:
+  contents: write # push the commit to the PR branch
+  actions: write # start CI on it
+
+# One run per branch at a time; a newer push replaces a waiting run.
+concurrency:
+  group: protocol-version-${{ github.head_ref }}
+  cancel-in-progress: true
+
+jobs:
+  set:
+    # A fork's branch can't be pushed to; the "Protocol version" CI check
+    # tells the author which number to set instead.
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref }}
+          fetch-depth: 0
+
+      - uses: dart-lang/setup-dart@v1
+
+      - name: Set kProtocolVersion to main's + 1
+        id: set
+        run: |
+          dart tool/protocol_version.dart set --base origin/${{ github.base_ref }}
+          if git diff --quiet; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Commit it to the PR branch
+        if: steps.set.outputs.changed == 'true'
+        run: |
+          version=$(sed -n 's/^const int kProtocolVersion = \([0-9]*\);/\1/p' packages/nico_shared/lib/net/protocol.dart)
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git commit -am "Set protocol version to $version"
+          git push origin "HEAD:${{ github.head_ref }}"
+
+      - name: Run CI on the new commit
+        if: steps.set.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run ci.yml --ref "${{ github.head_ref }}"

@@ -4,8 +4,28 @@ on:
   push:
     branches: [main]
   pull_request:
+  # Started by the "Set protocol version" workflow after it commits to a PR
+  # branch (its own pushes don't trigger CI).
+  workflow_dispatch:
 
 jobs:
+  # A PR into main must carry main's protocol version + 1. The "Set protocol
+  # version" workflow does that automatically; this is the safety net (fork
+  # PRs, a failed run). Make it a required check on main.
+  protocol-version:
+    name: Protocol version
+    if: github.event_name != 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: dart-lang/setup-dart@v1
+
+      - name: kProtocolVersion is main's + 1
+        run: dart tool/protocol_version.dart check --base origin/main
+
   analyze-and-test:
     runs-on: ubuntu-latest
     steps:

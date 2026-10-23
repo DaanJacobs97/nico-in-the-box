@@ -136,8 +136,11 @@ win or draw. The host can then use *Restart game*, which starts a rematch where 
 - **Drawing:** if you draw, you draw 1 card. You may play it straight away if it's playable; otherwise your turn ends.
 - **Action cards:**
   - Reverse acts as Skip when there are 2 players.
-  - Draw Two and Wild Draw Four make the next player draw and lose their turn.
-  - There's no stacking and no challenges.
+  - Draw Two and Wild Draw Four make the next player draw (and, with "Play after drawing a penalty" off, lose their
+    turn).
+  - With "Stack +2 and +4" on, the next player may answer instead: a +2 on a +2, or a Wild +4 on either. The
+    total passes on until someone draws it all. A +2 can't go on a +4.
+  - Both options are on by default. There are no Wild Draw Four challenges.
 - **Last card:** press "Last card!" when you're down to one card. If another player catches you before you call it,
   you draw 2.
 - **Deck refills:** when the draw pile runs out, the discard pile (minus its top card) is reshuffled.
@@ -799,3 +802,137 @@ Mac and is still a stub, so it isn't included.
    sources, firewall).
 4. **Dry run:** a `-rc` tag; install and play from the downloaded files on Windows and the tablet before the real
    release (0.3.1, since the icons and signing land after the `v0.3.0` tag).
+
+## Follow-up: Sea Siege visuals
+
+**Status:** built on `feature/seasiege-visuals`; PR held back until the owner has nothing more to add.
+
+**Request:** on the shared screen, stack the grids in portrait and put them side by side in landscape, show the
+host's grid first, animate the water, and draw sprites for every ship type.
+
+**Decisions (confirmed):**
+- **Sprites appear for players too:** your own fleet is drawn as ships while placing and in battle. The shared
+  screen still shows only sunk ships, as wrecks, so nothing secret leaks.
+- **One source of art:** `paintShip` in `seasiege_sprites.dart` draws each ship with plain shapes. Flutter paints
+  it directly, and `tool/sprites/` exports PNGs from it for the browser screen.
+  `test/games/seasiege_sprites_test.dart` fails if the PNGs fall behind the painter.
+- **Subtle animated water:** a slow shimmer and drifting wave lines (a `CustomPainter` in Flutter, CSS
+  backgrounds in the browser). First on the shared screen only; after the tablet test the owner asked for it on
+  players' boards too (app and browser client), moving like the screen. It stops when the system asks for reduced
+  motion.
+- **No "Afloat" list on the shared screen** (owner's request after the tablet test); the boards and the shot log
+  say enough.
+- **Layout follows the space the table actually has,** not the device orientation: wider than tall puts the boards
+  side by side. When the host's device is the shared screen, the host has no board and join order stays.
+- **The Caster may turn:** it used to lock itself to landscape on Android and iPad, so a tablet Caster never showed
+  the stacked layout. TVs are landscape anyway.
+- **Both boards are always the same size.** On the tablet Caster, a wrapped "Afloat" line made one board smaller.
+  The line is gone now, and a widget test checks both boards match at many widths.
+
+**Verified on the tablet** (Samsung SM-T590, USB tunnel, scripted second player, both rule settings):
+- **Chrome `/screen/`:** side by side in landscape, stacked in portrait, host first. The water moves, and wrecks
+  show both horizontal and vertical.
+- **Release-signed Caster from this branch:** a full run in landscape passed both games. After the lock was
+  removed, the Caster turned to portrait and showed the stacked layout and wrecks (screenshots). That run then
+  failed: the tablet's Wi-Fi re-associated, the Caster dropped, and later it was no longer found by scanning. That
+  issue is unrelated and is to be looked at separately.
+
+### Second round: players' layout, turn cue, shot toasts
+
+**Request:** stack or place side by side on the players' screens too, make it clearer whose turn it is, and replace
+the shot feed at the bottom with disappearing messages in an overlay, so the boards keep their size. The messages
+must not cover squares a player can tap.
+
+**Decisions (confirmed):**
+- **Players' battle screen:** side by side in landscape (enemy left, yours right, the same size), stacked in
+  portrait as before. Placing is unchanged.
+- **Turn cue:** the board being fired at glows gold with a crosshair by its title, and the other board dims.
+  - **Shared screen:** a gold banner says "Ann is firing at Bob's fleet".
+  - **Your device:** "Your turn: fire!" pulses. While you wait it says "Bob is aiming at your fleet".
+  - **Free-for-all:** with more than one fleet left to pick from, nothing glows.
+- **Toasts over the board that was hit,** fading after 3 s, with the square flashing for the first second.
+  - On your device during your turn, toasts move over your own board.
+  - Dimming never fades a toast.
+  - Compact mode (a shared screen is on) shows no toasts on players' devices.
+  - Shots already fired when a screen opens are not replayed.
+- **Shot numbers:** each log entry gets `n` so screens can tell new shots from old ones. Protocol 6.
+- **The browser screen is rebuilt on every update,** so it remembers what it has seen and keeps each toast's
+  timing with a negative animation delay.
+
+## Follow-up: keep the screen on while in a room
+
+**Status:** done. Apps keep the screen on; browser players get a lobby tip (option 1 of 3, chosen by the owner).
+
+**Decisions (confirmed):**
+- **Scope:** the screen stays on for the whole time you're in a room: lobby, game and results.
+  - `ScreenAwake` moved to `nico_shared`, and `SessionScreen` holds it.
+  - The host already held it through `HostedRoom`; the counter handles both holds.
+- **Browsers where supported.** The same code runs in the browser client.
+
+**Verified on the tablet:**
+- **App:** a screen wake lock for the app was taken when joining and dropped after leaving.
+  - Waiting out the timeout couldn't prove anything: the tablet has "Stay awake while charging" on and was
+    plugged in.
+- **Browser (Chrome, `http://192.168.0.156:47800/play/`):** no wake lock.
+  - The page isn't a secure context, so `navigator.wakeLock` is missing.
+  - wakelock_plus then falls back to a hidden looping video (NoSleep.js). Its data-URI video loads its metadata
+    but never decodes a frame (`readyState` 1, `currentTime` stuck at 0). Chrome doesn't count it as playing,
+    even when added to the page at 300 px.
+- **Browser outcome (owner's choice of three):**
+  - **Chosen:** browser players see a tip in the lobby ("Your screen may lock while you wait…"). The wake lock
+    call stays in place, so it starts working by itself if the host ever serves HTTPS.
+  - **Not chosen:** our own looping video, whether Chrome honours it is uncertain; HTTPS with a self-signed
+    certificate, which shows a full-page warning to every browser player.
+
+## Follow-up: Color Clash update
+
+**Status:** done. The owner played it on the Windows app and the tablet (app and Caster) from release builds of
+this branch: "works great".
+
+**Request:** new art for Wild and Wild +4, players' screens use all their space when a shared screen is on,
+swipe a card up to play it, and two options: stacking +2 and +4, and keeping your turn after drawing one (both
+on by default).
+
+**Decisions (confirmed):**
+- **Wild art:** a 2×2 grid of the four colors; Wild +4 adds a white "+4". On the pile the chosen color's
+  square stays bright and the others fade, and the border keeps the chosen color. Same in the browser screen.
+- **Stacking:** a +2 or +4 becomes a pending `penalty` (in the table view) for the next player. They may stack
+  a +2 on a +2 or a Wild +4 on either (a +2 can't go on a +4), or draw the whole total.
+- **Play after drawing a penalty** covers +2, +4 and a stacked total: the drawer then takes a normal turn.
+- **The engine's options default to off;** only the game definition turns them on. So the original engine
+  tests still check the classic rules, and the random bot games run every combination.
+- **Compact player screen:** a status line with a small top card, the active color and any penalty, the buttons,
+  then the hand as a fan of large cards. Cards shrink until the fan fits the width (down to 60 px), and only a
+  bigger hand than that scrolls.
+- **Swipe to play:** a playable card follows the finger on a vertical drag and plays when let go above 45% of a
+  card's height (or flicked up); otherwise it springs back. Tapping still works. Sideways drags are left to the
+  hand's scrolling. A Wild still asks for a color, and backing out returns the card.
+
+# Automatic protocol version
+
+**Problem:** two branches that both bump `kProtocolVersion` from 5 to 6 merge silently, because Git sees the same
+edit on both sides. Builds with and without the second branch's changes would then both claim protocol 6 and
+connect, then misbehave. This came up with a friend's game branch started before #35 (which went to 6).
+
+**Decisions (confirmed):**
+- **Nobody edits the number.** Every PR into `main` gets main's version + 1, even docs-only ones; the owner tests
+  with release builds or builds from one branch, so that costs nothing.
+- **No tokens or secrets.** The "Set protocol version" workflow commits to the PR's own branch, never to `main`,
+  so the branch protection holds.
+  - Pushes with the built-in token don't start other workflows, so it then starts CI with `workflow_dispatch`, the
+    one kind of run that token may start.
+- **Safety net:** the CI job "Protocol version" (`tool/protocol_version.dart check`) must be a required check on
+  `main`. It catches fork PRs (their branch can't be pushed to) and failed runs, and says which number to set.
+- **Branch protection on `main`:** "Require branches to be up to date before merging" is on, so the number is
+  always worked out against the newest `main`.
+
+**Known costs:**
+- **`git pull` after the bot's commit** before pushing again.
+- **Rare conflict:** if two PRs merge while a third is open, updating the third conflicts on the version line.
+  Either side will do; the workflow then sets the right number.
+- **"Awaiting approval" runs:** GitHub also creates `pull_request` runs for the bot's commit and holds them for
+  approval. They aren't needed (the started CI run covers the commit) and don't block merging. Approving them just
+  runs CI again, and the workflow finds the number already right.
+
+**Not covered:** a changed message shape is no longer detected separately. It doesn't need to be, since every PR
+bumps anyway.

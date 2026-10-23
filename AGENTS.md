@@ -28,8 +28,9 @@ or scaffolding.
   ```
 
 - `packages/nico_shared` must stay **web-safe**: no `dart:io` imports (it also runs in browsers).
-- If you change a network message's shape or add a game, bump `kProtocolVersion` in
-  `packages/nico_shared/lib/net/protocol.dart`.
+- **Never edit `kProtocolVersion` by hand.** Every pull request into `main` gets main's version + 1 automatically
+  (the "Set protocol version" workflow commits it to the PR branch; `git pull` before pushing again). The CI check
+  "Protocol version" fails if it's wrong and says which number to use.
 - **Added, moved or deleted a source file, or changed its size a lot? Update [docs/CODE_MAP.md](docs/CODE_MAP.md).**
   `test/docs/code_map_test.dart` fails until you do. It also caps source files at 600 non-blank lines: split a
   file that grows past that by job (see `game_server.dart` + `web_routes.dart`), don't raise the cap.

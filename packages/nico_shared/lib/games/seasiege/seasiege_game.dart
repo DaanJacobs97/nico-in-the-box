@@ -195,6 +195,7 @@ class SeaSiegeSession implements GameSession {
     target.shots[cell] = ship?.type;
     final sunk = ship != null && target.isSunk(ship);
     _log.add({
+      'n': _log.length + 1,
       'shooter': shooterId,
       'target': targetId,
       'cell': cell,
