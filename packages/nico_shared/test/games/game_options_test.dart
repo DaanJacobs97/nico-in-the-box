@@ -31,6 +31,12 @@ final game = GameDefinition(
       description: 'A hit earns another shot.',
     ),
     GameOption(id: 'fog', label: 'Fog', defaultValue: true),
+    GameOption.choice(
+      id: 'size',
+      label: 'Board size',
+      choices: [GameChoice('small', 'Small'), GameChoice('large', 'Large')],
+      defaultChoice: 'small',
+    ),
   ],
   createSession: (_, _, _, _) => _NoSession(),
 );
@@ -38,22 +44,33 @@ final game = GameDefinition(
 void main() {
   group('GameDefinition options', () {
     test('defaults and text', () {
-      expect(game.defaultOptions, {'again': false, 'fog': true});
+      expect(game.defaultOptions, {
+        'again': false,
+        'fog': true,
+        'size': 'small',
+      });
       expect(game.describeOptions(game.defaultOptions), [
         'Hit = shoot again: off',
         'Fog: on',
+        'Board size: Small',
       ]);
+      expect(game.options.last.isChoice, isTrue);
+      expect(game.options.first.isChoice, isFalse);
     });
 
     test('updateOptions applies changes and keeps the rest', () {
       expect(
-        game.updateOptions({'again': false, 'fog': true}, {'fog': false}),
-        {'again': false, 'fog': false},
+        game.updateOptions(game.defaultOptions, {
+          'fog': false,
+          'size': 'large',
+        }),
+        {'again': false, 'fog': false, 'size': 'large'},
       );
       // Missing values (e.g. from an older lobby) fall back to defaults.
       expect(game.updateOptions({}, {'again': true}), {
         'again': true,
         'fog': true,
+        'size': 'small',
       });
     });
 
@@ -62,6 +79,9 @@ void main() {
         {'nope': true},
         {'again': 'yes'},
         {'again': 1},
+        {'size': 'huge'},
+        {'size': true},
+        {'size': null},
         ['again'],
         null,
       ]) {
@@ -82,7 +102,7 @@ void main() {
         maxPlayers: 2,
         hostId: null,
         phase: RoomPhase.lobby,
-        gameOptions: {'again': true},
+        gameOptions: {'again': true, 'size': 'large'},
       );
       final back = DisplayState.fromJson(
         DisplayState(
@@ -91,10 +111,19 @@ void main() {
           rules: const ['Hit = shoot again: on'],
         ).toJson(),
       );
-      expect(back.lobby.gameOptions, {'again': true});
+      expect(back.lobby.gameOptions, {'again': true, 'size': 'large'});
       expect(back.gameName, 'Options');
       expect(back.rules, ['Hit = shoot again: on']);
     });
+  });
+
+  test('engines read switches and choices with fallbacks', () {
+    const GameOptions options = {'again': true, 'size': 'large'};
+    expect(options.flag('again'), isTrue);
+    expect(options.flag('missing'), isFalse);
+    expect(options.choice('size', 'small'), 'large');
+    expect(options.choice('missing', 'small'), 'small');
+    expect(options.choice('again', 'small'), 'small', reason: 'not a choice');
   });
 
   group('GameOptionsEditor', () {
@@ -118,6 +147,23 @@ void main() {
       ]);
     });
 
+    testWidgets('host picks a choice', (tester) async {
+      final changes = <GameOptions>[];
+      await pump(
+        tester,
+        GameOptionsEditor(
+          game: game,
+          values: game.defaultOptions,
+          onChanged: changes.add,
+        ),
+      );
+      expect(find.text('Board size'), findsOneWidget);
+      await tester.tap(find.byKey(const ValueKey('game-option-size-large')));
+      expect(changes, [
+        {'size': 'large'},
+      ]);
+    });
+
     testWidgets('players see the rules read-only', (tester) async {
       await pump(
         tester,
@@ -126,6 +172,8 @@ void main() {
       expect(find.byType(Switch), findsNothing);
       expect(find.text('Hit = shoot again'), findsOneWidget);
       expect(find.text('On'), findsNWidgets(2)); // 'fog' defaults to on.
+      expect(find.text('Small'), findsOneWidget, reason: 'the default choice');
+      expect(find.byType(SegmentedButton<String>), findsNothing);
     });
   });
 }

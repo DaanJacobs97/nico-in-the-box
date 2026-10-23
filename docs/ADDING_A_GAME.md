@@ -123,10 +123,11 @@ game uses it. If none fits, add one to `GameCategory` with a label and an icon (
 Also add a `MyGameSession.custom(...)` constructor that builds an exact state, like `ColorClashSession.custom`.
 Tests depend on it.
 
-### Options the host can switch (optional)
+### Options the host can set (optional)
 
-Some rules are a matter of taste, such as "a hit earns another shot". Declare these as **game options** and the host
-gets a switch for each in the lobby. You don't write any UI or protocol code for them.
+Some rules are a matter of taste, such as "a hit earns another shot" or how many hands to play. Declare these as
+**game options**: a switch (on or off) or a choice (one of a few values). The host sets them in the lobby. You don't
+write any UI or protocol code for them.
 
 ```dart
 const myGameDefinition = GameDefinition(
@@ -138,31 +139,44 @@ const myGameDefinition = GameDefinition(
       description: 'A hit earns another shot.', // one line under it
       defaultValue: false,       // what a new lobby starts with
     ),
+    GameOption.choice(
+      id: 'hands',
+      label: 'Hands',
+      choices: [GameChoice('5', '5'), GameChoice('10', '10')], // (id, label)
+      defaultChoice: '5',
+    ),
   ],
   createSession: _create,
 );
 
 GameSession _create(List<PlayerInfo> players, int round, Random random, GameOptions options) =>
-    MyGameSession(players, round: round, random: random, shootAgain: options['shootAgain'] ?? false);
+    MyGameSession(
+      players,
+      round: round,
+      random: random,
+      shootAgain: options.flag('shootAgain'),
+      hands: int.parse(options.choice('hands', '5')),
+    );
 ```
 
 What the system does for you:
-- **Lobby:** the host sees a switch per option under the game card. Other players see the rules read-only, with
-  On/Off.
+- **Lobby:** the host sees a switch or a row of buttons per option under the game card. Other players see the rules
+  read-only (On/Off, or the chosen label).
 - **Shared screens:** the lobby on every screen type shows the rules as text, such as "Hit = shoot again: on".
 - **Server:**
   - Only the host can change options, and only in the lobby.
-  - Unknown ids and non-bool values are refused.
+  - Unknown ids, a switch set to anything but on/off, and a choice set to a value it doesn't offer are refused.
   - Changing the game resets to the new game's defaults.
   - Every session, including after *Restart game*, gets a map with a value for each of your options.
 
 Your part:
 - **Pass the values as plain constructor parameters** (`shootAgain: true`), not the map. Then tests and `custom(...)`
-  constructors read naturally. Use `options['id'] ?? <default>` in `_create`.
+  constructors read naturally. Read them in `_create` with `options.flag('id')` and
+  `options.choice('id', <fallback>)` (choice values are strings: parse numbers there).
 - **Put rule values that affect play in `tableView()`** when players need to see them, as the generated example does
   with `target`.
-- **Test both settings** of every option in your engine test (see 7.2).
-- For now options are on/off switches only. If you need a number or a choice, ask first: it needs a new option type.
+- **Test every setting** of every option in your engine test (see 7.2).
+- Keep choices short (two to five values), so they fit on a phone. Blackjack's Mode and Hands are examples.
 
 `dart run tool/new_game.dart` generates an example option ("Long game": race to 20 instead of 10) that shows each step.
 
@@ -359,7 +373,7 @@ Copy this into your pull request description.
 - [ ] Images (if any): in `packages/nico_shared/assets/<id>/`, about twice their drawn size; the JS renderer links to `/art/<id>/...`
 - [ ] `category` set in the definition (the closest of card, board, grid, gambling, adventure)
 - [ ] Registered in `availableGames`, `gameViews`, `gameTables`
-- [ ] Options (if any): declared in `GameDefinition.options`, passed to the session as parameters, each tested on and off
+- [ ] Options (if any): declared in `GameDefinition.options`, passed to the session as parameters, every setting tested
 - [ ] Web client rebuilt; the "Protocol version" check passes on the PR (the number is set automatically)
 - [ ] Tests: engine (rules, rejections, end, random games, privacy), widgets (full, compact, TV-size table), registry check passes
 - [ ] (Recommended) server round-trip test; bot move function; a real device session

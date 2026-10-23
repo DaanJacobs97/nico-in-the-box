@@ -33,7 +33,7 @@ GameSession _create(
   players,
   round: round,
   random: random,
-  shootAgain: options['shootAgain'] ?? false,
+  shootAgain: options.flag('shootAgain'),
 );
 
 /// One player's side: their ships and the shots fired at them.

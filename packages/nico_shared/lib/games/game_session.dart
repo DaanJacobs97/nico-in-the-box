@@ -41,29 +41,79 @@ typedef GameSessionFactory = GameSession Function(
   GameOptions options,
 );
 
-/// The host's choices for a game's [GameOption]s, by option id.
-typedef GameOptions = Map<String, bool>;
+/// The host's choices for a game's [GameOption]s, by option id: a `bool` for a
+/// switch, a [GameChoice.id] for a choice.
+typedef GameOptions = Map<String, Object>;
 
-/// A rule the host can switch on or off in the lobby, such as "a hit earns
-/// another shot". The engine reads the chosen value from the [GameOptions]
-/// passed to [GameDefinition.createSession].
+/// Reading [GameOptions] in an engine.
+extension GameOptionValues on GameOptions {
+  /// The switch [id], or false when it isn't set.
+  bool flag(String id) => this[id] == true;
+
+  /// The chosen [GameChoice.id] of the choice [id], or [fallback] when it
+  /// isn't set.
+  String choice(String id, String fallback) =>
+      this[id] is String ? this[id]! as String : fallback;
+}
+
+/// One of the values a choice [GameOption] offers.
+class GameChoice {
+  const GameChoice(this.id, this.label);
+
+  /// The value in [GameOptions], such as `wins`.
+  final String id;
+
+  /// What the host and players see, such as "First to x wins".
+  final String label;
+}
+
+/// A rule the host sets in the lobby: a switch (on or off), such as "a hit
+/// earns another shot", or with [GameOption.choice] one of a few values,
+/// such as how many hands to play. The engine reads the chosen value from
+/// the [GameOptions] passed to [GameDefinition.createSession].
 class GameOption {
   const GameOption({
     required this.id,
     required this.label,
     this.description = '',
-    this.defaultValue = false,
-  });
+    bool this.defaultValue = false,
+  }) : choices = const [];
+
+  /// Pick one of [choices]; starts on [defaultChoice] (a [GameChoice.id]).
+  const GameOption.choice({
+    required this.id,
+    required this.label,
+    required this.choices,
+    required String defaultChoice,
+    this.description = '',
+  }) : defaultValue = defaultChoice;
 
   /// Key in [GameOptions], such as `shootAgain`. Unique per game.
   final String id;
 
-  /// Short switch label, such as "Hit = shoot again".
+  /// Short label, such as "Hit = shoot again".
   final String label;
 
-  /// One line under the switch explaining the rule.
+  /// One line under the option explaining the rule.
   final String description;
-  final bool defaultValue;
+
+  /// The values to pick from; empty for a switch.
+  final List<GameChoice> choices;
+
+  /// `bool` for a switch, a [GameChoice.id] for a choice.
+  final Object defaultValue;
+
+  bool get isChoice => choices.isNotEmpty;
+
+  /// What [value] reads as, such as "on" or "First to x wins".
+  String describe(Object? value) {
+    final current = value ?? defaultValue;
+    if (!isChoice) return current == true ? 'on' : 'off';
+    for (final c in choices) {
+      if (c.id == current) return c.label;
+    }
+    return '$current';
+  }
 }
 
 /// The kind of game, by what you play with. The host's game pickers group games
@@ -120,18 +170,26 @@ class GameDefinition {
   };
 
   /// [current] with [changes] applied. Throws [FormatException] for an
-  /// unknown option id or a value that isn't a bool.
+  /// unknown option id, a switch that isn't set to a bool, or a choice set to
+  /// something it doesn't offer.
   GameOptions updateOptions(GameOptions current, Object? changes) {
     if (changes is! Map<String, Object?>) {
       throw const FormatException('Options must be an object.');
     }
     final next = {...defaultOptions, ...current};
     for (final MapEntry(:key, :value) in changes.entries) {
-      if (!next.containsKey(key)) {
+      final option = options.where((o) => o.id == key).firstOrNull;
+      if (option == null) {
         throw FormatException('$name has no option "$key".');
       }
-      if (value is! bool) throw FormatException('"$key" must be on or off.');
-      next[key] = value;
+      if (option.isChoice) {
+        if (!option.choices.any((c) => c.id == value)) {
+          throw FormatException('"$key" can\'t be "$value".');
+        }
+      } else if (value is! bool) {
+        throw FormatException('"$key" must be on or off.');
+      }
+      next[key] = value!;
     }
     return next;
   }
@@ -139,7 +197,6 @@ class GameDefinition {
   /// The active rules as text, such as `['Hit = shoot again: on']`, for
   /// lobbies and shared screens.
   List<String> describeOptions(GameOptions values) => [
-    for (final o in options)
-      '${o.label}: ${(values[o.id] ?? o.defaultValue) ? 'on' : 'off'}',
+    for (final o in options) '${o.label}: ${o.describe(values[o.id])}',
   ];
 }

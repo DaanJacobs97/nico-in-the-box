@@ -324,8 +324,9 @@ class GameClient extends ChangeNotifier {
   void setDisplay(DisplaySettings display) =>
       _send(Msg.setDisplay, {'display': display.toJson()});
 
-  /// Switches game options by id; options not named keep their value.
-  void setGameOptions(Map<String, bool> changes) =>
+  /// Sets game options by id (a bool for a switch, a choice id for a choice);
+  /// options not named keep their value.
+  void setGameOptions(Map<String, Object> changes) =>
       _send(Msg.setGameOptions, {'options': changes});
 
   /// Leaves for good: the server frees the seat instead of keeping it.

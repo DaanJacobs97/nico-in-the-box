@@ -39,8 +39,8 @@ GameSession _create(
   players,
   random: random,
   round: round,
-  stacking: options['stacking'] ?? true,
-  playAfterPenalty: options['playAfterPenalty'] ?? true,
+  stacking: options.flag('stacking'),
+  playAfterPenalty: options.flag('playAfterPenalty'),
 );
 
 const handSize = 7;

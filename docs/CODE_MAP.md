@@ -77,7 +77,7 @@ Lines are approximate, so you can tell big files from small ones.
 | `packages/nico_shared/lib/net/channel/connect.dart` | 3 | Picks the WebSocket implementation (conditional import) |
 | `packages/nico_shared/lib/net/channel/connect_io.dart` | 6 | Native WebSocket with 5 s pings (the only `dart:io` allowed in this package) |
 | `packages/nico_shared/lib/net/channel/connect_web.dart` | 3 | Browser WebSocket |
-| `packages/nico_shared/lib/games/game_session.dart` | 118 | **`GameSession`** interface, `GameDefinition` (+ `options`, `category`), `GameCategory` (card, board, grid, gambling, adventure), `GameOption`, `GameOptions`, `GameActionException` |
+| `packages/nico_shared/lib/games/game_session.dart` | 165 | **`GameSession`** interface, `GameDefinition` (+ `options`, `category`), `GameCategory` (card, board, grid, gambling, adventure), `GameOption` (a switch, or `GameOption.choice` with `GameChoice`s), `GameOptions` (`flag`, `choice`), `GameActionException` |
 | `packages/nico_shared/lib/games/registry.dart` | 28 | `availableGames`, `gameById`, `gamesByCategory` (for the pickers; empty categories left out) |
 | `packages/nico_shared/lib/games/game_views.dart` | 45 | `GameViewContext` (+`compact`), `TableContext`, `gameViews` and `gameTables` maps |
 | `packages/nico_shared/lib/games/tictactoe/tictactoe_game.dart` | 96 | Tic Tac Toe engine (marks swap per round) |
@@ -113,7 +113,7 @@ Lines are approximate, so you can tell big files from small ones.
 | `packages/nico_shared/lib/screens/lobby_view.dart` | 253 | Lobby: game (host's Change game menu grouped by category), players (away ones marked), Single game screen settings (host), screen-lock tip (browsers), pinned Start button |
 | `packages/nico_shared/lib/screens/shared_screen_view.dart` | 138 | `SharedScreenView`: draws a `DisplayState` (lobby / table / result) |
 | `packages/nico_shared/lib/widgets/display_settings_editor.dart` | 103 | Single game screen switch + "where is the screen" choice (`ScreenChoice`) |
-| `packages/nico_shared/lib/widgets/game_options_editor.dart` | 49 | Lobby game options: switches for the host, read-only rules for players |
+| `packages/nico_shared/lib/widgets/game_options_editor.dart` | 115 | Lobby game options: switches and segmented choices for the host, read-only rules for players |
 | `packages/nico_shared/lib/widgets/game_category_header.dart` | 32 | `GameCategoryHeader` (icon + name above a category's games), `gameCategoryIcon` |
 | `packages/nico_shared/lib/widgets/host_controls.dart` | 134 | Host app-bar menu: restart, end, kick, close |
 | `packages/nico_shared/lib/widgets/nickname_dialog.dart` | 66 | Nickname prompt with validation |

@@ -42,7 +42,7 @@ GameSession _create(
   players,
   round: round,
   random: random,
-  longGame: options['longGame'] ?? false,
+  longGame: options.flag('longGame'),
 );
 
 /// Actions: `{'type': 'add', 'amount': 1 | 2}`.

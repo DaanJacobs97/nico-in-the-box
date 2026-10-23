@@ -27,13 +27,19 @@ final _created = <GameOptions>[];
 final _optionsGame = GameDefinition(
   id: 'opts',
   name: 'Options',
-  description: 'Test game with two options.',
+  description: 'Test game with three options.',
   minPlayers: 2,
   maxPlayers: 2,
   category: GameCategory.board,
   options: const [
     GameOption(id: 'again', label: 'Hit = shoot again'),
     GameOption(id: 'fog', label: 'Fog', defaultValue: true),
+    GameOption.choice(
+      id: 'hands',
+      label: 'Hands',
+      choices: [GameChoice('5', '5'), GameChoice('10', '10')],
+      defaultChoice: '5',
+    ),
   ],
   createSession: (_, _, _, options) {
     _created.add(options);
@@ -100,16 +106,41 @@ void main() {
   }
 
   test('the lobby starts with the game defaults', () {
-    expect(guest.lobby!.gameOptions, {'again': false, 'fog': true});
-    expect(server.displayState.rules, ['Hit = shoot again: off', 'Fog: on']);
+    expect(guest.lobby!.gameOptions, {
+      'again': false,
+      'fog': true,
+      'hands': '5',
+    });
+    expect(server.displayState.rules, [
+      'Hit = shoot again: off',
+      'Fog: on',
+      'Hands: 5',
+    ]);
     expect(server.displayState.gameName, 'Options');
   });
 
   test('the host changes an option and everyone sees it', () async {
     host.setGameOptions({'again': true});
     await until(guest, () => guest.lobby!.gameOptions['again'] == true);
-    expect(guest.lobby!.gameOptions, {'again': true, 'fog': true});
+    expect(guest.lobby!.gameOptions, {
+      'again': true,
+      'fog': true,
+      'hands': '5',
+    });
     expect(server.displayState.rules.first, 'Hit = shoot again: on');
+  });
+
+  test('the host picks a choice and everyone sees it', () async {
+    host.setGameOptions({'hands': '10'});
+    await until(guest, () => guest.lobby!.gameOptions['hands'] == '10');
+    expect(server.displayState.rules.last, 'Hands: 10');
+
+    final notices = await noticesFrom(
+      host,
+      () => host.setGameOptions({'hands': '99'}),
+    );
+    expect(notices.single, contains('can\x27t be "99"'));
+    expect(server.gameOptions['hands'], '10');
   });
 
   test('only the host can change options', () async {
@@ -128,7 +159,7 @@ void main() {
       () => host.setGameOptions({'nope': true}),
     );
     expect(notices.single, contains('no option "nope"'));
-    expect(server.gameOptions, {'again': false, 'fog': true});
+    expect(server.gameOptions, {'again': false, 'fog': true, 'hands': '5'});
   });
 
   test('sessions get the options, and a restart keeps them', () async {
@@ -138,7 +169,7 @@ void main() {
     await until(host, () => host.lobby!.phase == RoomPhase.playing);
     host.restartGame();
     await until(host, () => _created.length == 2);
-    expect(_created, everyElement({'again': true, 'fog': false}));
+    expect(_created, everyElement({'again': true, 'fog': false, 'hands': '5'}));
   });
 
   test('options are locked while a game runs', () async {

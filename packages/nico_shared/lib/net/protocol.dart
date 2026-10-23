@@ -264,7 +264,7 @@ class LobbyState {
 
   /// The host's choices for the game's options (`GameDefinition.options`),
   /// by option id. Empty for games without options.
-  final Map<String, bool> gameOptions;
+  final Map<String, Object> gameOptions;
 
   bool get canStart => players.length >= minPlayers;
 
@@ -312,7 +312,7 @@ class LobbyState {
       for (final d in json['displays'] as List<Object?>? ?? const [])
         DisplayInfo.fromJson(d! as Json),
     ],
-    gameOptions: (json['options'] as Json? ?? const {}).cast<String, bool>(),
+    gameOptions: (json['options'] as Json? ?? const {}).cast<String, Object>(),
   );
 }
 
