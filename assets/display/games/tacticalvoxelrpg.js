@@ -1,6 +1,9 @@
 'use strict';
 
-const slimeFrameCounts = { idle: 9, walk: 8, melee: 8, ranged: 8, special: 11, hurt: 5 };
+const tacticalPortraits = {
+  hero: { closeCombat: 'aldric', ranged: 'seren', trapper: 'mora' },
+  enemy: { closeCombat: 'hollow_guard', ranged: 'hollow_archer', trapper: 'blight_hound' },
+};
 
 NicoDisplay.register('tacticalvoxelrpg', (table, lobby, { el, nameOf }) => {
   const unitAt = new Map(table.units.map((unit) => [`${unit.x},${unit.y}`, unit]));
@@ -25,6 +28,12 @@ NicoDisplay.register('tacticalvoxelrpg', (table, lobby, { el, nameOf }) => {
     return 'idle';
   }
 
+  function portraitFor(unit) {
+    const team = unit.owner === '__ai__' ? 'enemy' : 'hero';
+    const name = tacticalPortraits[team][unit.kind];
+    return name ? `games/tacticalvoxelrpg/characters/${name}.png` : null;
+  }
+
   const cells = table.tiles.map((tile) => {
     const key = `${tile.x},${tile.y}`;
     const unit = unitAt.get(key);
@@ -40,26 +49,32 @@ NicoDisplay.register('tacticalvoxelrpg', (table, lobby, { el, nameOf }) => {
       ? unit.kind === 'closeCombat' ? 'V' : unit.kind === 'ranged' ? 'R' : 'T'
       : trapsAt.has(key) ? '×' : '';
     const animation = unit ? animationFor(unit) : 'idle';
-    const slimeSprite = unit && ['acid', 'dark', 'fire', 'plasma', 'water'].includes(unit.sprite)
+    const portrait = unit && portraitFor(unit);
+    const characterAnimation = animation === 'idle' || animation === 'walk'
+      ? animation
+      : animation === 'hurt'
+      ? 'hurt'
+      : animation === 'special'
+      ? 'special'
+      : 'attack';
+    const sprite = portrait
       ? el('span', {
-          class: `tvrpg-sprite slime-sprite ${animation === 'idle' ? 'slime-idle' : 'slime-once'}`,
-          style: `--frames:${slimeFrameCounts[animation]};--duration:${slimeFrameCounts[animation] * 125}ms;background-size:${slimeFrameCounts[animation] * 100}% 100%;background-image:url('games/tacticalvoxelrpg/slimes/${unit.sprite}/${animation}.png')`,
+          class: `tvrpg-sprite character-sprite character-${characterAnimation}`,
+          role: 'img',
+          'aria-label': unit.name,
+          style: `background-image:url('${portrait}')`,
         })
       : null;
-    if (slimeSprite && animation !== 'idle') {
-      slimeSprite.addEventListener('animationend', () => {
-        slimeSprite.style.backgroundImage =
-          `url('games/tacticalvoxelrpg/slimes/${unit.sprite}/idle.png')`;
-        slimeSprite.style.setProperty('--frames', slimeFrameCounts.idle);
-        slimeSprite.style.setProperty('--duration', `${slimeFrameCounts.idle * 125}ms`);
-        slimeSprite.style.backgroundSize = `${slimeFrameCounts.idle * 100}% 100%`;
-        slimeSprite.classList.replace('slime-once', 'slime-idle');
+    if (sprite && characterAnimation !== 'idle' && characterAnimation !== 'walk') {
+      sprite.addEventListener('animationend', () => {
+        sprite.classList.remove(`character-${characterAnimation}`);
+        sprite.classList.add('character-idle');
       }, { once: true });
     }
     return el(
       'div',
       { class: classes, 'data-cell': key },
-      unit ? (slimeSprite || el('span', { class: 'tvrpg-sprite' }, mark)) :
+      unit ? (sprite || el('span', { class: 'tvrpg-sprite' }, mark)) :
         trapsAt.has(key) ? el('span', { class: 'tvrpg-trap' }, mark) : '',
       unit ? el('small', { class: 'tvrpg-hp' }, `${unit.hp} HP`) : '',
       damage && damage.x === tile.x && damage.y === tile.y

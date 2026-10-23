@@ -159,6 +159,11 @@ void main() {
       final squad = units.where((unit) => unit['owner'] == 'p1').toList();
       expect(squad, hasLength(3));
       expect(squad.map((unit) => unit['movement']), [5, 4, 8]);
+      expect(squad.map((unit) => unit['weapon']), [
+        'Iron greatsword',
+        'Worn longbow',
+        'Ashwood staff',
+      ]);
       expect(squad.map((unit) => unit['energy']), [2, 2, 2]);
       final privateUnits = (game.viewFor('p1')['units']! as List<Object?>)
           .cast<Json>()

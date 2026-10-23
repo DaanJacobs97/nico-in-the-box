@@ -152,6 +152,7 @@ class TacticalUnit {
     'maxEnergy': tacticalEnergyPerTurn,
     'range': kind.range,
     'minimumRange': kind.minimumRange,
+    'weapon': kind.weapon,
     'movement': kind.movement,
     'mana': mana,
     'maxMana': maxMana,

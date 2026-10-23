@@ -38,6 +38,7 @@ flutter:
     - assets/display/games/tacticalvoxelrpg/slimes/fire/
     - assets/display/games/tacticalvoxelrpg/slimes/plasma/
     - assets/display/games/tacticalvoxelrpg/slimes/water/
+    - assets/display/games/tacticalvoxelrpg/characters/
 
 # App icons, drawn by tool/icons/draw_icons_test.dart. Regenerate with
 # `dart run flutter_launcher_icons` after redrawing.

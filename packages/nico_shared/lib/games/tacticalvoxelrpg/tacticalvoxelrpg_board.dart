@@ -7,10 +7,10 @@ class _TacticalBoard extends StatefulWidget {
     required this.traps,
     required this.reachable,
     required this.route,
-    required this.friendlyOwner,
     required this.lastAction,
     required this.recentActions,
-    required this.attackMode,
+    required this.attackTargets,
+    required this.trapTargets,
     required this.tileSize,
     required this.mapWidth,
     required this.mapHeight,
@@ -21,10 +21,10 @@ class _TacticalBoard extends StatefulWidget {
   final List<Map<String, Object?>> traps;
   final List<GridPoint> reachable;
   final List<GridPoint> route;
-  final String? friendlyOwner;
   final Object? lastAction;
   final List<Map<String, Object?>> recentActions;
-  final bool attackMode;
+  final Set<String> attackTargets;
+  final Set<GridPoint> trapTargets;
   final double tileSize;
   final int mapWidth;
   final int mapHeight;
@@ -175,15 +175,16 @@ class _TacticalBoardState extends State<_TacticalBoard> {
                 unit: unit,
                 showUnit:
                     unit?['sprite'] is! String &&
+                    _characterPortraitFor(unit) == null &&
                     unit?['id'] != _movingUnitId &&
                     !_queuedStarts.containsKey(unit?['id']),
                 trap: trap,
                 reachable: widget.reachable.contains(point),
                 route: widget.route.contains(point),
                 attackTarget:
-                    widget.attackMode &&
                     unit != null &&
-                    unit['owner'] != widget.friendlyOwner,
+                    widget.attackTargets.contains(unit['id'] as String),
+                trapTarget: widget.trapTargets.contains(point),
                 damage: _lastDamageForCell(point, widget.lastAction),
                 damageEvent: _lastEvent(widget.lastAction),
                 unitAnimation: _slimeAnimationFor(unit, widget.lastAction),
@@ -193,6 +194,7 @@ class _TacticalBoardState extends State<_TacticalBoard> {
           ),
           for (final unit in widget.units.where(
             (unit) =>
+                _characterPortraitFor(unit) != null ||
                 unit['sprite'] is String ||
                 unit['id'] == _movingUnitId ||
                 _queuedStarts.containsKey(unit['id']),
@@ -212,11 +214,38 @@ class _TacticalBoardState extends State<_TacticalBoard> {
                 (unit['x']! as int).toDouble(),
                 (unit['y']! as int).toDouble(),
               );
-    final sprite = unit['sprite'] is String;
-    final size = sprite ? widget.tileSize * 1.8 : _tileExtent;
-    final left = sprite ? _spriteLeft(position.dx) : position.dx * _tilePitch;
-    final top = sprite ? _spriteTop(position.dy) : position.dy * _tilePitch;
-    final contents = sprite
+    final portrait = _characterPortraitFor(unit);
+    final slime = unit['sprite'] is String;
+    final size = portrait != null
+        ? widget.tileSize * 2.0
+        : slime
+        ? widget.tileSize * 1.8
+        : _tileExtent;
+    final height = portrait != null ? widget.tileSize * 2.65 : size;
+    final left = portrait != null
+        ? position.dx * _tilePitch + _tileExtent / 2 - size / 2
+        : slime
+        ? _spriteLeft(position.dx)
+        : position.dx * _tilePitch;
+    final top = portrait != null
+        ? position.dy * _tilePitch + _tileExtent - height
+        : slime
+        ? _spriteTop(position.dy)
+        : position.dy * _tilePitch;
+    final contents = portrait != null
+        ? _TacticalCharacterArt(
+            asset: portrait,
+            animation: _characterAnimationFor(
+              unit,
+              widget.lastAction,
+              moving: moving,
+            ),
+            event: _lastEvent(widget.lastAction) ?? 0,
+            width: size,
+            height: height,
+            attackDirection: _attackDirectionFor(unit),
+          )
+        : slime
         ? _TacticalSlimeSprite(
             sprite: unit['sprite']! as String,
             animation: moving
@@ -234,8 +263,25 @@ class _TacticalBoardState extends State<_TacticalBoard> {
       left: left,
       top: top,
       width: size,
-      height: size,
-      child: contents,
+      height: height,
+      child: IgnorePointer(child: contents),
     );
+  }
+
+  double _attackDirectionFor(Map<String, Object?> unit) {
+    final action = widget.lastAction;
+    if (action is! Map<Object?, Object?> ||
+        action['type'] != 'attack' ||
+        action['unit'] != unit['id']) {
+      return 1;
+    }
+    final targetX =
+        action['x'] as int? ??
+        widget.units
+                .where((entry) => entry['id'] == action['target'])
+                .firstOrNull?['x']
+            as int?;
+    if (targetX == null) return 1;
+    return targetX >= (unit['x']! as int) ? 1 : -1;
   }
 }
