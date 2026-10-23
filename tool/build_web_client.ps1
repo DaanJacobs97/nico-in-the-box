@@ -24,8 +24,9 @@ try {
 $web = Join-Path $client 'build\web'
 # This is a dart2js + CanvasKit build: browsers load either canvaskit/ (full)
 # or canvaskit/chromium/. The skwasm/wimp/webparagraph engines are only used by
-# --wasm builds or opt-in flags, and .symbols files are debug-only.
-$skip = '^(canvaskit/(skwasm|skwasm_heavy|wimp)\.|canvaskit/webparagraph/)|\.symbols$|^\.last_build_id$'
+# --wasm builds or opt-in flags, and .symbols files are debug-only. Game art
+# (nico_shared's assets) is served by the host from its own copy.
+$skip = '^(canvaskit/(skwasm|skwasm_heavy|wimp)\.|canvaskit/webparagraph/|assets/packages/nico_shared/)|\.symbols$|^\.last_build_id$'
 
 Add-Type -AssemblyName System.IO.Compression, System.IO.Compression.FileSystem
 New-Item -ItemType Directory -Force (Split-Path $out) | Out-Null

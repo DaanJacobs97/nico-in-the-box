@@ -91,6 +91,14 @@ jobs:
           echo "web_client.zip: $size bytes"
           test "$size" -le 8388608 || { echo 'Over the 8 MB budget'; exit 1; }
 
+      # The host serves game art from its own copy (lib/net/game_art.dart), so
+      # it must not be packed into the zip as well.
+      - name: Browser client leaves game art to the host
+        run: |
+          if unzip -l assets/generated/web_client.zip | grep 'assets/packages/nico_shared/'; then
+            echo 'nico_shared assets are in web_client.zip (see tool/build_web_client.sh)'; exit 1
+          fi
+
       - name: Test shared package in a browser
         working-directory: packages/nico_shared
         timeout-minutes: 10

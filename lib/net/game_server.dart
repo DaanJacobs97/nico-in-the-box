@@ -8,6 +8,7 @@ import 'package:nico_shared/games/registry.dart';
 import 'package:nico_shared/net/protocol.dart';
 
 import 'display_frontend.dart';
+import 'game_art.dart';
 import 'web_files.dart';
 import 'web_routes.dart';
 
@@ -25,6 +26,7 @@ class GameServer extends ChangeNotifier {
     required this._game,
     this.webClient,
     this.screenPage,
+    this.gameArt,
     this._display = DisplaySettings.off,
     this.reconnectGrace = const Duration(seconds: 60),
     Random? random,
@@ -39,6 +41,9 @@ class GameServer extends ChangeNotifier {
 
   /// The shared screen page served at `/screen/`; null if not bundled.
   final DisplayFrontend? screenPage;
+
+  /// Game art for browsers (see `serveWebRequest`); null serves none.
+  final GameArt? gameArt;
   final String hostToken;
 
   /// How long a player who lost the connection keeps their seat.
@@ -135,6 +140,7 @@ class GameServer extends ChangeNotifier {
         roomName: roomName,
         webClient: webClient,
         screenPage: screenPage,
+        gameArt: gameArt,
       );
     } on Object {
       // The browser went away mid-response; nothing to clean up.

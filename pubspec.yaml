@@ -32,12 +32,6 @@ flutter:
     # Shared screen page served at /screen/ (lightweight HTML/JS).
     - assets/display/
     - assets/display/games/
-    - assets/display/games/tacticalvoxelrpg/slimes/acid/
-    - assets/display/games/tacticalvoxelrpg/slimes/dark/
-    - assets/display/games/tacticalvoxelrpg/slimes/fire/
-    - assets/display/games/tacticalvoxelrpg/slimes/plasma/
-    - assets/display/games/tacticalvoxelrpg/slimes/water/
-    - assets/display/games/tacticalvoxelrpg/characters/
     # Sea Siege ship sprites, drawn by tool/sprites/draw_sprites_test.dart.
     - assets/display/games/seasiege/
 

@@ -31,7 +31,8 @@ NicoDisplay.register('tacticalvoxelrpg', (table, lobby, { el, nameOf }) => {
   function portraitFor(unit) {
     const team = unit.owner === '__ai__' ? 'enemy' : 'hero';
     const name = tacticalPortraits[team][unit.kind];
-    return name ? `games/tacticalvoxelrpg/characters/${name}.png` : null;
+    // The host serves game art from its own copy (see web_routes.dart).
+    return name ? `/art/tacticalvoxelrpg/characters/${name}.png` : null;
   }
 
   const cells = table.tiles.map((tile) => {

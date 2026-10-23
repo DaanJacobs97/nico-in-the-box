@@ -11,6 +11,7 @@ import 'package:nico_shared/screens/screen_awake.dart';
 
 import 'caster_link.dart';
 import 'display_frontend.dart';
+import 'game_art.dart';
 import 'game_server.dart';
 import 'web_files.dart';
 
@@ -67,6 +68,7 @@ class HostedRoom {
       game: game,
       webClient: await _loadWebClient(),
       screenPage: await _loadScreenPage(),
+      gameArt: const BundleGameArt(),
       display: display,
     );
     await server.start();

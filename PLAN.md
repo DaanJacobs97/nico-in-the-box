@@ -936,3 +936,83 @@ connect, then misbehave. This came up with a friend's game branch started before
 
 **Not covered:** a changed message shape is no longer detected separately. It doesn't need to be, since every PR
 bumps anyway.
+
+# Serve game art from the host
+
+**Status:** built on `chore/serve-game-art`. Checked with a real browser against a host serving the real
+browser client and asset bundle (art at both URLs, 404 for missing files). The tablet test was skipped at the
+owner's request.
+
+**Problem:** art a game draws with `Image.asset(..., package: 'nico_shared')` lives in `packages/nico_shared/assets/`,
+so it is packed into the browser client (`assets/generated/web_client.zip`), which every host app carries and CI caps
+at 8 MB. Tactical Voxel RPG's 8.2 MB of art took the zip to 14.3 MB; shrinking it bought about 400 KB of room, not
+enough for the next sprite game. The browser screen also has its own copy under `assets/display/games/<id>/`, so the
+host app carries each game's art three times.
+
+**How it works today:**
+- Flutter web doesn't compile assets into the code. It fetches each one over HTTP when first drawn, from
+  `assets/<asset key>` under the base href, so `/play/assets/packages/nico_shared/assets/…` for game art.
+- The host app already bundles the same files under the same keys (`packages/nico_shared/assets/…`), because it
+  depends on `nico_shared`. So does the Caster.
+
+**Decisions (confirmed):**
+- **The host serves game art; the zip leaves it out.** No change to game code: `Image.asset(..., package:
+  'nico_shared')` keeps working in apps, the Caster and browsers alike. App players and the Caster keep their
+  bundled copy, so they don't depend on the network for art.
+- **One copy for the browser screen too:** the `/screen/` page loads the same files from the host, and
+  `assets/display/games/<id>/` no longer holds copies of game art.
+- **Tactical art stays shrunk.** `docs/ADDING_A_GAME.md` gets a guideline for art sizes.
+- **Built now,** since the Tactical PR (#38) is merged.
+
+## Steps
+
+1. **Leave `nico_shared`'s assets out of the zip.** Both `tool/build_web_client` scripts skip
+   `assets/packages/nico_shared/`. The browser client's `AssetManifest` still lists them, so lookups work; only the
+   bytes come from the host. CI checks the zip has no such entries, next to the size budget (which stays, now for
+   code only).
+2. **Host routes** (`lib/net/web_routes.dart`):
+   - `/play/assets/packages/nico_shared/<rest>`: served from the host's own bundle, key
+     `packages/nico_shared/<rest>`, when the zip doesn't have the file.
+   - `/art/<rest>`: the same files under a short name for the `/screen/` page (`packages/nico_shared/assets/<rest>`).
+   - Loaded on request from the asset bundle (not all into memory at start, as the screen page is), behind a small
+     interface so tests can supply files. Only keys under `packages/nico_shared/`; anything with `..` is refused.
+3. **Browser screen:** `tacticalvoxelrpg.js` loads `/art/tacticalvoxelrpg/…`. Delete
+   `assets/display/games/tacticalvoxelrpg/` and its six lines in the root `pubspec.yaml`. Sea Siege's PNGs stay:
+   they're drawn for the browser screen only (Flutter paints the ships itself).
+4. **Guard against new copies:** a test fails if any file under `assets/display/` is identical to one in
+   `packages/nico_shared/assets/`.
+5. **Docs:** `docs/ADDING_A_GAME.md`:
+   - where art goes: `packages/nico_shared/assets/<game id>/`;
+   - how the browser screen links to it: `/art/<game id>/…`;
+   - sizes: about twice the largest size it's drawn at, RGBA PNG; the shrink settings used for Tactical as an
+     example.
+
+   Plus CODE_MAP, CHANGELOG and README (the `tool/` row). `tool/new_game.dart` needs nothing: generated games have
+   no art.
+
+## Tests
+
+- `test/net/web_routes_test.dart`:
+  - game art under `/play/` comes from the bundle;
+  - a file in the zip still wins;
+  - `/art/` works;
+  - missing files give 404;
+  - `..` and keys outside `nico_shared` are refused.
+- `test/net/hosted_room_test.dart`: the real asset bundle serves a Tactical portrait at both URLs.
+- The full check, plus the browser client build: the zip should drop to about 5.9 MB.
+
+## Verification on devices
+
+A Windows host with:
+- a browser player on the tablet playing Tactical Voxel RPG, with portraits and slimes showing;
+- the browser `/screen/` showing them too;
+- the Caster still showing them (bundled).
+
+The browser's network tab should show the art coming from `/play/assets/packages/nico_shared/…` with status 200.
+
+## Not covered
+
+- **Art still lives in the host app** (once now, instead of three times). Apps grow with every game's art. That's
+  fine for a few games; downloading art on demand would be its own project.
+- **Older hosts:** builds from before this change bundle art in the zip; builds after it serve it. Mixing isn't
+  possible anyway, since every PR raises the protocol version.

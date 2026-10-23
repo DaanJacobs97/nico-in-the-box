@@ -189,6 +189,23 @@ Guidelines:
   CI browser test catches mistakes). Remember that long lists are built lazily: a card scrolled out of view doesn't
   exist until you scroll to it.
 
+### Images and sprites (optional)
+
+Drawing with widgets and `CustomPainter` needs no files (Sea Siege's ships are painted). For image files:
+
+- **Put them in `packages/nico_shared/assets/<id>/`**, list the folders under `flutter: assets:` in
+  `packages/nico_shared/pubspec.yaml`, and load them with `Image.asset('assets/<id>/...', package: 'nico_shared')`.
+- **That one copy serves everyone.** Apps and the Caster bundle it. The browser client doesn't: its zip leaves
+  `nico_shared`'s assets out, and the host serves them from its own copy when a browser asks
+  (`lib/net/game_art.dart`). So art doesn't count toward the browser client's 8 MB budget, but every host app and
+  Caster still carries it.
+- **Keep files close to the size they're drawn at:** about twice the largest size on screen (for sharp results on
+  high-density screens), as RGBA PNG. Tactical Voxel RPG's portraits are 512 px tall for a 255-point panel, and
+  its 96 px slime frames are drawn at about 42 px. Its 8 MB of original art came down to 1.7 MB that way (portraits
+  and frames scaled down, colour channels rounded to 6 bits, transparency kept).
+- Don't copy the files into `assets/display/` for the browser screen; link to them (see section 5). A test fails
+  on copies.
+
 ## 4. The shared-screen table (Flutter)
 
 This is a `StatelessWidget` that takes a `TableContext` (`table` = your `tableView()`, `lobby`, `nicknameOf`).
@@ -221,6 +238,8 @@ NicoDisplay.register('mygame', (table, lobby, { el, nameOf }) => {
 - Reuse the classes in `assets/display/style.css` (`game`, `status`, `chips`, `chip`, `log`, …). Add new ones with
   units like `vmin`/`rem`, so the page scales from a laptop to a TV.
 - The page already handles connecting, reconnecting, the lobby and the result banner. You only draw the table.
+- Your game's images are at `/art/<id>/...` (the host serves `packages/nico_shared/assets/<id>/...` there), for
+  example `` el('div', { style: `background-image:url('/art/mygame/hero.png')` }) ``.
 - Mirror the Flutter table so all three screen types look alike.
 
 ## 6. Register it
@@ -332,6 +351,7 @@ Copy this into your pull request description.
 - [ ] Player view (full + compact), stable ValueKeys on inputs, works in the browser client
 - [ ] Flutter table (scales with real sizes, no Transform.scale)
 - [ ] JS renderer `assets/display/games/<id>.js` (no innerHTML) + <script> tag in index.html
+- [ ] Images (if any): in `packages/nico_shared/assets/<id>/`, about twice their drawn size; the JS renderer links to `/art/<id>/...`
 - [ ] Registered in `availableGames`, `gameViews`, `gameTables`
 - [ ] Options (if any): declared in `GameDefinition.options`, passed to the session as parameters, each tested on and off
 - [ ] Web client rebuilt; the "Protocol version" check passes on the PR (the number is set automatically)
