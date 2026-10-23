@@ -5,6 +5,8 @@ import '../../net/protocol.dart';
 
 const int tacticalMapWidth = 40;
 const int tacticalMapHeight = 30;
+const int tacticalSoloMapWidth = 15;
+const int tacticalSoloMapHeight = 15;
 
 class GridPoint {
   const GridPoint(this.x, this.y);
@@ -78,26 +80,37 @@ class _CellData {
   int elevation;
 }
 
-/// A seeded 40×30 overworld with broad biome regions, a connected river,
-/// elevation/cliffs, roads and protected spawn clearings.
+/// A seeded tactical map with biome regions, a connected river, cliffs,
+/// roads and protected spawn clearings.
 class TacticalMap {
   TacticalMap._({
     required this.seed,
+    required this.width,
+    required this.height,
     required this.tiles,
     required this.spawnTeams,
   });
 
-  factory TacticalMap.generate(Random random) {
+  factory TacticalMap.generate(Random random, {bool solo = false}) {
+    final width = solo ? tacticalSoloMapWidth : tacticalMapWidth;
+    final height = solo ? tacticalSoloMapHeight : tacticalMapHeight;
     final seed = random.nextInt(0x7fffffff);
     final rng = Random(seed);
-    final anchors = _biomeAnchors(rng);
+    final anchors = solo
+        ? [
+            _BiomeAnchor(3 + rng.nextInt(2), 3 + rng.nextInt(2), 'grassland'),
+            _BiomeAnchor(11 + rng.nextInt(2), 3 + rng.nextInt(2), 'forest'),
+            _BiomeAnchor(3 + rng.nextInt(2), 11 + rng.nextInt(2), 'highland'),
+            _BiomeAnchor(11 + rng.nextInt(2), 11 + rng.nextInt(2), 'wetland'),
+          ]
+        : _biomeAnchors(rng);
     final cells = List<_CellData>.generate(
-      tacticalMapWidth * tacticalMapHeight,
+      width * height,
       (_) => _CellData(terrain: 'grass', biome: 'grassland', elevation: 0),
     );
 
-    for (var y = 0; y < tacticalMapHeight; y++) {
-      for (var x = 0; x < tacticalMapWidth; x++) {
+    for (var y = 0; y < height; y++) {
+      for (var x = 0; x < width; x++) {
         final scores = <({double score, String biome})>[];
         for (var i = 0; i < anchors.length; i++) {
           final anchor = anchors[i];
@@ -133,7 +146,7 @@ class TacticalMap {
           detailNoise,
           ecotone,
         );
-        cells[_index(x, y)] = _CellData(
+        cells[_index(x, y, width)] = _CellData(
           terrain: terrain,
           biome: biome,
           elevation: elevation,
@@ -141,53 +154,74 @@ class TacticalMap {
       }
     }
 
-    _markCliffs(cells);
-    _carveRiver(cells, seed);
+    _markCliffs(cells, width, height);
+    _carveRiver(cells, seed, width, height);
 
-    const spawnCenters = [
-      GridPoint(3, 3),
-      GridPoint(20, 3),
-      GridPoint(36, 3),
-      GridPoint(3, 26),
-      GridPoint(20, 26),
-      GridPoint(36, 26),
-    ];
+    final spawnCenters = solo
+        ? const [GridPoint(3, 3), GridPoint(11, 11)]
+        : const [
+            GridPoint(3, 3),
+            GridPoint(20, 3),
+            GridPoint(36, 3),
+            GridPoint(3, 26),
+            GridPoint(20, 26),
+            GridPoint(36, 26),
+          ];
     final spawnTeams = [
       for (final center in spawnCenters)
-        [
-          center,
-          GridPoint(center.x + 2, center.y),
-          GridPoint(center.x, center.y + 2),
-        ],
+        center.x < width ~/ 2
+            ? [
+                center,
+                GridPoint(center.x + 2, center.y),
+                GridPoint(center.x, center.y + 2),
+              ]
+            : [
+                center,
+                GridPoint(center.x - 2, center.y),
+                GridPoint(center.x, center.y - 2),
+              ],
     ];
-    _clearSpawns(cells, spawnCenters);
-    _carveRoads(cells, spawnCenters, seed);
+    _clearSpawns(cells, spawnCenters, width, height);
+    _carveRoads(cells, spawnCenters, seed, width, height);
 
     return TacticalMap._(
       seed: seed,
+      width: width,
+      height: height,
       tiles: [
-        for (var y = 0; y < tacticalMapHeight; y++)
-          for (var x = 0; x < tacticalMapWidth; x++)
+        for (var y = 0; y < height; y++)
+          for (var x = 0; x < width; x++)
             VoxelTile(
               x: x,
               y: y,
-              terrain: cells[_index(x, y)].terrain,
-              biome: cells[_index(x, y)].biome,
-              elevation: cells[_index(x, y)].elevation,
+              terrain: cells[_index(x, y, width)].terrain,
+              biome: cells[_index(x, y, width)].biome,
+              elevation: cells[_index(x, y, width)].elevation,
             ),
       ],
       spawnTeams: spawnTeams,
     );
   }
 
-  factory TacticalMap.custom(List<VoxelTile> tiles) =>
-      TacticalMap._(seed: 0, tiles: List.of(tiles), spawnTeams: const []);
+  factory TacticalMap.custom(
+    List<VoxelTile> tiles, {
+    int width = tacticalMapWidth,
+    int height = tacticalMapHeight,
+  }) => TacticalMap._(
+    seed: 0,
+    width: width,
+    height: height,
+    tiles: List.of(tiles),
+    spawnTeams: const [],
+  );
 
   final int seed;
+  final int width;
+  final int height;
   final List<VoxelTile> tiles;
   final List<List<GridPoint>> spawnTeams;
 
-  static int _index(int x, int y) => y * tacticalMapWidth + x;
+  static int _index(int x, int y, int width) => y * width + x;
 
   static List<_BiomeAnchor> _biomeAnchors(Random random) => [
     _BiomeAnchor(7 + random.nextInt(5), 7 + random.nextInt(4), 'grassland'),
@@ -213,16 +247,16 @@ class TacticalMap {
     };
   }
 
-  static void _markCliffs(List<_CellData> cells) {
-    for (var y = 1; y < tacticalMapHeight - 1; y++) {
-      for (var x = 1; x < tacticalMapWidth - 1; x++) {
-        final cell = cells[_index(x, y)];
+  static void _markCliffs(List<_CellData> cells, int width, int height) {
+    for (var y = 1; y < height - 1; y++) {
+      for (var x = 1; x < width - 1; x++) {
+        final cell = cells[_index(x, y, width)];
         if (cell.biome != 'highland' || cell.elevation < 4) continue;
         final adjacentHeights = [
-          cells[_index(x - 1, y)].elevation,
-          cells[_index(x + 1, y)].elevation,
-          cells[_index(x, y - 1)].elevation,
-          cells[_index(x, y + 1)].elevation,
+          cells[_index(x - 1, y, width)].elevation,
+          cells[_index(x + 1, y, width)].elevation,
+          cells[_index(x, y - 1, width)].elevation,
+          cells[_index(x, y + 1, width)].elevation,
         ];
         if (adjacentHeights.any((height) => cell.elevation - height >= 1)) {
           cell.terrain = 'cliff';
@@ -231,42 +265,69 @@ class TacticalMap {
     }
   }
 
-  static double _riverX(int y, int seed) {
-    final t = y / (tacticalMapHeight - 1);
-    final drift = sin(t * pi * 2) * 7 + sin(t * pi * 4 + 0.7) * 2.5;
-    final noise = (_valueNoise(0, y * 0.09, seed + 5003) - 0.5) * 4;
-    return tacticalMapWidth * 0.18 +
-        tacticalMapWidth * 0.64 * t +
-        drift +
-        noise;
+  static double _riverX(int y, int seed, int width, int height) {
+    final t = y / (height - 1);
+    final drift =
+        sin(t * pi * 2) * width * 0.175 +
+        sin(t * pi * 4 + 0.7) * width * 0.0625;
+    final noise = (_valueNoise(0, y * 0.09, seed + 5003) - 0.5) * width * 0.1;
+    return width * 0.18 + width * 0.64 * t + drift + noise;
   }
 
-  static void _carveRiver(List<_CellData> cells, int seed) {
-    for (var y = 2; y < tacticalMapHeight - 2; y++) {
-      final center = _riverX(y, seed).round().clamp(2, tacticalMapWidth - 3);
-      final width = _valueNoise(0, y * 0.13, seed + 7001) > 0.68 ? 2 : 1;
-      for (var x = center - width; x <= center + width; x++) {
-        final cell = cells[_index(x, y)];
+  static void _carveRiver(
+    List<_CellData> cells,
+    int seed,
+    int width,
+    int height,
+  ) {
+    for (var y = 2; y < height - 2; y++) {
+      final center = _riverX(
+        y,
+        seed,
+        width,
+        height,
+      ).round().clamp(2, width - 3);
+      final riverWidth = _valueNoise(0, y * 0.13, seed + 7001) > 0.68 ? 2 : 1;
+      for (var x = center - riverWidth; x <= center + riverWidth; x++) {
+        final cell = cells[_index(x, y, width)];
         cell.biome = 'river';
         cell.terrain = x == center ? 'water' : 'bank';
         cell.elevation = min(cell.elevation, 1);
       }
     }
-    for (final y in [9, 20]) {
-      final center = _riverX(y, seed).round().clamp(2, tacticalMapWidth - 3);
+    for (final y in [(height * 0.3).round(), (height * 0.7).round()]) {
+      final center = _riverX(
+        y,
+        seed,
+        width,
+        height,
+      ).round().clamp(2, width - 3);
       for (var x = center - 2; x <= center + 2; x++) {
-        final cell = cells[_index(x, y)];
+        final cell = cells[_index(x, y, width)];
         cell.biome = 'river';
         cell.terrain = 'bridge';
       }
     }
   }
 
-  static void _clearSpawns(List<_CellData> cells, List<GridPoint> centers) {
+  static void _clearSpawns(
+    List<_CellData> cells,
+    List<GridPoint> centers,
+    int width,
+    int height,
+  ) {
     for (final center in centers) {
-      for (var y = center.y - 3; y <= center.y + 3; y++) {
-        for (var x = center.x - 3; x <= center.x + 3; x++) {
-          final cell = cells[_index(x, y)];
+      for (
+        var y = max(0, center.y - 3);
+        y <= min(height - 1, center.y + 3);
+        y++
+      ) {
+        for (
+          var x = max(0, center.x - 3);
+          x <= min(width - 1, center.x + 3);
+          x++
+        ) {
+          final cell = cells[_index(x, y, width)];
           if (cell.terrain == 'water' || cell.terrain == 'cliff') {
             cell.terrain = 'grass';
           }
@@ -280,41 +341,48 @@ class TacticalMap {
     List<_CellData> cells,
     List<GridPoint> centers,
     int seed,
+    int width,
+    int height,
   ) {
     final roadY = <int>[];
-    for (var x = 0; x < tacticalMapWidth; x++) {
+    for (var x = 0; x < width; x++) {
       roadY.add(
-        (tacticalMapHeight / 2 +
+        (height / 2 +
                 sin(x * 0.1) * 3 +
                 (_valueNoise(x * 0.08, 1, seed + 9001) - 0.5) * 3)
             .round()
-            .clamp(2, tacticalMapHeight - 3),
+            .clamp(2, height - 3),
       );
     }
-    for (var x = 0; x < tacticalMapWidth; x++) {
-      _roadCell(cells, GridPoint(x, roadY[x]));
+    for (var x = 0; x < width; x++) {
+      _roadCell(cells, GridPoint(x, roadY[x]), width);
     }
     for (final center in centers) {
       final target = GridPoint(center.x, roadY[center.x]);
-      _carveBend(cells, center, GridPoint(center.x, target.y));
+      _carveBend(cells, center, GridPoint(center.x, target.y), width);
     }
   }
 
-  static void _carveBend(List<_CellData> cells, GridPoint from, GridPoint to) {
+  static void _carveBend(
+    List<_CellData> cells,
+    GridPoint from,
+    GridPoint to,
+    int width,
+  ) {
     var point = from;
-    _roadCell(cells, point);
+    _roadCell(cells, point, width);
     while (point.y != to.y) {
       point = GridPoint(point.x, point.y + (to.y > point.y ? 1 : -1));
-      _roadCell(cells, point);
+      _roadCell(cells, point, width);
     }
     while (point.x != to.x) {
       point = GridPoint(point.x + (to.x > point.x ? 1 : -1), point.y);
-      _roadCell(cells, point);
+      _roadCell(cells, point, width);
     }
   }
 
-  static void _roadCell(List<_CellData> cells, GridPoint point) {
-    final cell = cells[_index(point.x, point.y)];
+  static void _roadCell(List<_CellData> cells, GridPoint point, int width) {
+    final cell = cells[_index(point.x, point.y, width)];
     if (cell.terrain == 'water' || cell.terrain == 'cliff') {
       cell.terrain = 'bridge';
       cell.biome = 'river';
@@ -346,13 +414,9 @@ class TacticalMap {
   }
 
   bool inBounds(GridPoint point) =>
-      point.x >= 0 &&
-      point.x < tacticalMapWidth &&
-      point.y >= 0 &&
-      point.y < tacticalMapHeight;
+      point.x >= 0 && point.x < width && point.y >= 0 && point.y < height;
 
-  VoxelTile tileAt(GridPoint point) =>
-      tiles[point.y * tacticalMapWidth + point.x];
+  VoxelTile tileAt(GridPoint point) => tiles[point.y * width + point.x];
 
   Iterable<GridPoint> neighbors(GridPoint point) sync* {
     for (final (dx, dy) in const [(0, -1), (1, 0), (0, 1), (-1, 0)]) {

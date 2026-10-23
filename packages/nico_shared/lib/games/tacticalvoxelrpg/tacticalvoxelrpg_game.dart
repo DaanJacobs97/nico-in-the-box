@@ -210,7 +210,7 @@ class TacticalVoxelRPGSession implements GameSession {
         'Tactical Voxel RPG needs between one and six players.',
       );
     }
-    _map = TacticalMap.generate(_random);
+    _map = TacticalMap.generate(_random, solo: players.length == 1);
     _turnOrder = [for (final player in players) player.id];
     if (players.length == 1) _turnOrder.add(tacticalAiId);
     const spawnSlots = {
@@ -575,8 +575,8 @@ class TacticalVoxelRPGSession implements GameSession {
       }
     }
     return {
-      'width': tacticalMapWidth,
-      'height': tacticalMapHeight,
+      'width': _map.width,
+      'height': _map.height,
       'round': _round,
       'seed': _map.seed,
       'phase': isOver ? 'over' : 'battle',

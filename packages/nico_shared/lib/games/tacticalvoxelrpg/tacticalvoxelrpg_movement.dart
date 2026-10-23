@@ -91,9 +91,9 @@ extension _TacticalVoxelRPGMovement on TacticalVoxelRPGSession {
   ) {
     List<GridPoint>? best;
     final minX = max(0, target.x - unit.kind.range);
-    final maxX = min(tacticalMapWidth - 1, target.x + unit.kind.range);
+    final maxX = min(_map.width - 1, target.x + unit.kind.range);
     final minY = max(0, target.y - unit.kind.range);
-    final maxY = min(tacticalMapHeight - 1, target.y + unit.kind.range);
+    final maxY = min(_map.height - 1, target.y + unit.kind.range);
     for (var y = minY; y <= maxY; y++) {
       for (var x = minX; x <= maxX; x++) {
         final point = GridPoint(x, y);

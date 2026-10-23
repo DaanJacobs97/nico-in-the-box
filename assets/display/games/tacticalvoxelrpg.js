@@ -86,6 +86,14 @@ NicoDisplay.register('tacticalvoxelrpg', (table, lobby, { el, nameOf }) => {
     ? table.winner === '__ai__' ? 'AI victory' : 'Mission complete'
     : `${turnName}’s turn`;
   const map = el('div', { class: 'tvrpg-map' }, ...cells);
+  const mapWidth = table.width || 40;
+  const mapHeight = table.height || 30;
+  const cellSize = Math.min(
+    window.innerWidth * 0.88 / mapWidth,
+    window.innerHeight * 0.72 / mapHeight,
+  );
+  map.style.gridTemplateColumns = `repeat(${mapWidth}, ${cellSize}px)`;
+  map.style.gridAutoRows = `${cellSize}px`;
   const viewport = el('div', { class: 'tvrpg-viewport' }, map);
   const event = damage
     ? `−${damage.damage} HP · ${damage.targetHp} HP remaining`

@@ -193,6 +193,9 @@ void main() {
         isTrue,
       );
       expect(game.tableView()['solo'], isTrue);
+      expect(game.tableView()['width'], tacticalSoloMapWidth);
+      expect(game.tableView()['height'], tacticalSoloMapHeight);
+      expect(game.tableView()['tiles'], hasLength(15 * 15));
     });
 
     test('two players each get three units and no AI', () {
@@ -201,6 +204,8 @@ void main() {
       expect(units, hasLength(6));
       expect(units.any((unit) => unit['owner'] == tacticalAiId), isFalse);
       expect(game.tableView()['solo'], isFalse);
+      expect(game.tableView()['width'], tacticalMapWidth);
+      expect(game.tableView()['height'], tacticalMapHeight);
     });
 
     test('minimum and maximum player counts are one and six', () {
