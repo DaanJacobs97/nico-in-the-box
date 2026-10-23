@@ -1019,7 +1019,7 @@ The browser's network tab should show the art coming from `/play/assets/packages
 
 # Game categories
 
-**Status:** built on `feature/game-categories`.
+**Status:** done. The owner looked at both pickers in a Windows build of the branch: "Looks ok!"
 
 **Request:** group the game selector into card games, board games and gambling games, plus a category for Tic Tac
 Toe and Sea Siege and one for 2D games like Tactical Voxel RPG.
