@@ -9,6 +9,7 @@ const ticTacToeDefinition = GameDefinition(
   description: 'Three in a row wins. Host versus one challenger.',
   minPlayers: 2,
   maxPlayers: 2,
+  category: GameCategory.grid,
   createSession: _create,
 );
 

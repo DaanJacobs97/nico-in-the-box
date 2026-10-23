@@ -18,3 +18,14 @@ GameDefinition? gameById(String id) {
   }
   return null;
 }
+
+/// [games] grouped by category in [GameCategory] order, keeping their order
+/// within each. Categories no game uses are left out.
+List<(GameCategory, List<GameDefinition>)> gamesByCategory([
+  List<GameDefinition> games = availableGames,
+]) => [
+  for (final category in GameCategory.values)
+    if (games.where((g) => g.category == category).toList()
+        case final inCategory when inCategory.isNotEmpty)
+      (category, inCategory),
+];

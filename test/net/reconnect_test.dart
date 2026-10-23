@@ -31,6 +31,7 @@ final _secretGame = GameDefinition(
   description: 'Each player sees only their own view.',
   minPlayers: 2,
   maxPlayers: 3,
+  category: GameCategory.board,
   createSession: (_, _, _, _) => _SecretSession(),
 );
 

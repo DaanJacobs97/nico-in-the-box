@@ -23,6 +23,7 @@ final game = GameDefinition(
   description: 'Test game.',
   minPlayers: 2,
   maxPlayers: 2,
+  category: GameCategory.board,
   options: const [
     GameOption(
       id: 'again',

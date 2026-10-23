@@ -13,6 +13,7 @@ const seaSiegeDefinition = GameDefinition(
   // sunk fleets are skipped). Raising this also needs a target picker in the
   // player view, a 3-4 board table and tests.
   maxPlayers: 2,
+  category: GameCategory.grid,
   options: [
     GameOption(
       id: 'shootAgain',

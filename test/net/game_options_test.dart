@@ -30,6 +30,7 @@ final _optionsGame = GameDefinition(
   description: 'Test game with two options.',
   minPlayers: 2,
   maxPlayers: 2,
+  category: GameCategory.board,
   options: const [
     GameOption(id: 'again', label: 'Hit = shoot again'),
     GameOption(id: 'fog', label: 'Fog', defaultValue: true),

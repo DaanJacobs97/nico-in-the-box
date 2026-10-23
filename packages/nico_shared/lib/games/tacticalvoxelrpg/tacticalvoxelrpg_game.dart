@@ -13,6 +13,7 @@ const tacticalVoxelRPGDefinition = GameDefinition(
   description: 'Command three heroes through connected rooms and corridors.',
   minPlayers: 1,
   maxPlayers: 6,
+  category: GameCategory.adventure,
   createSession: _create,
 );
 

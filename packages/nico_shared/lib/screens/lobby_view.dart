@@ -5,6 +5,7 @@ import '../games/registry.dart';
 import '../net/game_client.dart';
 import '../net/protocol.dart';
 import '../widgets/display_settings_editor.dart';
+import '../widgets/game_category_header.dart';
 import '../widgets/game_options_editor.dart';
 import '../widgets/host_controls.dart';
 
@@ -57,14 +58,26 @@ class LobbyView extends StatelessWidget {
                     icon: const Icon(Icons.swap_horiz),
                     onSelected: client.changeGame,
                     itemBuilder: (_) => [
-                      for (final g in availableGames)
-                        PopupMenuItem(
-                          value: g.id,
-                          enabled:
-                              g.id != lobby.gameId &&
-                              lobby.players.length <= g.maxPlayers,
-                          child: Text('${g.name} (${g.playerRange})'),
+                      for (final (category, games) in gamesByCategory()) ...[
+                        // A header line: never selectable.
+                        PopupMenuItem<String>(
+                          key: ValueKey('menu-category-${category.name}'),
+                          enabled: false,
+                          height: 36,
+                          child: GameCategoryHeader(category: category),
                         ),
+                        for (final g in games)
+                          PopupMenuItem(
+                            value: g.id,
+                            enabled:
+                                g.id != lobby.gameId &&
+                                lobby.players.length <= g.maxPlayers,
+                            child: Padding(
+                              padding: const EdgeInsets.only(left: 28),
+                              child: Text('${g.name} (${g.playerRange})'),
+                            ),
+                          ),
+                      ],
                     ],
                   )
                 : null,

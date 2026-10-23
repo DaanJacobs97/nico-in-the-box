@@ -10,6 +10,7 @@ const colorClashDefinition = GameDefinition(
   description: 'Match colors and numbers, empty your hand first.',
   minPlayers: 2,
   maxPlayers: 4,
+  category: GameCategory.card,
   options: [
     GameOption(
       id: 'stacking',

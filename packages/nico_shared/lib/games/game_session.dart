@@ -66,6 +66,20 @@ class GameOption {
   final bool defaultValue;
 }
 
+/// The kind of game, by what you play with. The host's game pickers group games
+/// by it, in this order, and leave out categories no game uses yet.
+enum GameCategory {
+  card('Card games'),
+  board('Board games'),
+  grid('Grid games'),
+  gambling('Gambling games'),
+  adventure('Adventure games');
+
+  const GameCategory(this.label);
+
+  final String label;
+}
+
 /// Static description of a game, used by the host to pick one and by the
 /// server to size the room and create sessions.
 class GameDefinition {
@@ -75,6 +89,7 @@ class GameDefinition {
     required this.description,
     required this.minPlayers,
     required this.maxPlayers,
+    required this.category,
     required this.createSession,
     this.options = const [],
   });
@@ -82,6 +97,9 @@ class GameDefinition {
   final String id;
   final String name;
   final String description;
+
+  /// Where the game sits in the host's game pickers.
+  final GameCategory category;
   final int minPlayers;
   final int maxPlayers;
 
