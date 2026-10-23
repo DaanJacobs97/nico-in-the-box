@@ -104,6 +104,7 @@ const myGameDefinition = GameDefinition(
   description: 'One line shown when picking a game.',
   minPlayers: 2,                // Start game is enabled from here
   maxPlayers: 6,                // decides the room size
+  category: GameCategory.card,  // where the host's game pickers list it
   createSession: _create,
 );
 
@@ -114,6 +115,10 @@ GameSession _create(
   GameOptions options,          // the host's choices; empty if the game has none
 ) => MyGameSession(players, round: round, random: random);
 ```
+
+**Category:** by what you play with: `card`, `board`, `grid` (marking squares, like Tic Tac Toe and Sea Siege),
+`gambling` or `adventure` (games that live on screen, like Tactical Voxel RPG). The pickers show a category once a
+game uses it. If none fits, add one to `GameCategory` with a label and an icon (`gameCategoryIcon`).
 
 Also add a `MyGameSession.custom(...)` constructor that builds an exact state, like `ColorClashSession.custom`.
 Tests depend on it.
@@ -352,6 +357,7 @@ Copy this into your pull request description.
 - [ ] Flutter table (scales with real sizes, no Transform.scale)
 - [ ] JS renderer `assets/display/games/<id>.js` (no innerHTML) + <script> tag in index.html
 - [ ] Images (if any): in `packages/nico_shared/assets/<id>/`, about twice their drawn size; the JS renderer links to `/art/<id>/...`
+- [ ] `category` set in the definition (the closest of card, board, grid, gambling, adventure)
 - [ ] Registered in `availableGames`, `gameViews`, `gameTables`
 - [ ] Options (if any): declared in `GameDefinition.options`, passed to the session as parameters, each tested on and off
 - [ ] Web client rebuilt; the "Protocol version" check passes on the PR (the number is set automatically)

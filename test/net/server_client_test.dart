@@ -28,6 +28,7 @@ final _threeSeatGame = GameDefinition(
   description: 'Test game with three seats.',
   minPlayers: 2,
   maxPlayers: 3,
+  category: GameCategory.board,
   createSession: (_, _, _, _) => _IdleSession(),
 );
 

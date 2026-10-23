@@ -19,6 +19,9 @@ const __CAMEL__Definition = GameDefinition(
   description: 'TODO: one line the host sees when picking a game.',
   minPlayers: __MIN__,
   maxPlayers: __MAX__,
+  // Where the host's game pickers list it: card, board, grid, gambling or
+  // adventure (see GameCategory). Pick the closest.
+  category: GameCategory.board,
   // Rules the host can switch in the lobby; the session gets the choices.
   options: [
     GameOption(

@@ -1016,3 +1016,23 @@ The browser's network tab should show the art coming from `/play/assets/packages
   fine for a few games; downloading art on demand would be its own project.
 - **Older hosts:** builds from before this change bundle art in the zip; builds after it serve it. Mixing isn't
   possible anyway, since every PR raises the protocol version.
+
+# Game categories
+
+**Status:** built on `feature/game-categories`.
+
+**Request:** group the game selector into card games, board games and gambling games, plus a category for Tic Tac
+Toe and Sea Siege and one for 2D games like Tactical Voxel RPG.
+
+**Decisions (confirmed):**
+- **Group by what you play with,** not by style: "strategy" would fit almost every game.
+  - **Card games:** Color Clash.
+  - **Board games:** none yet.
+  - **Grid games:** Tic Tac Toe and Sea Siege, both played by marking squares.
+  - **Gambling games:** none yet.
+  - **Adventure games:** Tactical Voxel RPG.
+- **Empty categories are hidden** until a game uses them.
+- **A grouped list:** a header (icon + name) per category on the host setup screen, and the same headers (never
+  selectable) in the lobby's Change game menu.
+- **`category` is required in `GameDefinition`,** so a new game can't leave it out. It's static and never sent
+  over the network. The engine side stays pure Dart: the icons live in `game_category_header.dart`.

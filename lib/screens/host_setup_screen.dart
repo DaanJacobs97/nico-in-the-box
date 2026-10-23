@@ -5,6 +5,7 @@ import 'package:nico_shared/games/registry.dart';
 import 'package:nico_shared/net/protocol.dart';
 import 'package:nico_shared/screens/session_screen.dart';
 import 'package:nico_shared/widgets/display_settings_editor.dart';
+import 'package:nico_shared/widgets/game_category_header.dart';
 
 import '../net/hosted_room.dart';
 import '../widgets/caster_picker.dart';
@@ -120,17 +121,28 @@ class _HostSetupScreenState extends State<HostSetupScreen> {
               groupValue: _game,
               onChanged: (game) => setState(() => _game = game ?? _game),
               child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  for (final game in availableGames)
-                    Card(
-                      child: RadioListTile<GameDefinition>(
-                        value: game,
-                        title: Text(game.name),
-                        subtitle: Text(
-                          '${game.playerRange} · ${game.description}',
-                        ),
+                  for (final (category, games) in gamesByCategory()) ...[
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(4, 12, 4, 4),
+                      child: GameCategoryHeader(
+                        key: ValueKey('category-${category.name}'),
+                        category: category,
                       ),
                     ),
+                    for (final game in games)
+                      Card(
+                        child: RadioListTile<GameDefinition>(
+                          key: ValueKey('pick-game-${game.id}'),
+                          value: game,
+                          title: Text(game.name),
+                          subtitle: Text(
+                            '${game.playerRange} · ${game.description}',
+                          ),
+                        ),
+                      ),
+                  ],
                 ],
               ),
             ),

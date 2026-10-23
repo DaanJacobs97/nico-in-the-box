@@ -58,7 +58,7 @@ Lines are approximate, so you can tell big files from small ones.
 | `lib/net/display_frontend.dart` | 20 | `DisplayFrontend` interface + `HtmlDisplayFrontend` (serves `/screen/`) |
 | `lib/net/multicast_lock.dart` | 18 | Android Wi-Fi multicast lock via MethodChannel (no-op elsewhere) |
 | `lib/screens/home_screen.dart` | 67 | Host / Join buttons |
-| `lib/screens/host_setup_screen.dart` | 150 | Nickname, room name, game, Single game screen settings → `HostedRoom.create` → `SessionScreen` |
+| `lib/screens/host_setup_screen.dart` | 162 | Nickname, room name, game (grouped by category), Single game screen settings → `HostedRoom.create` → `SessionScreen` |
 | `lib/screens/join_screen.dart` | 237 | Room scan list + manual IP; nickname retry loop; `parseManualAddress` |
 | `lib/widgets/join_info.dart` | 111 | Host lobby card: addresses, `/screen` URL, `/play` QR code, Windows firewall hint |
 | `lib/widgets/caster_picker.dart` | 165 | Host lobby "Choose screen": Casters found, manual address, connected Caster |
@@ -77,8 +77,8 @@ Lines are approximate, so you can tell big files from small ones.
 | `packages/nico_shared/lib/net/channel/connect.dart` | 3 | Picks the WebSocket implementation (conditional import) |
 | `packages/nico_shared/lib/net/channel/connect_io.dart` | 6 | Native WebSocket with 5 s pings (the only `dart:io` allowed in this package) |
 | `packages/nico_shared/lib/net/channel/connect_web.dart` | 3 | Browser WebSocket |
-| `packages/nico_shared/lib/games/game_session.dart` | 104 | **`GameSession`** interface, `GameDefinition` (+ `options`), `GameOption`, `GameOptions`, `GameActionException` |
-| `packages/nico_shared/lib/games/registry.dart` | 14 | `availableGames`, `gameById` |
+| `packages/nico_shared/lib/games/game_session.dart` | 118 | **`GameSession`** interface, `GameDefinition` (+ `options`, `category`), `GameCategory` (card, board, grid, gambling, adventure), `GameOption`, `GameOptions`, `GameActionException` |
+| `packages/nico_shared/lib/games/registry.dart` | 28 | `availableGames`, `gameById`, `gamesByCategory` (for the pickers; empty categories left out) |
 | `packages/nico_shared/lib/games/game_views.dart` | 45 | `GameViewContext` (+`compact`), `TableContext`, `gameViews` and `gameTables` maps |
 | `packages/nico_shared/lib/games/tictactoe/tictactoe_game.dart` | 96 | Tic Tac Toe engine (marks swap per round) |
 | `packages/nico_shared/lib/games/tictactoe/tictactoe_view.dart` | 170 | Tic Tac Toe player board + `TicTacToeTable` |
@@ -110,10 +110,11 @@ Lines are approximate, so you can tell big files from small ones.
 | `packages/nico_shared/lib/games/tacticalvoxelrpg/tacticalvoxelrpg_table.dart` | 272 | Full-screen shared battlefield with overlaid status, damage, health, camera and zoom controls |
 | `packages/nico_shared/lib/screens/session_screen.dart` | 391 | **`SessionScreen`**: lobby → game → result, notices, leaving, host-as-screen area, "Reconnecting…" banner, immersive tactical UI; keeps the screen on while open |
 | `packages/nico_shared/lib/screens/screen_awake.dart` | 28 | `ScreenAwake`: reference-counted wake lock while hosting or in a room (apps, and browsers where allowed) |
-| `packages/nico_shared/lib/screens/lobby_view.dart` | 240 | Lobby: game, players (away ones marked), Single game screen settings (host), screen-lock tip (browsers), pinned Start button |
+| `packages/nico_shared/lib/screens/lobby_view.dart` | 253 | Lobby: game (host's Change game menu grouped by category), players (away ones marked), Single game screen settings (host), screen-lock tip (browsers), pinned Start button |
 | `packages/nico_shared/lib/screens/shared_screen_view.dart` | 138 | `SharedScreenView`: draws a `DisplayState` (lobby / table / result) |
 | `packages/nico_shared/lib/widgets/display_settings_editor.dart` | 103 | Single game screen switch + "where is the screen" choice (`ScreenChoice`) |
 | `packages/nico_shared/lib/widgets/game_options_editor.dart` | 49 | Lobby game options: switches for the host, read-only rules for players |
+| `packages/nico_shared/lib/widgets/game_category_header.dart` | 32 | `GameCategoryHeader` (icon + name above a category's games), `gameCategoryIcon` |
 | `packages/nico_shared/lib/widgets/host_controls.dart` | 134 | Host app-bar menu: restart, end, kick, close |
 | `packages/nico_shared/lib/widgets/nickname_dialog.dart` | 66 | Nickname prompt with validation |
 | `packages/nico_shared/lib/widgets/confirm_dialog.dart` | 27 | Yes/no dialog helper |
@@ -217,7 +218,7 @@ Lines are approximate, so you can tell big files from small ones.
 
 | Suite | Run from | Covers |
 |---|---|---|
-| `test/` (app) | repo root | server and client over real loopback sockets (`net/server_client_test.dart`), reconnects (`net/reconnect_test.dart` on the server, `net/reconnect_client_test.dart` for the client and its banner), display feed (`net/display_feed_test.dart`), web routes (`net/web_routes_test.dart`), game art served to browsers and no copies in `assets/display/` (`net/game_art_test.dart`), Caster link (`net/caster_link_test.dart`), hosted room (`net/hosted_room_test.dart`), game options over the wire (`net/game_options_test.dart`), home/dialog widgets (`widget_test.dart`), game registry (`games/registry_consistency_test.dart`), Sea Siege sprite PNGs up to date (`games/seasiege_sprites_test.dart`), protocol version rule incl. a real-git replay of two branches bumping to the same number (`test/tool/protocol_version_test.dart`), this map (`docs/code_map_test.dart`) |
+| `test/` (app) | repo root | server and client over real loopback sockets (`net/server_client_test.dart`), reconnects (`net/reconnect_test.dart` on the server, `net/reconnect_client_test.dart` for the client and its banner), display feed (`net/display_feed_test.dart`), web routes (`net/web_routes_test.dart`), game art served to browsers and no copies in `assets/display/` (`net/game_art_test.dart`), Caster link (`net/caster_link_test.dart`), hosted room (`net/hosted_room_test.dart`), game options over the wire (`net/game_options_test.dart`), home/dialog widgets (`widget_test.dart`), game pickers grouped by category (`game_picker_test.dart`), game registry (`games/registry_consistency_test.dart`), Sea Siege sprite PNGs up to date (`games/seasiege_sprites_test.dart`), protocol version rule incl. a real-git replay of two branches bumping to the same number (`test/tool/protocol_version_test.dart`), this map (`docs/code_map_test.dart`) |
 | `packages/nico_shared/test/` | that folder | engines (`games/tictactoe_test.dart`, `games/color_clash_test.dart`, incl. privacy; its options in `games/color_clash_options_test.dart`), protocol (`net/protocol_test.dart`), game options and their editor (`games/game_options_test.dart`), shared screens (`widgets/shared_screen_test.dart`), Sea Siege (`games/seasiege_test.dart`, `widgets/seasiege_view_test.dart`), Color Clash views (`widgets/color_clash_view_test.dart`: wild art, fanned hand, swipe to play, penalty), Tactical Voxel RPG (`games/tacticalvoxelrpg_test.dart`, `widgets/tacticalvoxelrpg_view_test.dart`). Also runs in Chrome in CI |
 | `packages/nico_native/test/` | that folder | `discovery_test.dart`, `caster_scanner_test.dart` |
 | `caster/test/` | that folder | `cast_server_test.dart`, `idle_screen_test.dart` |
