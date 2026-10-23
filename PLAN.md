@@ -136,8 +136,11 @@ win or draw. The host can then use *Restart game*, which starts a rematch where 
 - **Drawing:** if you draw, you draw 1 card. You may play it straight away if it's playable; otherwise your turn ends.
 - **Action cards:**
   - Reverse acts as Skip when there are 2 players.
-  - Draw Two and Wild Draw Four make the next player draw and lose their turn.
-  - There's no stacking and no challenges.
+  - Draw Two and Wild Draw Four make the next player draw (and, with "Play after drawing a penalty" off, lose their
+    turn).
+  - With "Stack +2 and +4" on, the next player may answer instead: a +2 on a +2, or a Wild +4 on either. The
+    total passes on until someone draws it all. A +2 can't go on a +4.
+  - Both options are on by default. There are no Wild Draw Four challenges.
 - **Last card:** press "Last card!" when you're down to one card. If another player catches you before you call it,
   you draw 2.
 - **Deck refills:** when the draw pile runs out, the discard pile (minus its top card) is reshuffled.
@@ -880,6 +883,30 @@ must not cover squares a player can tap.
     call stays in place, so it starts working by itself if the host ever serves HTTPS.
   - **Not chosen:** our own looping video, whether Chrome honours it is uncertain; HTTPS with a self-signed
     certificate, which shows a full-page warning to every browser player.
+
+## Follow-up: Color Clash update
+
+**Status:** done. The owner played it on the Windows app and the tablet (app and Caster) from release builds of
+this branch: "works great".
+
+**Request:** new art for Wild and Wild +4, players' screens use all their space when a shared screen is on,
+swipe a card up to play it, and two options: stacking +2 and +4, and keeping your turn after drawing one (both
+on by default).
+
+**Decisions (confirmed):**
+- **Wild art:** a 2×2 grid of the four colors; Wild +4 adds a white "+4". On the pile the chosen color's
+  square stays bright and the others fade, and the border keeps the chosen color. Same in the browser screen.
+- **Stacking:** a +2 or +4 becomes a pending `penalty` (in the table view) for the next player. They may stack
+  a +2 on a +2 or a Wild +4 on either (a +2 can't go on a +4), or draw the whole total.
+- **Play after drawing a penalty** covers +2, +4 and a stacked total: the drawer then takes a normal turn.
+- **The engine's options default to off;** only the game definition turns them on. So the original engine
+  tests still check the classic rules, and the random bot games run every combination.
+- **Compact player screen:** a status line with a small top card, the active color and any penalty, the buttons,
+  then the hand as a fan of large cards. Cards shrink until the fan fits the width (down to 60 px), and only a
+  bigger hand than that scrolls.
+- **Swipe to play:** a playable card follows the finger on a vertical drag and plays when let go above 45% of a
+  card's height (or flicked up); otherwise it springs back. Tapping still works. Sideways drags are left to the
+  hand's scrolling. A Wild still asks for a color, and backing out returns the card.
 
 # Automatic protocol version
 

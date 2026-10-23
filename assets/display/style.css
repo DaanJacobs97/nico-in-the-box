@@ -123,6 +123,33 @@ h2 { font-size: 1.6rem; margin: 0; font-weight: 500; color: var(--muted); }
 .bg-green { background: var(--green); }
 .bg-blue { background: var(--blue); }
 .bg-wild { background: var(--wild); }
+.card.wild { position: relative; padding: 0.7vmin; box-sizing: border-box; }
+.wild-grid {
+  display: grid;
+  grid-template: 1fr 1fr / 1fr 1fr;
+  gap: 0.7vmin;
+  width: 100%;
+  height: 100%;
+}
+.wild-grid > div { border-radius: 1vmin; }
+.wild-grid > .faded { filter: brightness(0.35) saturate(0.6); }
+.plus4 {
+  position: absolute;
+  padding: 0 2vmin;
+  border-radius: 10vmin;
+  border: 0.5vmin solid #fff;
+  background: var(--wild);
+  font-size: 6vmin;
+  line-height: 1.15;
+}
+.penalty {
+  background: var(--red);
+  color: #fff;
+  border-radius: 1.5vmin;
+  padding: 0.2vmin 1.2vmin;
+  font-size: 3.5vmin;
+  font-weight: 900;
+}
 
 /* Result banner */
 .result {
