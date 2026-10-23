@@ -1,7 +1,7 @@
 import 'dart:convert';
 
 /// Bump whenever a message shape changes so mismatched builds refuse to talk.
-const int kProtocolVersion = 5;
+const int kProtocolVersion = 9;
 
 /// TCP port the game server listens on (WebSocket at [kWebSocketPath]).
 const int kGamePort = 47800;
