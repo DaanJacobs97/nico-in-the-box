@@ -408,9 +408,19 @@ class TacticalMap {
   static double _smooth(double value) => value * value * (3 - 2 * value);
 
   static double _hashNoise(int x, int y, int seed) {
-    var value = x * 73856093 ^ y * 19349663 ^ seed * 83492791;
-    value = (value ^ (value >> 13)) * 1274126177;
+    var value =
+        _mul32(x, 73856093) ^ _mul32(y, 19349663) ^ _mul32(seed, 83492791);
+    value = _mul32(value ^ (value >>> 13), 1274126177);
     return (value & 0x7fffffff) / 0x7fffffff;
+  }
+
+  /// `(a * b) mod 2^32`, the same on every platform. A plain `a * b` would
+  /// overflow 64 bits natively but lose precision in browsers (where ints are
+  /// doubles), so browser screens would generate a different map.
+  static int _mul32(int a, int b) {
+    final low = (a & 0xffff) * b;
+    final high = (((a >>> 16) & 0xffff) * b) & 0xffff;
+    return (low + (high << 16)) & 0xffffffff;
   }
 
   bool inBounds(GridPoint point) =>
