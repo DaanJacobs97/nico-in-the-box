@@ -98,3 +98,5 @@ assets/generated/*
 
 # Release signing settings (see "Release builds" in the README).
 /key.properties
+# Widget Preview related
+.widget_preview/
