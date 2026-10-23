@@ -1,0 +1,436 @@
+{
+  "frameSize": {
+    "width": 128,
+    "height": 128
+  },
+  "layout": "horizontal strip",
+  "anchor": {
+    "x": 64,
+    "y": 120
+  },
+  "source": {
+    "file": "ChatGPT Image 21 Oct 2026, 02_48_01-3.png",
+    "width": 1536,
+    "height": 1024,
+    "sha256": "c695168c65efbd53c6876758198510b92ebb6ef77cd9a43bdbce388fe90877fa"
+  },
+  "scale": 0.632768361581921,
+  "animations": {
+    "idle": {
+      "file": "idle.png",
+      "frameCount": 9,
+      "fps": 8,
+      "loop": true,
+      "available": true,
+      "sourceRects": [
+        [
+          22,
+          173,
+          93,
+          82
+        ],
+        [
+          116,
+          173,
+          87,
+          82
+        ],
+        [
+          210,
+          174,
+          87,
+          81
+        ],
+        [
+          300,
+          175,
+          85,
+          80
+        ],
+        [
+          390,
+          174,
+          80,
+          81
+        ],
+        [
+          475,
+          174,
+          74,
+          81
+        ],
+        [
+          550,
+          177,
+          76,
+          78
+        ],
+        [
+          630,
+          173,
+          77,
+          82
+        ],
+        [
+          710,
+          176,
+          82,
+          79
+        ]
+      ],
+      "individualFrames": [
+        "frames/idle/000.png",
+        "frames/idle/001.png",
+        "frames/idle/002.png",
+        "frames/idle/003.png",
+        "frames/idle/004.png",
+        "frames/idle/005.png",
+        "frames/idle/006.png",
+        "frames/idle/007.png",
+        "frames/idle/008.png"
+      ]
+    },
+    "walk": {
+      "file": "walk.png",
+      "frameCount": 8,
+      "fps": 8,
+      "loop": true,
+      "available": true,
+      "sourceRects": [
+        [
+          811,
+          174,
+          90,
+          81
+        ],
+        [
+          915,
+          173,
+          76,
+          82
+        ],
+        [
+          1005,
+          174,
+          71,
+          81
+        ],
+        [
+          1090,
+          174,
+          76,
+          81
+        ],
+        [
+          1180,
+          173,
+          72,
+          82
+        ],
+        [
+          1270,
+          176,
+          68,
+          79
+        ],
+        [
+          1360,
+          174,
+          90,
+          81
+        ],
+        [
+          1450,
+          175,
+          59,
+          80
+        ]
+      ],
+      "individualFrames": [
+        "frames/walk/000.png",
+        "frames/walk/001.png",
+        "frames/walk/002.png",
+        "frames/walk/003.png",
+        "frames/walk/004.png",
+        "frames/walk/005.png",
+        "frames/walk/006.png",
+        "frames/walk/007.png"
+      ]
+    },
+    "melee": {
+      "file": "melee.png",
+      "frameCount": 8,
+      "fps": 8,
+      "loop": false,
+      "available": true,
+      "sourceRects": [
+        [
+          16,
+          299,
+          97,
+          83
+        ],
+        [
+          115,
+          300,
+          84,
+          82
+        ],
+        [
+          215,
+          299,
+          100,
+          82
+        ],
+        [
+          315,
+          296,
+          105,
+          86
+        ],
+        [
+          420,
+          295,
+          79,
+          87
+        ],
+        [
+          515,
+          300,
+          74,
+          83
+        ],
+        [
+          610,
+          306,
+          80,
+          77
+        ],
+        [
+          710,
+          299,
+          100,
+          84
+        ]
+      ],
+      "individualFrames": [
+        "frames/melee/000.png",
+        "frames/melee/001.png",
+        "frames/melee/002.png",
+        "frames/melee/003.png",
+        "frames/melee/004.png",
+        "frames/melee/005.png",
+        "frames/melee/006.png",
+        "frames/melee/007.png"
+      ]
+    },
+    "ranged": {
+      "file": "ranged.png",
+      "frameCount": 8,
+      "fps": 8,
+      "loop": false,
+      "available": true,
+      "sourceRects": [
+        [
+          831,
+          300,
+          94,
+          82
+        ],
+        [
+          925,
+          301,
+          88,
+          81
+        ],
+        [
+          1016,
+          297,
+          83,
+          84
+        ],
+        [
+          1102,
+          313,
+          65,
+          64
+        ],
+        [
+          1180,
+          307,
+          64,
+          66
+        ],
+        [
+          1251,
+          303,
+          73,
+          82
+        ],
+        [
+          1340,
+          327,
+          70,
+          41
+        ],
+        [
+          1410,
+          305,
+          113,
+          74
+        ]
+      ],
+      "individualFrames": [
+        "frames/ranged/000.png",
+        "frames/ranged/001.png",
+        "frames/ranged/002.png",
+        "frames/ranged/003.png",
+        "frames/ranged/004.png",
+        "frames/ranged/005.png",
+        "frames/ranged/006.png",
+        "frames/ranged/007.png"
+      ]
+    },
+    "special": {
+      "file": "special.png",
+      "frameCount": 11,
+      "fps": 8,
+      "loop": false,
+      "available": true,
+      "sourceRects": [
+        [
+          17,
+          422,
+          158,
+          120
+        ],
+        [
+          177,
+          418,
+          128,
+          124
+        ],
+        [
+          305,
+          418,
+          124,
+          124
+        ],
+        [
+          431,
+          422,
+          129,
+          120
+        ],
+        [
+          561,
+          421,
+          129,
+          121
+        ],
+        [
+          700,
+          415,
+          150,
+          127
+        ],
+        [
+          850,
+          433,
+          98,
+          109
+        ],
+        [
+          953,
+          412,
+          142,
+          130
+        ],
+        [
+          1100,
+          408,
+          120,
+          134
+        ],
+        [
+          1233,
+          390,
+          177,
+          152
+        ],
+        [
+          1412,
+          422,
+          110,
+          120
+        ]
+      ],
+      "individualFrames": [
+        "frames/special/000.png",
+        "frames/special/001.png",
+        "frames/special/002.png",
+        "frames/special/003.png",
+        "frames/special/004.png",
+        "frames/special/005.png",
+        "frames/special/006.png",
+        "frames/special/007.png",
+        "frames/special/008.png",
+        "frames/special/009.png",
+        "frames/special/010.png"
+      ]
+    },
+    "hurt": {
+      "file": "hurt.png",
+      "frameCount": 5,
+      "fps": 8,
+      "loop": false,
+      "available": true,
+      "sourceRects": [
+        [
+          16,
+          578,
+          83,
+          76
+        ],
+        [
+          100,
+          578,
+          83,
+          76
+        ],
+        [
+          185,
+          578,
+          78,
+          76
+        ],
+        [
+          270,
+          582,
+          72,
+          72
+        ],
+        [
+          350,
+          579,
+          84,
+          75
+        ]
+      ],
+      "individualFrames": [
+        "frames/hurt/000.png",
+        "frames/hurt/001.png",
+        "frames/hurt/002.png",
+        "frames/hurt/003.png",
+        "frames/hurt/004.png"
+      ]
+    },
+    "death": {
+      "file": "death.png",
+      "frameCount": 0,
+      "available": false,
+      "loop": false,
+      "reason": "No death animation is identified in the source. PNG is an empty placeholder, not a frame."
+    }
+  }
+}
