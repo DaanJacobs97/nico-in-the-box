@@ -46,13 +46,14 @@ Lines are approximate, so you can tell big files from small ones.
 | File | Lines | What it does |
 |---|---:|---|
 | `lib/main.dart` | 29 | App entry and theme; opens `HomeScreen` |
-| `lib/net/game_server.dart` | 466 | **`GameServer`**: rooms, messages, host-only commands, game sessions, display feed (`attachDisplay`, `displayState`). Routes `/ws` and `/display` here; plain HTTP goes to `web_routes.dart` |
+| `lib/net/game_server.dart` | 502 | **`GameServer`**: rooms, messages, host-only commands, game sessions, display feed (`attachDisplay`, `displayState`). Routes `/ws` and `/display` here; plain HTTP goes to `web_routes.dart` |
 | `lib/net/display_handle.dart` | 37 | `DisplayHandle`: one connected shared screen (part of `game_server.dart`, so it shares its private API) |
 | `lib/net/player_seats.dart` | 189 | Seats (part of `game_server.dart`): hello and nicknames, resume tokens, the reconnect grace period, leaving, kicking, dropping connections |
-| `lib/net/web_routes.dart` | 88 | `serveWebRequest`: plain HTTP routes `/`, `/play/`, `/screen/` (landing page, browser client, screen page) |
-| `lib/net/hosted_room.dart` | 165 | **`HostedRoom`**: everything a host runs. Starts the server and broadcaster, joins as host, loads web assets, keeps the screen awake, manages the Caster (`connectCaster`) |
+| `lib/net/web_routes.dart` | 119 | `serveWebRequest`: plain HTTP routes `/`, `/play/`, `/screen/` (landing page, browser client, screen page), and game art at `/play/assets/packages/nico_shared/...` and `/art/...` |
+| `lib/net/game_art.dart` | 45 | `GameArt`/`BundleGameArt`: game art (`nico_shared`'s assets) served to browsers from the host's own bundle, loaded on request; `gameArtKey` refuses anything outside `packages/nico_shared/` |
+| `lib/net/hosted_room.dart` | 166 | **`HostedRoom`**: everything a host runs. Starts the server and broadcaster, joins as host, loads web assets and game art, keeps the screen awake, manages the Caster (`connectCaster`) |
 | `lib/net/caster_link.dart` | 140 | `CasterLink`: outbound connection to a Caster (`castHello` handshake, attaches it as a display, drop notice) |
-| `lib/net/web_files.dart` | 65 | `WebFiles`/`MemoryWebFiles`: static files in memory (from a zip or assets), content types |
+| `lib/net/web_files.dart` | 68 | `WebFiles`/`MemoryWebFiles`: static files in memory (from a zip or assets), content types |
 | `lib/net/web_pages.dart` | 75 | Small generated HTML pages: landing page, "not included" pages |
 | `lib/net/display_frontend.dart` | 20 | `DisplayFrontend` interface + `HtmlDisplayFrontend` (serves `/screen/`) |
 | `lib/net/multicast_lock.dart` | 18 | Android Wi-Fi multicast lock via MethodChannel (no-op elsewhere) |
@@ -149,7 +150,7 @@ Lines are approximate, so you can tell big files from small ones.
 | `assets/display/games/tictactoe.js` | 36 | Tic Tac Toe table renderer |
 | `assets/display/games/colorclash.js` | 69 | Color Clash table renderer (wild grid, pending penalty) |
 | `assets/display/games/seasiege.js` | 129 | Sea Siege table renderer (placing status, turn banner and target glow, host's board first, wrecks from `games/seasiege/*.png`, toasts and flash for new shots, remembered across redraws) |
-| `assets/display/games/tacticalvoxelrpg.js` | 135 | Tactical Voxel RPG browser battlefield with character portraits, animation and team health renderer |
+| `assets/display/games/tacticalvoxelrpg.js` | 127 | Tactical Voxel RPG browser battlefield with character portraits, animation and team health renderer (portraits from `/art/tacticalvoxelrpg/`) |
 
 ### `tool/`: scripts
 
@@ -157,7 +158,7 @@ Lines are approximate, so you can tell big files from small ones.
 |---|---|
 | `tool/check.ps1`, `tool/check.sh` | **Run before every PR**: format check, analyze, all five test suites (`-Fix`/`--fix` formats first) |
 | `tool/new_game.dart`, `tool/new_game_templates.dart` | `dart run tool/new_game.dart <id> "<Name>" [min] [max]`: generates a placeholder game (all six pieces, tests, an example option, code map rows, protocol bump). Templates live in the part file |
-| `tool/build_web_client.ps1`, `tool/build_web_client.sh` | Build `web_client/` into `assets/generated/web_client.zip` (git-ignored) |
+| `tool/build_web_client.ps1`, `tool/build_web_client.sh` | Build `web_client/` into `assets/generated/web_client.zip` (git-ignored), leaving out `nico_shared`'s assets (the host serves those) |
 | `tool/release/package_windows.ps1`, `tool/release/package_android.sh` | Build the release files into `build/release/`: Windows zips (with the Visual C++ runtime DLLs) and release-signed APKs (fails on a debug-signed APK) |
 | `tool/bot/lan_bot_test.dart` | Scripted LAN player (all three games): `flutter test tool/bot/lan_bot_test.dart --dart-define=HOST=<ip>` |
 | `tool/icons/draw_icons_test.dart` | Draws the app, Caster and browser-client icons into `icons/` (`flutter test tool/icons/draw_icons_test.dart`, then `dart run flutter_launcher_icons` in each app) |
@@ -189,7 +190,8 @@ Lines are approximate, so you can tell big files from small ones.
 | Shared screen behaviour | server: `displayState`/`_broadcastDisplay` in `game_server.dart`; Flutter: `shared_screen_view.dart`; browser: `assets/display/app.js` |
 | Room discovery | `nico_native/lib/discovery.dart` (+ `join_screen.dart` UI) |
 | Caster protocol | `protocol.dart` (`kCast*`, `castHello`), `caster/lib/cast_server.dart`, `lib/net/caster_link.dart` |
-| Web routes / served files | `web_routes.dart`, `web_files.dart`, `web_pages.dart` |
+| Web routes / served files | `web_routes.dart`, `web_files.dart`, `web_pages.dart`, `game_art.dart` (game images for browsers) |
+| Images for a game | `packages/nico_shared/assets/<id>/` + its `pubspec.yaml`; browser screen links to `/art/<id>/...` (see ADDING_A_GAME.md) |
 | What the host app bundles | `pubspec.yaml` `assets:` (`assets/generated/`, `assets/display/`) |
 
 ## 4. Protocol cheat sheet
@@ -215,7 +217,7 @@ Lines are approximate, so you can tell big files from small ones.
 
 | Suite | Run from | Covers |
 |---|---|---|
-| `test/` (app) | repo root | server and client over real loopback sockets (`net/server_client_test.dart`), reconnects (`net/reconnect_test.dart` on the server, `net/reconnect_client_test.dart` for the client and its banner), display feed (`net/display_feed_test.dart`), web routes (`net/web_routes_test.dart`), Caster link (`net/caster_link_test.dart`), hosted room (`net/hosted_room_test.dart`), game options over the wire (`net/game_options_test.dart`), home/dialog widgets (`widget_test.dart`), game registry (`games/registry_consistency_test.dart`), Sea Siege sprite PNGs up to date (`games/seasiege_sprites_test.dart`), protocol version rule incl. a real-git replay of two branches bumping to the same number (`test/tool/protocol_version_test.dart`), this map (`docs/code_map_test.dart`) |
+| `test/` (app) | repo root | server and client over real loopback sockets (`net/server_client_test.dart`), reconnects (`net/reconnect_test.dart` on the server, `net/reconnect_client_test.dart` for the client and its banner), display feed (`net/display_feed_test.dart`), web routes (`net/web_routes_test.dart`), game art served to browsers and no copies in `assets/display/` (`net/game_art_test.dart`), Caster link (`net/caster_link_test.dart`), hosted room (`net/hosted_room_test.dart`), game options over the wire (`net/game_options_test.dart`), home/dialog widgets (`widget_test.dart`), game registry (`games/registry_consistency_test.dart`), Sea Siege sprite PNGs up to date (`games/seasiege_sprites_test.dart`), protocol version rule incl. a real-git replay of two branches bumping to the same number (`test/tool/protocol_version_test.dart`), this map (`docs/code_map_test.dart`) |
 | `packages/nico_shared/test/` | that folder | engines (`games/tictactoe_test.dart`, `games/color_clash_test.dart`, incl. privacy; its options in `games/color_clash_options_test.dart`), protocol (`net/protocol_test.dart`), game options and their editor (`games/game_options_test.dart`), shared screens (`widgets/shared_screen_test.dart`), Sea Siege (`games/seasiege_test.dart`, `widgets/seasiege_view_test.dart`), Color Clash views (`widgets/color_clash_view_test.dart`: wild art, fanned hand, swipe to play, penalty), Tactical Voxel RPG (`games/tacticalvoxelrpg_test.dart`, `widgets/tacticalvoxelrpg_view_test.dart`). Also runs in Chrome in CI |
 | `packages/nico_native/test/` | that folder | `discovery_test.dart`, `caster_scanner_test.dart` |
 | `caster/test/` | that folder | `cast_server_test.dart`, `idle_screen_test.dart` |

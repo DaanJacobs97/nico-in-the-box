@@ -9,6 +9,10 @@ automatically, so builds from different merges refuse to play together.
 
 ## Unreleased
 
+- **Game art no longer weighs on the browser client:** the host serves games' images to browsers from its own copy
+  instead of packing them into the browser client too, which drops it from 7.6 MB back to 5.9 MB. The browser
+  screen uses the same files, so each game's art is in the host app once instead of three times.
+  `docs/ADDING_A_GAME.md` explains where art goes and how big it should be.
 - **Color Clash refresh:**
   - **New Wild cards:** a grid of all four colors, with "+4" on a Wild +4. On the pile, the chosen color stays
     bright.

@@ -81,7 +81,7 @@ what, and maps the tests.
 | `packages/nico_native/` | Native-only LAN code (`dart:io`): UDP announcements and scanning, shared by the app and the Caster |
 | `caster/` | **Nico Caster**: a separate app that turns any Windows PC, Android tablet or Android TV into the shared screen. The host picks it from a list (see PLAN.md) |
 | `web_client/` | Flutter **web** app for players without the app. The host serves it at `/play/` |
-| `tool/` | `build_web_client` scripts: build `web_client/` and pack it into `assets/generated/web_client.zip` (git-ignored) |
+| `tool/` | `build_web_client` scripts: build `web_client/` and pack it into `assets/generated/web_client.zip` (git-ignored). Game art isn't packed: the host serves it from its own copy |
 | `integration_test/` | The end-to-end LAN test on real devices |
 
 ### Test

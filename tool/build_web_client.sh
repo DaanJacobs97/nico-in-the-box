@@ -19,7 +19,9 @@ rm -f "$out"
 cd build/web
 # Browsers load canvaskit/ (full) or canvaskit/chromium/; the other engines are
 # only for --wasm builds or opt-in flags, and .symbols files are debug-only.
+# Game art (nico_shared's assets) is served by the host from its own copy.
 zip -q -r -9 "$out" . \
   -x 'canvaskit/skwasm.*' 'canvaskit/skwasm_heavy.*' 'canvaskit/wimp.*' \
-     'canvaskit/webparagraph/*' '*.symbols' '.last_build_id'
+     'canvaskit/webparagraph/*' '*.symbols' '.last_build_id' \
+     'assets/packages/nico_shared/*'
 ls -l "$out"
