@@ -1,12 +1,12 @@
 {
   "frameSize": {
-    "width": 128,
-    "height": 128
+    "width": 96,
+    "height": 96
   },
   "layout": "horizontal strip",
   "anchor": {
-    "x": 64,
-    "y": 120
+    "x": 48,
+    "y": 90
   },
   "source": {
     "file": "ChatGPT Image 21 Oct 2026, 02_47_29-1.png",
@@ -14,7 +14,7 @@
     "height": 1024,
     "sha256": "9fa00aefd6e2e2952b6caae37cbc8537ed79e8ad718576e9fc36cd2542e9458f"
   },
-  "scale": 0.632768361581921,
+  "scale": 0.474576271186441,
   "animations": {
     "idle": {
       "file": "idle.png",
