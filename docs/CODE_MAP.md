@@ -92,13 +92,14 @@ Lines are approximate, so you can tell big files from small ones.
 | `packages/nico_shared/lib/games/seasiege/seasiege_table.dart` | 316 | `SeaGrid` (10×10 board used by both views; whole-board tap, double-tap and drag, preview), `SeaBoard`, `describeShot`, `SeaSiegeTable` (shared screen) |
 | `packages/nico_shared/lib/games/tacticalvoxelrpg/tacticalvoxelrpg_game.dart` | 613 | Tactical Voxel RPG engine: squads, card activations, terrain movement profiles, combat, traps and solo AI |
 | `packages/nico_shared/lib/games/tacticalvoxelrpg/tacticalvoxelrpg_cards.dart` | 298 | Tactical RPG card definitions, private draw/discard hands, card actions, attacks and retention |
-| `packages/nico_shared/lib/games/tacticalvoxelrpg/tacticalvoxelrpg_map.dart` | 404 | Seeded 40×30 biome generator with rivers, cliffs, roads, spawn clearings and weighted pathfinding |
+| `packages/nico_shared/lib/games/tacticalvoxelrpg/tacticalvoxelrpg_map.dart` | 481 | Seeded 40×30 multiplayer and 15×15 solo biome maps with rivers, cliffs, roads and spawn clearings |
 | `packages/nico_shared/lib/games/tacticalvoxelrpg/tacticalvoxelrpg_movement.dart` | 125 | Character-weighted route validation, movement range and tactical AI pathing |
 | `packages/nico_shared/lib/games/tacticalvoxelrpg/tacticalvoxelrpg_sprite.dart` | 138 | Sprite-sheet frame playback for enemy idle, walk, attack, special and hurt animations |
-| `packages/nico_shared/lib/games/tacticalvoxelrpg/tacticalvoxelrpg_cell.dart` | 397 | Tactical map cells, unit/card widgets, terrain overlays and zoom controls |
-| `packages/nico_shared/lib/games/tacticalvoxelrpg/tacticalvoxelrpg_view.dart` | 429 | Mobile tactics view: unit activation, action hand, route, pan and zoom controls |
-| `packages/nico_shared/lib/games/tacticalvoxelrpg/tacticalvoxelrpg_board.dart` | 272 | Tactical board widget: grid interaction and queued per-tile movement animations |
-| `packages/nico_shared/lib/games/tacticalvoxelrpg/tacticalvoxelrpg_table.dart` | 239 | Shared-screen battlefield, damage numbers, health bars, camera follow and zoom controls |
+| `packages/nico_shared/lib/games/tacticalvoxelrpg/tacticalvoxelrpg_cell.dart` | 442 | Tactical map cells, unit/card widgets, terrain overlays, zoom and translucent overlay panels |
+| `packages/nico_shared/lib/games/tacticalvoxelrpg/tacticalvoxelrpg_view.dart` | 581 | Full-screen mobile battlefield with overlaid unit activation, action cards, route and zoom controls |
+| `packages/nico_shared/lib/games/tacticalvoxelrpg/tacticalvoxelrpg_board.dart` | 241 | Dimension-aware tactical grid and queued per-tile movement animations |
+| `packages/nico_shared/lib/games/tacticalvoxelrpg/tacticalvoxelrpg_route.dart` | 57 | Route planning helpers for tile-by-tile drag paths and terrain-weighted tap-to-plan routes |
+| `packages/nico_shared/lib/games/tacticalvoxelrpg/tacticalvoxelrpg_table.dart` | 272 | Full-screen shared battlefield with overlaid status, damage, health, camera and zoom controls |
 | `packages/nico_shared/lib/screens/session_screen.dart` | 282 | **`SessionScreen`**: lobby → game → result, notices, leaving, host-as-screen area, "Reconnecting…" banner |
 | `packages/nico_shared/lib/screens/lobby_view.dart` | 215 | Lobby: game, players (away ones marked), Single game screen settings (host), pinned Start button |
 | `packages/nico_shared/lib/screens/shared_screen_view.dart` | 138 | `SharedScreenView`: draws a `DisplayState` (lobby / table / result) |
