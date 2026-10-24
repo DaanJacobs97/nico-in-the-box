@@ -30,6 +30,36 @@ Future<void> pumpAt(WidgetTester tester, Size size, Widget child) async {
 }
 
 void main() {
+  testWidgets('wide first turn shows all three playable hero cards', (
+    tester,
+  ) async {
+    final session = TacticalVoxelRPGSession([vera], random: Random(4));
+    await pumpAt(
+      tester,
+      const Size(1280, 800),
+      TacticalVoxelRPGView(
+        ctx: GameViewContext(
+          view: session.viewFor('p1'),
+          myId: 'p1',
+          lobby: lobby,
+          sendAction: (_) {},
+        ),
+      ),
+    );
+
+    for (final unit in ['closeCombat', 'ranged', 'trapper']) {
+      final card = find.byKey(ValueKey('tacticalvoxelrpg-activate-p1-$unit'));
+      expect(card, findsOneWidget);
+      final draggable = find.descendant(
+        of: card,
+        matching: find.byWidgetPredicate((widget) => widget is Draggable),
+      );
+      expect(draggable, findsOneWidget);
+      expect(tester.widget<Draggable>(draggable).maxSimultaneousDrags, 1);
+    }
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('mobile view shows three units, energy and route controls', (
     tester,
   ) async {
@@ -292,7 +322,15 @@ void main() {
       ),
     );
     await pumpAt(tester, const Size(400, 800), view());
-    await tester.tap(find.byKey(const ValueKey('tacticalvoxelrpg-cell-3-3')));
+    final heroCard = find.byKey(
+      const ValueKey('tacticalvoxelrpg-activate-p1-closeCombat'),
+    );
+    final heroCardCenter = tester.getCenter(heroCard);
+    final battlefieldCenter = tester.getCenter(
+      find.byKey(const ValueKey('tacticalvoxelrpg-cell-6-6')),
+    );
+    await tester.drag(heroCard, battlefieldCenter - heroCardCenter);
+    await tester.pump(const Duration(milliseconds: 300));
     await tester.pumpWidget(MaterialApp(home: Scaffold(body: view())));
     await tester.pump(const Duration(milliseconds: 260));
     final activeUnit = (session.viewFor('p1')['units']! as List<Object?>)
@@ -312,7 +350,9 @@ void main() {
     await tester.drag(stridesCard, boardTarget - cardCenter);
     await tester.pump(const Duration(milliseconds: 300));
     expect(
-      find.text('Drag a route from the active hero to a highlighted tile.'),
+      find.text(
+        'Choose a yellow square, or drag from your hero to draw a path.',
+      ),
       findsOneWidget,
     );
     final from = tester.getCenter(
@@ -327,11 +367,14 @@ void main() {
       const Duration(milliseconds: 300),
     );
     await tester.pump();
+    await tester.tap(find.byKey(const ValueKey('tacticalvoxelrpg-cell-4-3')));
+    await tester.pump();
     expect(sent, [
       {'type': 'selectUnit', 'unit': 'p1-closeCombat'},
       {
-        'type': 'planRoute',
+        'type': 'playCard',
         'unit': 'p1-closeCombat',
+        'cardId': strides['id'],
         'path': [const GridPoint(4, 3).toJson()],
       },
     ]);
