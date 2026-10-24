@@ -100,14 +100,15 @@ Lines are approximate, so you can tell big files from small ones.
 | `packages/nico_shared/lib/games/tacticalvoxelrpg/tacticalvoxelrpg_map.dart` | 481 | Seeded 40×30 multiplayer and 15×15 solo biome maps with rivers, cliffs, roads and spawn clearings |
 | `packages/nico_shared/lib/games/tacticalvoxelrpg/tacticalvoxelrpg_movement.dart` | 151 | Character-weighted route validation, movement range and tactical AI pathing |
 | `packages/nico_shared/lib/games/tacticalvoxelrpg/tacticalvoxelrpg_sprite.dart` | 275 | Slime sprite-sheet playback and character portrait idle, walk, attack and hurt animations |
-| `packages/nico_shared/lib/games/tacticalvoxelrpg/tacticalvoxelrpg_cell.dart` | 273 | Tactical map cells, terrain overlays, damage numbers and map zoom controls |
-| `packages/nico_shared/lib/games/tacticalvoxelrpg/tacticalvoxelrpg_view.dart` | 592 | Full-screen battlefield, character art, drag targets, route controls, attack range and camera handling |
-| `packages/nico_shared/lib/games/tacticalvoxelrpg/tacticalvoxelrpg_hud.dart` | 433 | Art-directed three-column tactical HUD, health strip, selected portrait, phase badge and pile browser |
-| `packages/nico_shared/lib/games/tacticalvoxelrpg/tacticalvoxelrpg_hud_cards.dart` | 335 | Art-directed squad and action card faces with drag-to-play feedback |
-| `packages/nico_shared/lib/games/tacticalvoxelrpg/tacticalvoxelrpg_hud_presenters.dart` | 227 | Selected hero portrait, squad health strip and battle phase badge |
-| `packages/nico_shared/lib/games/tacticalvoxelrpg/tacticalvoxelrpg_board.dart` | 285 | Dimension-aware battlefield grid and queued per-tile movement animations |
-| `packages/nico_shared/lib/games/tacticalvoxelrpg/tacticalvoxelrpg_route.dart` | 57 | Route planning helpers for tile-by-tile drag paths and terrain-weighted tap-to-plan routes |
-| `packages/nico_shared/lib/games/tacticalvoxelrpg/tacticalvoxelrpg_table.dart` | 272 | Full-screen shared battlefield with overlaid status, damage, health, camera and zoom controls |
+| `packages/nico_shared/lib/games/tacticalvoxelrpg/tacticalvoxelrpg_cell.dart` | 299 | Tactical map cells, movement/attack range tints, route arrows, damage numbers and zoom controls |
+| `packages/nico_shared/lib/games/tacticalvoxelrpg/tacticalvoxelrpg_view.dart` | 448 | Full-screen battlefield layout, map centering/zoom and overlay placement |
+| `packages/nico_shared/lib/games/tacticalvoxelrpg/tacticalvoxelrpg_interaction.dart` | 290 | Card selection, retain/play actions, map targeting and drag/click route interaction |
+| `packages/nico_shared/lib/games/tacticalvoxelrpg/tacticalvoxelrpg_hud.dart` | 610 | Art-directed tactical HUD, vertical company cards, hidden hand, retain pouch and turn controls |
+| `packages/nico_shared/lib/games/tacticalvoxelrpg/tacticalvoxelrpg_hud_cards.dart` | 387 | Purple unit/action card faces, drag-to-play feedback and selected states |
+| `packages/nico_shared/lib/games/tacticalvoxelrpg/tacticalvoxelrpg_hud_presenters.dart` | 240 | Selected hero portrait, vertical squad health strip and battle phase badge |
+| `packages/nico_shared/lib/games/tacticalvoxelrpg/tacticalvoxelrpg_board.dart` | 307 | Centered battlefield grid, route arrows and queued per-tile movement animations |
+| `packages/nico_shared/lib/games/tacticalvoxelrpg/tacticalvoxelrpg_route.dart` | 67 | Terrain-weighted path search and route planning helpers |
+| `packages/nico_shared/lib/games/tacticalvoxelrpg/tacticalvoxelrpg_table.dart` | 273 | Full-screen shared battlefield with overlaid status, damage, health, camera and zoom controls |
 | `packages/nico_shared/lib/screens/session_screen.dart` | 391 | **`SessionScreen`**: lobby → game → result, notices, leaving, host-as-screen area, "Reconnecting…" banner, immersive tactical UI; keeps the screen on while open |
 | `packages/nico_shared/lib/screens/screen_awake.dart` | 28 | `ScreenAwake`: reference-counted wake lock while hosting or in a room (apps, and browsers where allowed) |
 | `packages/nico_shared/lib/screens/lobby_view.dart` | 253 | Lobby: game (host's Change game menu grouped by category), players (away ones marked), Single game screen settings (host), screen-lock tip (browsers), pinned Start button |
