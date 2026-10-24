@@ -8,12 +8,14 @@ class _UnitActivationCard extends StatelessWidget {
     required this.disabled,
     required this.compact,
     required this.onTap,
+    this.handCard = false,
   });
 
   final Map<String, Object?> unit;
   final bool selected;
   final bool disabled;
   final bool compact;
+  final bool handCard;
   final VoidCallback onTap;
 
   @override
@@ -23,8 +25,16 @@ class _UnitActivationCard extends StatelessWidget {
     final health = (unit['hp'] as int) / (unit['maxHp'] as int);
     final face = AnimatedContainer(
       duration: const Duration(milliseconds: 200),
-      width: compact ? 64 : 174,
-      height: compact ? 90 : 72,
+      width: compact
+          ? 64
+          : handCard
+          ? 120
+          : 174,
+      height: compact
+          ? 90
+          : handCard
+          ? 190
+          : 72,
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: selected
@@ -58,6 +68,62 @@ class _UnitActivationCard extends StatelessWidget {
                     style: const TextStyle(
                       color: Color(0xffd7c9e5),
                       fontSize: 8,
+                    ),
+                  ),
+                ],
+              )
+            : handCard
+            ? Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  SizedBox(height: 76, child: _unitArt(art)),
+                  Text(
+                    (unit['role'] as String).toUpperCase(),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      color: Color(0xffc9b3e1),
+                      fontSize: 7,
+                      letterSpacing: 1,
+                    ),
+                  ),
+                  const SizedBox(height: 3),
+                  Text(
+                    unit['name'] as String,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(fontFamily: 'Georgia', fontSize: 13),
+                  ),
+                  const Spacer(),
+                  Text(
+                    '${unit['hp']}/${unit['maxHp']} HP · 2 AP',
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      color: Color(0xffd7c9e5),
+                      fontSize: 8,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(2),
+                    child: LinearProgressIndicator(
+                      value: health,
+                      minHeight: 4,
+                      backgroundColor: const Color(0xff40364b),
+                      color: const Color(0xffbea3df),
+                    ),
+                  ),
+                  const SizedBox(height: 5),
+                  Text(
+                    'MOV ${unit['movement']} · RANGE ${unit['minimumRange']}–${unit['range']}',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      color: Color(0xffb7a7c9),
+                      fontSize: 7,
                     ),
                   ),
                 ],

@@ -17,6 +17,7 @@ part 'tacticalvoxelrpg_route.dart';
 part 'tacticalvoxelrpg_interaction.dart';
 part 'tacticalvoxelrpg_hud.dart';
 part 'tacticalvoxelrpg_hud_cards.dart';
+part 'tacticalvoxelrpg_hud_activation.dart';
 part 'tacticalvoxelrpg_hud_presenters.dart';
 
 class TacticalVoxelRPGView extends StatefulWidget {
@@ -78,9 +79,12 @@ class _TacticalVoxelRPGViewState extends State<TacticalVoxelRPGView> {
     final canAct = view['canAct'] == true;
     final turn = view['turn'] as String?;
     final damage = _lastDamage(view['lastAction']);
-    final ownUnits = units
-        .where((unit) => unit['owner'] == widget.ctx.myId)
-        .toList();
+    final myUnitIds = (view['myUnits'] as List<Object?>? ?? const [])
+        .whereType<String>()
+        .toSet();
+    final ownUnits = myUnitIds.isEmpty
+        ? units.where((unit) => unit['owner'] == widget.ctx.myId).toList()
+        : units.where((unit) => myUnitIds.contains(unit['id'])).toList();
     final portraitUnit =
         active ??
         ownUnits.where((unit) => unit['completed'] != true).firstOrNull ??
@@ -465,8 +469,7 @@ class _TacticalVoxelRPGViewState extends State<TacticalVoxelRPGView> {
               child: SafeArea(
                 top: false,
                 child: _TacticalHud(
-                  units: units,
-                  ownerId: widget.ctx.myId,
+                  units: ownUnits,
                   active: active,
                   hand: _objects(active?['hand']),
                   selectedCardId: _selectedCardId,

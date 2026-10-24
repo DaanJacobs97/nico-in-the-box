@@ -11,7 +11,6 @@ class _TacticalDragPayload {
 class _TacticalHud extends StatelessWidget {
   const _TacticalHud({
     required this.units,
-    required this.ownerId,
     required this.active,
     required this.hand,
     required this.selectedCardId,
@@ -29,7 +28,6 @@ class _TacticalHud extends StatelessWidget {
   });
 
   final List<Map<String, Object?>> units;
-  final String ownerId;
   final Map<String, Object?>? active;
   final List<Map<String, Object?>> hand;
   final int? selectedCardId;
@@ -81,8 +79,10 @@ class _TacticalHud extends StatelessWidget {
   Widget _wideLayout(BuildContext context, Object? activeId) => Row(
     crossAxisAlignment: CrossAxisAlignment.end,
     children: [
-      SizedBox(width: 190, child: _companyColumn(context, activeId)),
-      const SizedBox(width: 22),
+      if (active != null) ...[
+        SizedBox(width: 190, child: _companyColumn(context, activeId)),
+        const SizedBox(width: 22),
+      ],
       Expanded(child: _handColumn(context)),
       const SizedBox(width: 22),
       SizedBox(width: 166, child: _turnControls(context)),
@@ -158,12 +158,13 @@ class _TacticalHud extends StatelessWidget {
     bool compact = false,
   }) {
     final cards = [
-      for (final unit in units.where((unit) => unit['owner'] == ownerId))
+      for (final unit in units)
         _UnitActivationCard(
           key: ValueKey('tacticalvoxelrpg-activate-${unit['id']}'),
           unit: unit,
           selected: unit['id'] == activeId,
           compact: compact,
+          handCard: active == null,
           disabled:
               !canAct ||
               unit['completed'] == true ||
@@ -200,7 +201,7 @@ class _TacticalHud extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Expanded(
-              child: handCollapsed
+              child: handCollapsed && active != null
                   ? Align(
                       alignment: Alignment.topCenter,
                       child: SizedBox(
@@ -212,20 +213,21 @@ class _TacticalHud extends StatelessWidget {
                     )
                   : _handCards(context, compact: false),
             ),
-            SizedBox(
-              width: 40,
-              child: IconButton(
-                key: const ValueKey('tacticalvoxelrpg-toggle-hand'),
-                tooltip: handCollapsed
-                    ? 'Show action hand'
-                    : 'Hide action hand',
-                onPressed: onToggleHand,
-                icon: Icon(
-                  handCollapsed ? Icons.expand_less : Icons.expand_more,
-                  color: const Color(0xffd2b9ed),
+            if (active != null)
+              SizedBox(
+                width: 40,
+                child: IconButton(
+                  key: const ValueKey('tacticalvoxelrpg-toggle-hand'),
+                  tooltip: handCollapsed
+                      ? 'Show action hand'
+                      : 'Hide action hand',
+                  onPressed: onToggleHand,
+                  icon: Icon(
+                    handCollapsed ? Icons.expand_less : Icons.expand_more,
+                    color: const Color(0xffd2b9ed),
+                  ),
                 ),
               ),
-            ),
           ],
         ),
       ),
@@ -279,12 +281,7 @@ class _TacticalHud extends StatelessWidget {
 
   Widget _handCards(BuildContext context, {required bool compact}) {
     if (active == null) {
-      return const Center(
-        child: Text(
-          'Activate a hero to reveal their action hand',
-          style: TextStyle(color: Color(0xff899386), fontSize: 11),
-        ),
-      );
+      return _unitActivationHand(compact: compact);
     }
     return LayoutBuilder(
       builder: (context, constraints) {
