@@ -19,6 +19,8 @@ part 'tacticalvoxelrpg_hud.dart';
 part 'tacticalvoxelrpg_hud_cards.dart';
 part 'tacticalvoxelrpg_hud_activation.dart';
 part 'tacticalvoxelrpg_hud_presenters.dart';
+part 'tacticalvoxelrpg_selection.dart';
+part 'tacticalvoxelrpg_selection_table.dart';
 
 class TacticalVoxelRPGView extends StatefulWidget {
   const TacticalVoxelRPGView({super.key, required this.ctx});
@@ -64,6 +66,9 @@ class _TacticalVoxelRPGViewState extends State<TacticalVoxelRPGView> {
   @override
   Widget build(BuildContext context) {
     final view = widget.ctx.view;
+    if (view['phase'] == 'selection') {
+      return _TacticalUnitSelectionScreen(ctx: widget.ctx);
+    }
     final units = _objects(view['units']);
     final tiles = _objects(view['tiles']);
     final traps = _objects(view['traps']);

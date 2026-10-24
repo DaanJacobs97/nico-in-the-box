@@ -6,6 +6,7 @@ import 'tacticalvoxelrpg_map.dart';
 
 part 'tacticalvoxelrpg_movement.dart';
 part 'tacticalvoxelrpg_cards.dart';
+part 'tacticalvoxelrpg_draft.dart';
 
 const tacticalVoxelRPGDefinition = GameDefinition(
   id: 'tacticalvoxelrpg',
@@ -38,7 +39,12 @@ GameSession _create(
   int round,
   Random random,
   GameOptions _,
-) => TacticalVoxelRPGSession(players, round: round, random: random);
+) => TacticalVoxelRPGSession(
+  players,
+  round: round,
+  random: random,
+  preBattleSelection: true,
+);
 
 enum TacticalClass { closeCombat, ranged, trapper }
 
@@ -201,8 +207,14 @@ class TacticalVoxelRPGSession implements GameSession {
     List<PlayerInfo> players, {
     int round = 0,
     Random? random,
+    bool preBattleSelection = false,
+    Duration selectionDuration = const Duration(seconds: 60),
   }) : _players = List.of(players),
        _random = random ?? Random(),
+       _drafting = preBattleSelection,
+       _draftDeadline = preBattleSelection
+           ? DateTime.now().add(selectionDuration)
+           : null,
        // These public parameter names deliberately remain distinct from the
        // private fields used to store them.
        // ignore: prefer_initializing_formals
@@ -230,6 +242,7 @@ class TacticalVoxelRPGSession implements GameSession {
     if (players.length == 1) {
       _addTeam(tacticalAiId, _map.spawnTeams.last);
     }
+    if (preBattleSelection) _initializeDraftSelections();
     _selectedUnitId = null;
   }
 
@@ -274,6 +287,10 @@ class TacticalVoxelRPGSession implements GameSession {
   late List<String> _turnOrder;
   int _turnIndex = 0;
   int _round = 0;
+  bool _drafting = false;
+  DateTime? _draftDeadline;
+  final Map<String, List<String>> _draftSelections = {};
+  final Set<String> _readyPlayers = {};
   String? _selectedUnitId;
   bool _over = false;
   String? _winnerId;
@@ -285,41 +302,6 @@ class TacticalVoxelRPGSession implements GameSession {
   TacticalUnit? get _selectedUnit => _unitById(_selectedUnitId);
   bool get _isAiTurn => _turnOwner == tacticalAiId;
 
-  void _addTeam(String owner, List<GridPoint> spawns) {
-    const classes = [
-      TacticalClass.closeCombat,
-      TacticalClass.ranged,
-      TacticalClass.trapper,
-    ];
-    const slimeSprites = ['acid', 'dark', 'fire', 'plasma', 'water'];
-    const playerNames = ['Aldric', 'Seren', 'Mora'];
-    const playerRoles = ['THE OATHKEEPER', 'THE WAYFARER', 'THE HEXWEAVER'];
-    const enemyNames = ['Hollow guard', 'Hollow archer', 'Blight hound'];
-    const enemyHp = [18, 16, 14];
-    for (var i = 0; i < classes.length; i++) {
-      final isEnemy = owner == tacticalAiId;
-      final sprite = isEnemy
-          ? slimeSprites[_random.nextInt(slimeSprites.length)]
-          : null;
-      final unit = TacticalUnit(
-        id: '$owner-${classes[i].name}',
-        ownerId: owner,
-        kind: classes[i],
-        x: spawns[i].x,
-        y: spawns[i].y,
-        hp: isEnemy ? enemyHp[i] : classes[i].startingHp,
-        maxHp: isEnemy ? enemyHp[i] : classes[i].maximumHp,
-        mana: isEnemy ? 0 : classes[i].maximumMana,
-        maxMana: isEnemy ? 0 : classes[i].maximumMana,
-        displayName: isEnemy ? enemyNames[i] : playerNames[i],
-        role: isEnemy ? 'THE HOLLOWED' : playerRoles[i],
-        sprite: sprite,
-      );
-      _units.add(unit);
-      if (!isEnemy) _initializeCards(unit);
-    }
-  }
-
   @override
   bool get isOver => _over;
 
@@ -328,6 +310,11 @@ class TacticalVoxelRPGSession implements GameSession {
     if (isOver) throw const GameActionException('The mission is over.');
     if (!_players.any((player) => player.id == playerId)) {
       throw const GameActionException('You are not in this mission.');
+    }
+    if (!_drafting && action['type'] == 'draftTimeout') return;
+    if (_drafting) {
+      _applyDraftAction(playerId, action);
+      return;
     }
     if (playerId != _turnOwner) {
       throw const GameActionException("It's the other team's turn.");
@@ -581,7 +568,10 @@ class TacticalVoxelRPGSession implements GameSession {
       'height': _map.height,
       'round': _round,
       'seed': _map.seed,
-      'phase': isOver ? 'over' : 'battle',
+      'phase': _gamePhase,
+      'draftReadyCount': _readyPlayers.length,
+      'draftPlayerCount': _players.length,
+      'draftSeconds': _draftSecondsRemaining,
       'solo': _players.length == 1,
       'tiles': [for (final tile in _map.tiles) tile.toJson()],
       'units': [for (final unit in _units) unit.toJson()],
@@ -611,7 +601,11 @@ class TacticalVoxelRPGSession implements GameSession {
       for (final unit in _units)
         if (unit.ownerId == playerId) unit.id,
     ],
-    'canAct': !isOver && _turnOwner == playerId,
+    'canAct': !_drafting && !isOver && _turnOwner == playerId,
+    if (_drafting)
+      'draftSelectedUnitIds': _draftSelections[playerId] ?? const <String>[],
+    if (_drafting) 'draftReadyPlayers': _readyPlayers.toList(),
+    if (_drafting) 'draftSeconds': _draftSecondsRemaining,
   };
 
   @override

@@ -66,6 +66,9 @@ class _TacticalVoxelRPGTableState extends State<TacticalVoxelRPGTable> {
   @override
   Widget build(BuildContext context) {
     final table = widget.ctx.table;
+    if (table['phase'] == 'selection') {
+      return _TacticalSelectionTable(ctx: widget.ctx);
+    }
     final units = _objects(table['units']);
     final tiles = _objects(table['tiles']);
     final traps = _objects(table['traps']);
