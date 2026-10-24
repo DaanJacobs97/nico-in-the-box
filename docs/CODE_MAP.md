@@ -110,8 +110,8 @@ Lines are approximate, so you can tell big files from small ones.
 | `packages/nico_shared/lib/games/tacticalvoxelrpg/tacticalvoxelrpg_table.dart` | 272 | Full-screen shared battlefield with overlaid status, damage, health, camera and zoom controls |
 | `packages/nico_shared/lib/games/blackjack/blackjack_game.dart` | 447 | Blackjack engine: bets or Deal, seat-by-seat hit/stand/double/split, AI dealer (stands on 17, checks for blackjack), one deck reshuffled below 20 cards, Mode and x (hands) options; `custom` test constructor with a stacked deck |
 | `packages/nico_shared/lib/games/blackjack/blackjack_cards.dart` | 53 | `PlayingCard`, 52-card `buildDeck`, `handValue` (soft aces), `isNatural` |
-| `packages/nico_shared/lib/games/blackjack/blackjack_view.dart` | 152 | Blackjack player view: bet/Deal and move buttons; full (table) or compact (dealer + own seat) |
-| `packages/nico_shared/lib/games/blackjack/blackjack_table.dart` | 334 | `BlackjackTable` (shared screen), `BlackjackTableArea`, dealer, seats, hands, `PlayingCardFace` |
+| `packages/nico_shared/lib/games/blackjack/blackjack_view.dart` | 156 | Blackjack player view: bet/Deal and move buttons; full (table) or compact (dealer + own seat) |
+| `packages/nico_shared/lib/games/blackjack/blackjack_table.dart` | 343 | `BlackjackTable` (shared screen), `BlackjackTableArea`, dealer, seats, hands, `PlayingCardFace` |
 | `packages/nico_shared/lib/screens/session_screen.dart` | 391 | **`SessionScreen`**: lobby → game → result, notices, leaving, host-as-screen area, "Reconnecting…" banner, immersive tactical UI; keeps the screen on while open |
 | `packages/nico_shared/lib/screens/screen_awake.dart` | 28 | `ScreenAwake`: reference-counted wake lock while hosting or in a room (apps, and browsers where allowed) |
 | `packages/nico_shared/lib/screens/lobby_view.dart` | 253 | Lobby: game (host's Change game menu grouped by category), players (away ones marked), Single game screen settings (host), screen-lock tip (browsers), pinned Start button |
@@ -151,7 +151,7 @@ Lines are approximate, so you can tell big files from small ones.
 |---|---:|---|
 | `assets/display/index.html` | 22 | Page shell; loads `app.js` and one script per game |
 | `assets/display/app.js` | 133 | `NicoDisplay`: `/display` WebSocket, reconnect, lobby/result, safe `el()` DOM helper, `register()` |
-| `assets/display/style.css` | 417 | TV-scaled styles (incl. Blackjack's cards and seats, Sea Siege's portrait/landscape boards, moving water, turn banner, target glow, toasts and flash; tactical terrain, character portrait animations and damage numbers) |
+| `assets/display/style.css` | 430 | TV-scaled styles (incl. Blackjack's cards and seats, Sea Siege's portrait/landscape boards, moving water, turn banner, target glow, toasts and flash; tactical terrain, character portrait animations and damage numbers) |
 | `assets/display/games/tictactoe.js` | 36 | Tic Tac Toe table renderer |
 | `assets/display/games/colorclash.js` | 69 | Color Clash table renderer (wild grid, pending penalty) |
 | `assets/display/games/seasiege.js` | 129 | Sea Siege table renderer (placing status, turn banner and target glow, host's board first, wrecks from `games/seasiege/*.png`, toasts and flash for new shots, remembered across redraws) |

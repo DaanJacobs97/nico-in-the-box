@@ -43,7 +43,9 @@ class BlackjackTableArea extends StatelessWidget {
   Widget build(BuildContext context) {
     final seats = (table['seats']! as List<Object?>).cast<Json>();
     final turn = table['turn'] as Json?;
-    return SingleChildScrollView(
+    // The header and dealer stay at the top; the seats sit in the middle of
+    // the space left (and scroll when they don't fit).
+    return Padding(
       padding: EdgeInsets.all(12 * scale),
       child: Column(
         children: [
@@ -55,26 +57,33 @@ class BlackjackTableArea extends StatelessWidget {
           SizedBox(height: 8 * scale),
           BlackjackDealer(dealer: table['dealer']! as Json, scale: scale),
           SizedBox(height: 12 * scale),
-          Wrap(
-            spacing: 10 * scale,
-            runSpacing: 10 * scale,
-            alignment: WrapAlignment.center,
-            children: [
-              for (final seat in seats)
-                BlackjackSeat(
-                  key: ValueKey('bj-seat-${seat['id']}'),
-                  seat: seat,
-                  name: seat['id'] == myId
-                      ? 'You'
-                      : nameOf(seat['id']! as String),
-                  chipsMode: table['mode'] == 'chips',
-                  turnHand: turn?['player'] == seat['id']
-                      ? turn!['hand'] as int
-                      : null,
-                  between: table['playing'] != true,
-                  scale: scale,
+          Expanded(
+            child: Center(
+              child: SingleChildScrollView(
+                child: Wrap(
+                  key: const ValueKey('bj-seats'),
+                  spacing: 10 * scale,
+                  runSpacing: 10 * scale,
+                  alignment: WrapAlignment.center,
+                  children: [
+                    for (final seat in seats)
+                      BlackjackSeat(
+                        key: ValueKey('bj-seat-${seat['id']}'),
+                        seat: seat,
+                        name: seat['id'] == myId
+                            ? 'You'
+                            : nameOf(seat['id']! as String),
+                        chipsMode: table['mode'] == 'chips',
+                        turnHand: turn?['player'] == seat['id']
+                            ? turn!['hand'] as int
+                            : null,
+                        between: table['playing'] != true,
+                        scale: scale,
+                      ),
+                  ],
                 ),
-            ],
+              ),
+            ),
           ),
         ],
       ),

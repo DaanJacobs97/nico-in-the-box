@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nico_shared/games/blackjack/blackjack_cards.dart';
 import 'package:nico_shared/games/blackjack/blackjack_game.dart';
+import 'package:nico_shared/games/blackjack/blackjack_table.dart';
 import 'package:nico_shared/games/blackjack/blackjack_view.dart';
 import 'package:nico_shared/games/game_views.dart';
 import 'package:nico_shared/net/protocol.dart';
@@ -204,6 +205,16 @@ void main() {
     expect(find.text('Bob'), findsOneWidget);
     expect(find.byKey(const ValueKey('bj-card-back')), findsOneWidget);
     expect(find.textContaining('First to 5 wins'), findsOneWidget);
+    // The seats sit in the middle of the space below the dealer.
+    final dealerBottom = tester
+        .getBottomLeft(find.byKey(const ValueKey('bj-dealer')))
+        .dy;
+    final areaBottom = tester.getBottomLeft(find.byType(BlackjackTableArea)).dy;
+    final seats = tester.getRect(find.byKey(const ValueKey('bj-seats')));
+    final above = seats.top - dealerBottom;
+    final below = areaBottom - seats.bottom;
+    expect(above, greaterThan(100), reason: 'not stuck under the dealer');
+    expect(above - below, moreOrLessEquals(0, epsilon: 60));
   });
 
   testWidgets('a full table of eight fits a phone and a TV', (tester) async {

@@ -415,7 +415,20 @@ h2 { font-size: 1.6rem; margin: 0; font-weight: 500; color: var(--muted); }
 .bj-dealer { display: flex; flex-direction: column; align-items: center; gap: 0.8vmin; }
 .bj-dealer .pcard { width: 8vmin; height: 11.2vmin; font-size: 3.6vmin; }
 .bj-dealer .name, .bj-seat .name { font-size: 1.4rem; font-weight: 700; }
-.bj-seats { display: flex; flex-wrap: wrap; gap: 1.2vmin; justify-content: center; }
+/* The seats take the space below the dealer and sit in its middle. */
+.bj-seats {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.2vmin;
+  justify-content: center;
+  align-content: center;
+  /* When they don't fit, start at the top instead of cutting it off. */
+  align-content: safe center;
+  align-items: center;
+}
 .bj-seat {
   background: var(--panel);
   border: 3px solid transparent;
