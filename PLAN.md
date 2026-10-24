@@ -1039,7 +1039,9 @@ Toe and Sea Siege and one for 2D games like Tactical Voxel RPG.
 
 # Blackjack
 
-**Status:** built on `feature/blackjack`.
+**Status:** built on `feature/blackjack`. The owner played it on Windows builds of the branch and asked for three
+changes, all made: your seat centred on the compact screen, the seats centred on the shared screen, and visible
+chips ("Bet: x chips") on a subtle felt table.
 
 **Request:** a gambling game, Blackjack for up to 8 players, with the dealer always AI and one deck. Options: first
 to win x hands, or most earnings after x hands.
@@ -1063,3 +1065,15 @@ to win x hands, or most earnings after x hands.
 - **A broke player sits out** (chips mode); if everyone is broke, the game ends early.
 - **Ties share the win** in both modes.
 - **Privacy:** every card is face up except the dealer's hole card, which isn't sent until the dealer plays.
+
+**After playing (owner's requests):**
+- **Compact screen:** the dealer stays at the top and your seat sits in the middle of the space below.
+- **Shared screen:** the seats sit in the middle of the space below the dealer. On the browser screen, overflowing
+  seats start at the top rather than being cut off.
+- **Chips:**
+  - Bets are drawn as stacks of casino chips, using the fewest chips: 500 purple, 100 black, 50 red, 10 blue, and
+    5 green (which 3:2 payouts can produce).
+  - Next to them: "Bet: x chips", or "(doubled)" after a double.
+  - A bet placed for the next hand shows before the deal.
+- **Felt table:** dark green, with a faint gold arc for its edge and "Blackjack pays 3 to 2 · Dealer stands on 17"
+  under the dealer. It stays dark in light mode, so what's on it uses dark colours.
