@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../net/protocol.dart';
 import '../game_views.dart';
 import 'blackjack_cards.dart';
+import 'blackjack_chips.dart';
 
 /// Blackjack on the shared screen: dealer, every seat, whose turn.
 class BlackjackTable extends StatelessWidget {
@@ -45,47 +46,49 @@ class BlackjackTableArea extends StatelessWidget {
     final turn = table['turn'] as Json?;
     // The header and dealer stay at the top; the seats sit in the middle of
     // the space left (and scroll when they don't fit).
-    return Padding(
-      padding: EdgeInsets.all(12 * scale),
-      child: Column(
-        children: [
-          Text(
-            blackjackHeader(table),
-            key: const ValueKey('bj-header'),
-            style: TextStyle(fontSize: 14 * scale),
-          ),
-          SizedBox(height: 8 * scale),
-          BlackjackDealer(dealer: table['dealer']! as Json, scale: scale),
-          SizedBox(height: 12 * scale),
-          Expanded(
-            child: Center(
-              child: SingleChildScrollView(
-                child: Wrap(
-                  key: const ValueKey('bj-seats'),
-                  spacing: 10 * scale,
-                  runSpacing: 10 * scale,
-                  alignment: WrapAlignment.center,
-                  children: [
-                    for (final seat in seats)
-                      BlackjackSeat(
-                        key: ValueKey('bj-seat-${seat['id']}'),
-                        seat: seat,
-                        name: seat['id'] == myId
-                            ? 'You'
-                            : nameOf(seat['id']! as String),
-                        chipsMode: table['mode'] == 'chips',
-                        turnHand: turn?['player'] == seat['id']
-                            ? turn!['hand'] as int
-                            : null,
-                        between: table['playing'] != true,
-                        scale: scale,
-                      ),
-                  ],
+    return BlackjackFelt(
+      child: Padding(
+        padding: EdgeInsets.all(12 * scale),
+        child: Column(
+          children: [
+            Text(
+              blackjackHeader(table),
+              key: const ValueKey('bj-header'),
+              style: TextStyle(fontSize: 14 * scale),
+            ),
+            SizedBox(height: 8 * scale),
+            BlackjackDealer(dealer: table['dealer']! as Json, scale: scale),
+            SizedBox(height: 12 * scale),
+            Expanded(
+              child: Center(
+                child: SingleChildScrollView(
+                  child: Wrap(
+                    key: const ValueKey('bj-seats'),
+                    spacing: 10 * scale,
+                    runSpacing: 10 * scale,
+                    alignment: WrapAlignment.center,
+                    children: [
+                      for (final seat in seats)
+                        BlackjackSeat(
+                          key: ValueKey('bj-seat-${seat['id']}'),
+                          seat: seat,
+                          name: seat['id'] == myId
+                              ? 'You'
+                              : nameOf(seat['id']! as String),
+                          chipsMode: table['mode'] == 'chips',
+                          turnHand: turn?['player'] == seat['id']
+                              ? turn!['hand'] as int
+                              : null,
+                          between: table['playing'] != true,
+                          scale: scale,
+                        ),
+                    ],
+                  ),
                 ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -131,6 +134,16 @@ class BlackjackDealer extends StatelessWidget {
           SizedBox(height: 60 * scale)
         else
           CardRow(cards: cards, hidden: hidden ? 1 : 0, width: 44 * scale),
+        SizedBox(height: 6 * scale),
+        // Printed on the felt, as on a real table.
+        Text(
+          'BLACKJACK PAYS 3 TO 2 · DEALER STANDS ON 17',
+          style: TextStyle(
+            fontSize: 10 * scale,
+            letterSpacing: 1.5 * scale,
+            color: const Color(0x8CFFD778),
+          ),
+        ),
       ],
     );
   }
@@ -188,7 +201,28 @@ class BlackjackSeat extends StatelessWidget {
             overflow: TextOverflow.ellipsis,
             style: TextStyle(fontSize: 15 * scale, fontWeight: FontWeight.bold),
           ),
-          Text('$score$extra', style: TextStyle(fontSize: 12 * scale)),
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (chipsMode) ...[
+                CasinoChip(value: 100, size: 18 * scale),
+                SizedBox(width: 4 * scale),
+              ],
+              Flexible(
+                child: Text(
+                  '$score$extra',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 12 * scale),
+                ),
+              ),
+            ],
+          ),
+          // A bet placed for the next hand, before the cards come.
+          if (chipsMode && between && (seat['bet']! as int) > 0)
+            Padding(
+              padding: EdgeInsets.only(top: 4 * scale),
+              child: BetChips(amount: seat['bet']! as int, size: 24 * scale),
+            ),
           for (var i = 0; i < hands.length; i++)
             BlackjackHand(
               hand: hands[i],
@@ -227,21 +261,27 @@ class BlackjackHand extends StatelessWidget {
     final total = hand['natural'] == true
         ? 'Blackjack'
         : '${hand['total']}${hand['total']! as int > 21 ? ' bust' : ''}';
-    final bet = showBet
-        ? ' · ${hand['bet']}${hand['doubled'] == true ? ' (x2)' : ''}'
-        : '';
     return Padding(
       padding: EdgeInsets.only(top: width * 0.2),
       child: Column(
         children: [
           CardRow(cards: cards, width: width),
           Text(
-            '$total$bet',
+            total,
             style: TextStyle(
               fontSize: width * 0.42,
               fontWeight: active ? FontWeight.bold : FontWeight.normal,
             ),
           ),
+          if (showBet)
+            Padding(
+              padding: EdgeInsets.only(top: width * 0.12),
+              child: BetChips(
+                amount: hand['bet']! as int,
+                size: width * 0.8,
+                doubled: hand['doubled'] == true,
+              ),
+            ),
           if (result != null) _ResultBadge(result: result, size: width * 0.4),
         ],
       ),

@@ -26,15 +26,44 @@ NicoDisplay.register('blackjack', (table, lobby, { el, nameOf }) => {
     );
   }
 
+  // Chip values, biggest first; blackjack pays 3:2, so a 5 can turn up.
+  const CHIP_VALUES = [500, 100, 50, 10, 5];
+
+  // An amount as stacks of chips, one per value, biggest left.
+  function chips(amount) {
+    const stacks = el('div', { class: 'chip-stacks' });
+    let left = amount;
+    for (const value of CHIP_VALUES) {
+      const count = Math.floor(left / value);
+      if (!count) continue;
+      left %= value;
+      const stack = el('div', { class: 'chip-stack' });
+      for (let i = 0; i < Math.min(count, 8); i++) {
+        stack.append(el('div', { class: `cchip v${value}` }, String(value)));
+      }
+      stacks.append(stack);
+    }
+    return stacks;
+  }
+
+  function betLine(amount, doubled) {
+    return el(
+      'div',
+      { class: 'bj-bet' },
+      chips(amount),
+      `Bet: ${amount} chips${doubled ? ' (doubled)' : ''}`
+    );
+  }
+
   function hand(h, active) {
     const total = h.natural ? 'Blackjack' : `${h.total}${h.total > 21 ? ' bust' : ''}`;
-    const bet = chipsMode ? ` · ${h.bet}${h.doubled ? ' (x2)' : ''}` : '';
     const result = RESULTS[h.result];
     return el(
       'div',
       { class: `bj-hand${active ? ' active' : ''}` },
       el('div', { class: 'cards' }, ...h.cards.map(card)),
-      el('div', {}, total + bet),
+      el('div', {}, total),
+      chipsMode ? betLine(h.bet, h.doubled) : '',
       result ? el('div', { class: `bj-result ${result[1]}` }, result[0]) : ''
     );
   }
@@ -61,7 +90,9 @@ NicoDisplay.register('blackjack', (table, lobby, { el, nameOf }) => {
         'div',
         { class: `bj-seat${turnHand >= 0 ? ' turn' : ''}` },
         el('div', { class: 'name' }, nameOf(lobby, s.id)),
-        el('div', { class: 'muted' }, score + extra),
+        el('div', { class: 'muted' }, chipsMode ? el('span', { class: 'cchip v100 icon' }) : '', score + extra),
+        // A bet placed for the next hand, before the cards come.
+        chipsMode && !table.playing && s.bet > 0 ? betLine(s.bet, false) : '',
         ...s.hands.map((h, i) => hand(h, i === turnHand))
       )
     );
@@ -70,13 +101,15 @@ NicoDisplay.register('blackjack', (table, lobby, { el, nameOf }) => {
   const turn = table.turn ? `${nameOf(lobby, table.turn.player)}'s turn` : '';
   return el(
     'div',
-    { class: 'game' },
+    { class: 'game bj-game' },
     el('div', { class: 'muted' }, `${header} · ${table.cardsLeft} cards left${reshuffled}`),
     el(
       'div',
       { class: 'bj-dealer' },
       el('div', { class: 'name' }, dealerLabel),
-      el('div', { class: 'cards' }, ...dealerCards)
+      el('div', { class: 'cards' }, ...dealerCards),
+      // Printed on the felt, as on a real table.
+      el('div', { class: 'bj-rule' }, 'BLACKJACK PAYS 3 TO 2 · DEALER STANDS ON 17')
     ),
     el('div', { class: 'status' }, turn),
     seats

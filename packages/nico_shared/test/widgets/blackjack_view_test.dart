@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nico_shared/games/blackjack/blackjack_cards.dart';
+import 'package:nico_shared/games/blackjack/blackjack_chips.dart';
 import 'package:nico_shared/games/blackjack/blackjack_game.dart';
 import 'package:nico_shared/games/blackjack/blackjack_table.dart';
 import 'package:nico_shared/games/blackjack/blackjack_view.dart';
@@ -251,6 +252,70 @@ void main() {
         ),
       );
       expect(tester.takeException(), isNull, reason: '$size');
+    }
+  });
+
+  test('bets break into the fewest chips, biggest first', () {
+    expect(chipBreakdown(370), {100: 3, 50: 1, 10: 2});
+    expect(chipBreakdown(1150), {500: 2, 100: 1, 50: 1});
+    expect(chipBreakdown(15), {10: 1, 5: 1});
+    expect(chipBreakdown(0), isEmpty);
+  });
+
+  testWidgets('bets show as chips with "Bet: x chips"', (tester) async {
+    // Ann doubles (5 + 6 + 10); Bob has bet but not played yet.
+    final s = game([
+      c(5),
+      c(9),
+      c(10),
+      c(6),
+      c(8),
+      c(7),
+      c(10),
+    ], chipsMode: true);
+    dealAll(s);
+    s.applyAction('a', {'type': 'double'});
+    await pumpAt(tester, const Size(500, 900), view(s, compact: false));
+    expect(tester.takeException(), isNull);
+    expect(find.text('Bet: 200 chips (doubled)'), findsOneWidget);
+    expect(find.text('Bet: 100 chips'), findsOneWidget);
+    expect(find.byKey(const ValueKey('bj-chips-200')), findsOneWidget);
+    expect(find.byType(CasinoChip), findsWidgets);
+  });
+
+  testWidgets('a bet placed for the next hand shows before the deal', (
+    tester,
+  ) async {
+    final s = game([], chipsMode: true)
+      ..applyAction('a', {'type': 'bet', 'amount': 250});
+    await pumpAt(tester, const Size(500, 900), view(s, compact: false));
+    expect(find.text('Bet: 250 chips'), findsOneWidget);
+    expect(find.text('750 chips · ready'), findsOneWidget);
+  });
+
+  testWidgets('the table sits on felt, in light mode too', (tester) async {
+    final s = game([c(10), c(9), c(5), c(7), c(8), c(6)]);
+    dealAll(s);
+    tester.view.physicalSize = const Size(400, 800);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    for (final compact in [false, true]) {
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: ThemeData(brightness: Brightness.light),
+          home: Scaffold(body: view(s, compact: compact)),
+        ),
+      );
+      expect(find.byKey(const ValueKey('bj-felt')), findsOneWidget);
+      expect(
+        find.text('BLACKJACK PAYS 3 TO 2 · DEALER STANDS ON 17'),
+        findsOneWidget,
+      );
+      // Text on the felt is light, whatever the app theme.
+      final style = DefaultTextStyle.of(
+        tester.element(find.byKey(const ValueKey('bj-dealer'))),
+      ).style;
+      expect(style.color!.computeLuminance(), greaterThan(0.5));
     }
   });
 }

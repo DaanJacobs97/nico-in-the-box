@@ -445,3 +445,47 @@ h2 { font-size: 1.6rem; margin: 0; font-weight: 500; color: var(--muted); }
 .bj-result.win { background: #43a047; }
 .bj-result.push { background: #757575; }
 .bj-result.lose { background: var(--red); }
+/* A subtle table: dark green felt and a faint gold arc for its edge. */
+.bj-game {
+  position: relative;
+  overflow: hidden;
+  background: radial-gradient(ellipse 130% 100% at 50% 0%, #0f4a37 0%, #0a3326 55%, #071f18 100%);
+}
+.bj-game::before {
+  content: '';
+  position: absolute;
+  left: -10%;
+  right: -10%;
+  top: -55%;
+  height: 100%;
+  border-bottom: 2px solid rgba(255, 215, 120, 0.18);
+  border-radius: 50%;
+  pointer-events: none;
+}
+.bj-game > * { position: relative; }
+.bj-rule { color: rgba(255, 215, 120, 0.55); font-size: 1.3vmin; letter-spacing: 0.3vmin; }
+.bj-bet { display: flex; align-items: flex-end; justify-content: center; gap: 0.8vmin; margin-top: 0.6vmin; font-size: 1rem; }
+.chip-stacks { display: flex; align-items: flex-end; gap: 0.3vmin; }
+/* Later chips sit on top of earlier ones. */
+.chip-stack { display: flex; flex-direction: column-reverse; }
+.chip-stack .cchip + .cchip { margin-bottom: -3.4vmin; }
+.cchip {
+  width: 4.2vmin;
+  height: 4.2vmin;
+  box-sizing: border-box;
+  border-radius: 50%;
+  border: 0.6vmin dashed #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-size: 1.35vmin;
+  font-weight: 900;
+  box-shadow: 0 0.35vmin 0 rgba(0, 0, 0, 0.35);
+}
+.cchip.icon { display: inline-flex; width: 2.4vmin; height: 2.4vmin; border-width: 0.4vmin; margin-right: 0.5vmin; vertical-align: middle; }
+.cchip.v500 { background: #7b1fa2; }
+.cchip.v100 { background: #212121; }
+.cchip.v50 { background: #d32f2f; }
+.cchip.v10 { background: #1565c0; }
+.cchip.v5 { background: #2e7d32; }

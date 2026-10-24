@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../net/protocol.dart';
 import '../game_views.dart';
+import 'blackjack_chips.dart';
 import 'blackjack_game.dart';
 import 'blackjack_table.dart';
 
@@ -91,39 +92,41 @@ class BlackjackView extends StatelessWidget {
         final scale = (constraints.maxWidth / 360).clamp(1.0, 1.8);
         // The dealer stays at the top; your seat sits in the middle of the
         // space left (and scrolls when a split makes it tall).
-        return Column(
-          children: [
-            Padding(
-              padding: const EdgeInsets.all(12),
-              child: BlackjackDealer(
-                dealer: view['dealer']! as Json,
-                scale: scale,
-              ),
-            ),
-            Expanded(
-              child: Center(
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
-                  child: mine == null
-                      ? null
-                      : BlackjackSeat(
-                          key: const ValueKey('bj-my-seat'),
-                          seat: mine,
-                          name: 'You',
-                          chipsMode: view['mode'] == 'chips',
-                          between: view['playing'] != true,
-                          turnHand:
-                              (view['turn'] as Json?)?['player'] == ctx.myId
-                              ? (view['turn']! as Json)['hand'] as int
-                              : null,
-                          scale: scale * 1.3,
-                        ),
+        return BlackjackFelt(
+          child: Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.all(12),
+                child: BlackjackDealer(
+                  dealer: view['dealer']! as Json,
+                  scale: scale,
                 ),
               ),
-            ),
-            status,
-            controls,
-          ],
+              Expanded(
+                child: Center(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    child: mine == null
+                        ? null
+                        : BlackjackSeat(
+                            key: const ValueKey('bj-my-seat'),
+                            seat: mine,
+                            name: 'You',
+                            chipsMode: view['mode'] == 'chips',
+                            between: view['playing'] != true,
+                            turnHand:
+                                (view['turn'] as Json?)?['player'] == ctx.myId
+                                ? (view['turn']! as Json)['hand'] as int
+                                : null,
+                            scale: scale * 1.3,
+                          ),
+                  ),
+                ),
+              ),
+              status,
+              controls,
+            ],
+          ),
         );
       },
     );
