@@ -163,6 +163,13 @@ void main() {
     expect(tester.takeException(), isNull);
     expect(find.byKey(const ValueKey('bj-dealer')), findsOneWidget);
     expect(find.byKey(const ValueKey('bj-my-seat')), findsOneWidget);
+    // Your seat sits in the middle of the space below the dealer.
+    final top = tester.getBottomLeft(find.byKey(const ValueKey('bj-dealer')));
+    final bottom = tester.getTopLeft(find.byKey(const ValueKey('bj-status')));
+    expect(
+      tester.getCenter(find.byKey(const ValueKey('bj-my-seat'))).dy,
+      moreOrLessEquals((top.dy + bottom.dy) / 2, epsilon: 13),
+    );
     expect(find.text('Bob'), findsNothing);
     expect(find.byKey(const ValueKey('bj-action-stand')), findsOneWidget);
   });
