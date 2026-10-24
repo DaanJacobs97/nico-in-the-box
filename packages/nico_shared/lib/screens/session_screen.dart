@@ -232,7 +232,7 @@ class _SessionScreenState extends State<SessionScreen> {
     showDialog<void>(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: const Color(0xff19221c),
+        backgroundColor: const Color(0xff171220),
         title: const Text('Every oath has a cost.'),
         content: const Text(
           'Activate a unit to play its own five-card hand. Each unit gets '

@@ -20,70 +20,95 @@ class _UnitActivationCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final art = _characterPortraitFor(unit);
     final fill = unit['completed'] == true;
+    final health = (unit['hp'] as int) / (unit['maxHp'] as int);
     final face = AnimatedContainer(
       duration: const Duration(milliseconds: 200),
-      width: compact ? 64 : 56,
-      height: compact ? 90 : 146,
+      width: compact ? 64 : 174,
+      height: compact ? 90 : 72,
       decoration: BoxDecoration(
-        color: selected ? const Color(0xff293026) : const Color(0xff1b2420),
+        gradient: LinearGradient(
+          colors: selected
+              ? const [Color(0xff392b4b), Color(0xff20182c)]
+              : const [Color(0xff282235), Color(0xff191523)],
+        ),
         border: Border.all(
-          color: selected ? const Color(0xffc4aa72) : const Color(0xff4b5548),
+          color: selected ? const Color(0xffd2b9ed) : const Color(0xff655675),
+          width: selected ? 2 : 1,
         ),
         boxShadow: selected
-            ? const [BoxShadow(color: Color(0x22b69b4b), blurRadius: 18)]
+            ? const [BoxShadow(color: Color(0x33c5a8e4), blurRadius: 15)]
             : null,
       ),
-      padding: const EdgeInsets.all(5),
+      padding: const EdgeInsets.all(6),
       child: Opacity(
-        opacity: disabled || fill ? 0.35 : 1,
-        child: Column(
-          children: [
-            SizedBox(
-              height: compact ? 31 : 67,
-              child: art == null
-                  ? const Icon(Icons.person_outline, color: Color(0xff909782))
-                  : Image.asset(
-                      art,
-                      package: 'nico_shared',
-                      fit: BoxFit.contain,
-                      filterQuality: FilterQuality.medium,
-                      errorBuilder: (context, error, stackTrace) =>
-                          const Icon(Icons.person_outline),
+        opacity: disabled || fill ? 0.42 : 1,
+        child: compact
+            ? Column(
+                children: [
+                  Expanded(child: _unitArt(art)),
+                  Text(
+                    unit['name'] as String,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(fontFamily: 'Georgia', fontSize: 9),
+                  ),
+                  Text(
+                    '${unit['hp']}/${unit['maxHp']}',
+                    style: const TextStyle(
+                      color: Color(0xffd7c9e5),
+                      fontSize: 8,
                     ),
-            ),
-            Text(
-              unit['name'] as String,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontFamily: 'Georgia',
-                fontSize: compact ? 9 : 11,
+                  ),
+                ],
+              )
+            : Row(
+                children: [
+                  SizedBox(width: 42, child: _unitArt(art)),
+                  const SizedBox(width: 7),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          unit['name'] as String,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontFamily: 'Georgia',
+                            fontSize: 13,
+                          ),
+                        ),
+                        const SizedBox(height: 3),
+                        Text(
+                          '${unit['hp']}/${unit['maxHp']} HP · MOV ${unit['movement']}',
+                          style: const TextStyle(
+                            color: Color(0xffc7b9d5),
+                            fontSize: 8,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(2),
+                          child: LinearProgressIndicator(
+                            value: health,
+                            minHeight: 4,
+                            backgroundColor: const Color(0xff40364b),
+                            color: const Color(0xffbea3df),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 5),
+                  Icon(
+                    selected ? Icons.check_circle : Icons.play_circle_outline,
+                    color: const Color(0xffd2b9ed),
+                    size: 17,
+                  ),
+                ],
               ),
-            ),
-            const Spacer(),
-            Text(
-              '${unit['hp']}/${unit['maxHp']} HP',
-              style: const TextStyle(color: Color(0xffaab2a0), fontSize: 8),
-            ),
-            SizedBox(height: compact ? 2 : 4),
-            ClipRRect(
-              borderRadius: BorderRadius.circular(2),
-              child: LinearProgressIndicator(
-                value: (unit['hp'] as int) / (unit['maxHp'] as int),
-                minHeight: 4,
-                backgroundColor: const Color(0xff333d32),
-                color: const Color(0xffa3af80),
-              ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              'MOV ${unit['movement']} · MP ${unit['mana']}',
-              maxLines: 1,
-              style: const TextStyle(color: Color(0xffaab2a0), fontSize: 7),
-            ),
-          ],
-        ),
       ),
     );
     return Draggable<_TacticalDragPayload>(
@@ -97,6 +122,17 @@ class _UnitActivationCard extends StatelessWidget {
       child: GestureDetector(onTap: disabled ? null : onTap, child: face),
     );
   }
+
+  Widget _unitArt(String? art) => art == null
+      ? const Icon(Icons.person_outline, color: Color(0xffb9a8ca))
+      : Image.asset(
+          art,
+          package: 'nico_shared',
+          fit: BoxFit.contain,
+          filterQuality: FilterQuality.medium,
+          errorBuilder: (context, error, stackTrace) =>
+              const Icon(Icons.person_outline),
+        );
 }
 
 class _TacticalHandCard extends StatelessWidget {
@@ -158,7 +194,7 @@ class _TacticalHandCard extends StatelessWidget {
         gradient: const LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [Color(0xff586351), Color(0xff25342c), Color(0xff17231c)],
+          colors: [Color(0xff493957), Color(0xff292137), Color(0xff171321)],
         ),
         border: Border.all(
           color: selected
@@ -212,7 +248,7 @@ class _TacticalHandCard extends StatelessWidget {
                         bottom: Radius.circular(4),
                       ),
                       gradient: const RadialGradient(
-                        colors: [Color(0x4496a47b), Color(0xff17231e)],
+                        colors: [Color(0x449a80bf), Color(0xff171321)],
                       ),
                     ),
                     child: Center(
@@ -276,7 +312,7 @@ class _TacticalHandCard extends StatelessWidget {
                   shape: BoxShape.circle,
                   border: Border.all(color: const Color(0xffc1b17e), width: 2),
                   gradient: const RadialGradient(
-                    colors: [Color(0xff65775a), Color(0xff1d3023)],
+                    colors: [Color(0xff77628e), Color(0xff21192e)],
                   ),
                   boxShadow: const [
                     BoxShadow(color: Colors.black54, blurRadius: 6),
@@ -326,7 +362,7 @@ class _TacticalHandCard extends StatelessWidget {
                     ),
                     child: const Text(
                       'RETAINED',
-                      style: TextStyle(color: Color(0xff17221a), fontSize: 7),
+                      style: TextStyle(color: Color(0xff191321), fontSize: 7),
                     ),
                   ),
                 ),

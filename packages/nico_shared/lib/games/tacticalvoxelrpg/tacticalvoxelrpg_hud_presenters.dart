@@ -88,8 +88,8 @@ class _TacticalPortraitPanel extends StatelessWidget {
               child: LinearProgressIndicator(
                 value: maxHp == 0 ? 0 : hp / maxHp,
                 minHeight: 4,
-                backgroundColor: const Color(0xff333d32),
-                color: const Color(0xffa3af80),
+                backgroundColor: const Color(0xff3d3348),
+                color: const Color(0xffc8ade9),
               ),
             ),
             const SizedBox(height: 12),
@@ -119,69 +119,82 @@ class _SquadHealthRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => IgnorePointer(
-    child: Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        for (final unit in units)
-          Container(
-            width: 66,
-            margin: const EdgeInsets.only(right: 8),
-            padding: const EdgeInsets.all(5),
-            decoration: BoxDecoration(
-              color: const Color(0xd9141b19),
-              border: Border.all(
-                color: unit['id'] == activeId
-                    ? const Color(0xffcdb37b)
-                    : const Color(0xff657364),
+    child: SizedBox(
+      width: 176,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          for (final unit in units)
+            Container(
+              height: 53,
+              margin: const EdgeInsets.only(bottom: 5),
+              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 4),
+              decoration: BoxDecoration(
+                color: const Color(0xe91b1525),
+                border: Border.all(
+                  color: unit['id'] == activeId
+                      ? const Color(0xffd2b9ed)
+                      : const Color(0xff655675),
+                ),
+              ),
+              child: Row(
+                children: [
+                  SizedBox(
+                    width: 34,
+                    child: _characterPortraitFor(unit) == null
+                        ? const Icon(Icons.person_outline)
+                        : Image.asset(
+                            _characterPortraitFor(unit)!,
+                            package: 'nico_shared',
+                            fit: BoxFit.contain,
+                            errorBuilder: (context, error, stackTrace) =>
+                                const SizedBox.shrink(),
+                          ),
+                  ),
+                  const SizedBox(width: 7),
+                  Expanded(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Flexible(
+                              child: Text(
+                                unit['name'] as String,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(fontSize: 9),
+                              ),
+                            ),
+                            Text(
+                              '${unit['hp']}/${unit['maxHp']}',
+                              style: const TextStyle(
+                                fontSize: 8,
+                                color: Color(0xffe0d5f0),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 5),
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(2),
+                          child: LinearProgressIndicator(
+                            value: (unit['hp'] as int) / (unit['maxHp'] as int),
+                            minHeight: 5,
+                            backgroundColor: const Color(0xff3d3348),
+                            color: const Color(0xffc8ade9),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ),
             ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                SizedBox(
-                  height: 51,
-                  child: _characterPortraitFor(unit) == null
-                      ? const Icon(Icons.person_outline)
-                      : Image.asset(
-                          _characterPortraitFor(unit)!,
-                          package: 'nico_shared',
-                          fit: BoxFit.contain,
-                          errorBuilder: (context, error, stackTrace) =>
-                              const SizedBox.shrink(),
-                        ),
-                ),
-                const SizedBox(height: 3),
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(2),
-                  child: LinearProgressIndicator(
-                    value: (unit['hp'] as int) / (unit['maxHp'] as int),
-                    minHeight: 4,
-                    backgroundColor: const Color(0xff333d32),
-                    color: const Color(0xffa3af80),
-                  ),
-                ),
-                const SizedBox(height: 3),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Flexible(
-                      child: Text(
-                        unit['name'] as String,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(fontSize: 8),
-                      ),
-                    ),
-                    Text(
-                      '${unit['hp']}/${unit['maxHp']}',
-                      style: const TextStyle(fontSize: 7),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-      ],
+        ],
+      ),
     ),
   );
 }
@@ -197,7 +210,7 @@ class _BattleStatusCard extends StatelessWidget {
     child: Container(
       padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 10),
       decoration: BoxDecoration(
-        color: const Color(0xe5101714),
+        color: const Color(0xe5171220),
         border: Border.all(color: const Color(0x40888a63)),
       ),
       child: Column(

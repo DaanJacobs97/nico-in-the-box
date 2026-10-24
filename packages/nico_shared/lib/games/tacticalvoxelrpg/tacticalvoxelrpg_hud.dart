@@ -16,6 +16,8 @@ class _TacticalHud extends StatelessWidget {
     required this.hand,
     required this.selectedCardId,
     required this.mode,
+    required this.handCollapsed,
+    required this.onToggleHand,
     required this.canAct,
     required this.canEndTurn,
     required this.onActivate,
@@ -32,6 +34,8 @@ class _TacticalHud extends StatelessWidget {
   final List<Map<String, Object?>> hand;
   final int? selectedCardId;
   final String? mode;
+  final bool handCollapsed;
+  final VoidCallback onToggleHand;
   final bool canAct;
   final bool canEndTurn;
   final ValueChanged<String> onActivate;
@@ -54,7 +58,7 @@ class _TacticalHud extends StatelessWidget {
             gradient: LinearGradient(
               begin: Alignment.topCenter,
               end: Alignment.bottomCenter,
-              colors: [Color(0x00101513), Color(0xc90d1311), Color(0xf20d1311)],
+              colors: [Color(0x0015101d), Color(0xe2141020), Color(0xf8120e1b)],
               stops: [0, 0.13, 0.52],
             ),
           ),
@@ -81,7 +85,7 @@ class _TacticalHud extends StatelessWidget {
       const SizedBox(width: 22),
       Expanded(child: _handColumn(context)),
       const SizedBox(width: 22),
-      SizedBox(width: 155, child: _turnControls(context)),
+      SizedBox(width: 166, child: _turnControls(context)),
     ],
   );
 
@@ -94,7 +98,29 @@ class _TacticalHud extends StatelessWidget {
       ),
       if (active != null) ...[
         const SizedBox(height: 4),
-        SizedBox(height: 176, child: _handCards(context, compact: true)),
+        SizedBox(
+          height: handCollapsed ? 70 : 176,
+          child: Row(
+            children: [
+              Expanded(
+                child: handCollapsed
+                    ? ClipRect(child: _handCards(context, compact: true))
+                    : _handCards(context, compact: true),
+              ),
+              IconButton(
+                key: const ValueKey('tacticalvoxelrpg-toggle-hand'),
+                tooltip: handCollapsed
+                    ? 'Show action hand'
+                    : 'Hide action hand',
+                onPressed: onToggleHand,
+                icon: Icon(
+                  handCollapsed ? Icons.expand_less : Icons.expand_more,
+                  color: const Color(0xffd2b9ed),
+                ),
+              ),
+            ],
+          ),
+        ),
       ],
       const SizedBox(height: 4),
       _compactControls(context),
@@ -106,8 +132,7 @@ class _TacticalHud extends StatelessWidget {
     children: [
       const _HudLabel('YOUR COMPANY'),
       const SizedBox(height: 7),
-      _companyRow(context, activeId),
-      const Spacer(),
+      Expanded(child: _companyRow(context, activeId)),
       Text(
         active == null ? 'SELECT A UNIT' : 'UNIT COMMITTED',
         style: const TextStyle(
@@ -119,8 +144,8 @@ class _TacticalHud extends StatelessWidget {
       const SizedBox(height: 5),
       Text(
         active == null
-            ? 'Choose a hero to begin their activation.'
-            : 'Finish this activation before changing heroes.',
+            ? 'Tap a hero card or drag it onto the battlefield to play it.'
+            : 'Finish this activation before playing another hero.',
         maxLines: 2,
         style: const TextStyle(color: Color(0xff8f9a8c), fontSize: 10),
       ),
@@ -131,35 +156,79 @@ class _TacticalHud extends StatelessWidget {
     BuildContext context,
     Object? activeId, {
     bool compact = false,
-  }) => Row(
-    crossAxisAlignment: CrossAxisAlignment.end,
-    children: [
+  }) {
+    final cards = [
       for (final unit in units.where((unit) => unit['owner'] == ownerId))
-        Expanded(
-          child: Padding(
-            padding: const EdgeInsets.only(right: 4),
-            child: _UnitActivationCard(
-              key: ValueKey('tacticalvoxelrpg-activate-${unit['id']}'),
-              unit: unit,
-              selected: unit['id'] == activeId,
-              compact: compact,
-              disabled:
-                  !canAct ||
-                  unit['completed'] == true ||
-                  activeId != null && unit['id'] != activeId,
-              onTap: () => onActivate(unit['id']! as String),
+        _UnitActivationCard(
+          key: ValueKey('tacticalvoxelrpg-activate-${unit['id']}'),
+          unit: unit,
+          selected: unit['id'] == activeId,
+          compact: compact,
+          disabled:
+              !canAct ||
+              unit['completed'] == true ||
+              activeId != null && unit['id'] != activeId,
+          onTap: () => onActivate(unit['id']! as String),
+        ),
+    ];
+    if (compact) {
+      return Row(
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [for (final card in cards) Expanded(child: card)],
+      );
+    }
+    return Column(
+      children: [
+        for (final card in cards)
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.only(bottom: 5),
+              child: card,
             ),
           ),
-        ),
-    ],
-  );
+      ],
+    );
+  }
 
   Widget _handColumn(BuildContext context) => Column(
     crossAxisAlignment: CrossAxisAlignment.stretch,
     children: [
       _handHeader(context),
       const SizedBox(height: 3),
-      Expanded(child: _handCards(context, compact: false)),
+      Expanded(
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Expanded(
+              child: handCollapsed
+                  ? Align(
+                      alignment: Alignment.topCenter,
+                      child: SizedBox(
+                        height: 70,
+                        child: ClipRect(
+                          child: _handCards(context, compact: false),
+                        ),
+                      ),
+                    )
+                  : _handCards(context, compact: false),
+            ),
+            SizedBox(
+              width: 40,
+              child: IconButton(
+                key: const ValueKey('tacticalvoxelrpg-toggle-hand'),
+                tooltip: handCollapsed
+                    ? 'Show action hand'
+                    : 'Hide action hand',
+                onPressed: onToggleHand,
+                icon: Icon(
+                  handCollapsed ? Icons.expand_less : Icons.expand_more,
+                  color: const Color(0xffd2b9ed),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
     ],
   );
 
@@ -304,6 +373,7 @@ class _TacticalHud extends StatelessWidget {
           ],
         ),
       const Spacer(),
+      if (active != null) ...[_retainPouch(context), const SizedBox(height: 7)],
       if (active != null) ...[
         TextButton.icon(
           key: const ValueKey('tacticalvoxelrpg-finish-unit'),
@@ -316,8 +386,10 @@ class _TacticalHud extends StatelessWidget {
         key: const ValueKey('tacticalvoxelrpg-end-turn'),
         onPressed: canAct && canEndTurn ? onEndTurn : null,
         style: FilledButton.styleFrom(
-          backgroundColor: const Color(0xffbda777),
-          foregroundColor: const Color(0xff151b16),
+          backgroundColor: const Color(0xffbfa5df),
+          foregroundColor: const Color(0xff181322),
+          disabledBackgroundColor: const Color(0xff30283b),
+          disabledForegroundColor: const Color(0xffa99ab7),
           shape: const RoundedRectangleBorder(borderRadius: BorderRadius.zero),
           padding: const EdgeInsets.symmetric(vertical: 15, horizontal: 8),
         ),
@@ -342,6 +414,105 @@ class _TacticalHud extends StatelessWidget {
         ),
     ],
   );
+
+  Widget _retainPouch(BuildContext context) {
+    final retainedId = active?['retainedCardId'];
+    final retained = hand.where((card) => card['id'] == retainedId).firstOrNull;
+    return DragTarget<_TacticalDragPayload>(
+      key: const ValueKey('tacticalvoxelrpg-retain-pouch'),
+      onWillAcceptWithDetails: (details) =>
+          details.data.cardId != null && details.data.unitId == active?['id'],
+      onAcceptWithDetails: (details) => onRetainCard(details.data.cardId!),
+      builder: (context, candidates, rejected) => OutlinedButton(
+        onPressed: active == null ? null : () => _showRetainPicker(context),
+        style: OutlinedButton.styleFrom(
+          alignment: Alignment.centerLeft,
+          backgroundColor: const Color(0xff21182d),
+          side: BorderSide(
+            color: candidates.isNotEmpty
+                ? const Color(0xffd4b9f0)
+                : const Color(0xff79668d),
+          ),
+          padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 8),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+        ),
+        child: Row(
+          children: [
+            Icon(
+              retained == null ? Icons.inbox_outlined : Icons.inbox,
+              size: 21,
+              color: const Color(0xffd2b9ed),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'RETAIN ${retained == null ? '0/1' : '1/1'}',
+                    style: const TextStyle(
+                      fontSize: 9,
+                      letterSpacing: 1,
+                      color: Color(0xffd8c6e8),
+                    ),
+                  ),
+                  Text(
+                    retained?['name'] as String? ??
+                        (candidates.isNotEmpty
+                            ? 'Drop to retain'
+                            : 'Choose a card'),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: Color(0xffa89ab8),
+                      fontSize: 9,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showRetainPicker(BuildContext context) {
+    showDialog<void>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: const Color(0xff1b1525),
+        title: Text('${active!['name']} · retain pouch'),
+        content: SizedBox(
+          width: 330,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              for (final card in hand)
+                ListTile(
+                  leading: Text(
+                    card['icon'] as String,
+                    style: const TextStyle(
+                      fontSize: 23,
+                      color: Color(0xffd2b9ed),
+                    ),
+                  ),
+                  title: Text(card['name'] as String),
+                  subtitle: Text('${card['cost']} AP · ${card['type']}'),
+                  trailing: card['id'] == active!['retainedCardId']
+                      ? const Icon(Icons.check, color: Color(0xffd2b9ed))
+                      : null,
+                  onTap: () {
+                    onRetainCard(card['id']! as int);
+                    Navigator.of(context).pop();
+                  },
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 
   Widget _pileButton(
     BuildContext context,
@@ -378,6 +549,14 @@ class _TacticalHud extends StatelessWidget {
           onPressed: onFinish,
           child: const Text('Finish unit'),
         ),
+      if (active != null)
+        TextButton.icon(
+          onPressed: () => _showRetainPicker(context),
+          icon: const Icon(Icons.inbox_outlined, size: 15),
+          label: Text(
+            'Retain ${active!['retainedCardId'] == null ? '0/1' : '1/1'}',
+          ),
+        ),
       FilledButton(
         key: const ValueKey('tacticalvoxelrpg-end-turn'),
         onPressed: canAct && canEndTurn ? onEndTurn : null,
@@ -398,7 +577,7 @@ class _TacticalPileDialog extends StatelessWidget {
     final sorted = [...cards]
       ..sort((a, b) => (a['name'] as String).compareTo(b['name'] as String));
     return AlertDialog(
-      backgroundColor: const Color(0xff19221c),
+      backgroundColor: const Color(0xff171220),
       title: Text(title, style: const TextStyle(fontFamily: 'Georgia')),
       content: SizedBox(
         width: 360,
