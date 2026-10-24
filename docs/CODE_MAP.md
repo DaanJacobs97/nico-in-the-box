@@ -95,13 +95,14 @@ Lines are approximate, so you can tell big files from small ones.
 | `packages/nico_shared/lib/games/seasiege/sea_effects.dart` | 307 | Turn and shot effects for both views: `seaTargetOf`, `TurnBanner` (gold, pulsing), `SeaShotFeed` (new shots only, 3 s each), `SeaToastLayer`, `SeaBoardPanel` (title, crosshair, dimming, toasts) |
 | `packages/nico_shared/lib/games/seasiege/seasiege_sprites.dart` | 222 | `paintShip` (top-down art for each ship type, intact or wrecked; also exported as the browser PNGs), `ShipSprite` |
 | `packages/nico_shared/lib/games/seasiege/seasiege_table.dart` | 152 | `SeaBoard`, `hostFirst`, `describeShot`, `SeaSiegeTable` (shared screen: "Ann is firing at Bob's fleet" banner, host's board first, side by side when wide, stacked when tall, toasts over the board hit) |
-| `packages/nico_shared/lib/games/tacticalvoxelrpg/tacticalvoxelrpg_game.dart` | 633 | Tactical Voxel RPG engine: squads, card activations, terrain movement profiles, combat, traps and solo AI |
+| `packages/nico_shared/lib/games/tacticalvoxelrpg/tacticalvoxelrpg_game.dart` | 627 | Tactical Voxel RPG engine: pre-battle selection, squads, terrain movement profiles, combat, traps and solo AI |
+| `packages/nico_shared/lib/games/tacticalvoxelrpg/tacticalvoxelrpg_draft.dart` | 162 | Company selection state: three-unit loadouts, per-player ready status, 60-second timeout and battle start |
 | `packages/nico_shared/lib/games/tacticalvoxelrpg/tacticalvoxelrpg_cards.dart` | 310 | Tactical RPG card definitions, private draw/discard hands, card actions, attacks and retention |
 | `packages/nico_shared/lib/games/tacticalvoxelrpg/tacticalvoxelrpg_map.dart` | 481 | Seeded 40×30 multiplayer and 15×15 solo biome maps with rivers, cliffs, roads and spawn clearings |
 | `packages/nico_shared/lib/games/tacticalvoxelrpg/tacticalvoxelrpg_movement.dart` | 151 | Character-weighted route validation, movement range and tactical AI pathing |
 | `packages/nico_shared/lib/games/tacticalvoxelrpg/tacticalvoxelrpg_sprite.dart` | 275 | Slime sprite-sheet playback and character portrait idle, walk, attack and hurt animations |
 | `packages/nico_shared/lib/games/tacticalvoxelrpg/tacticalvoxelrpg_cell.dart` | 299 | Tactical map cells, movement/attack range tints, route arrows, damage numbers and zoom controls |
-| `packages/nico_shared/lib/games/tacticalvoxelrpg/tacticalvoxelrpg_view.dart` | 509 | Full-screen battlefield layout, map centering/zoom and overlay placement |
+| `packages/nico_shared/lib/games/tacticalvoxelrpg/tacticalvoxelrpg_view.dart` | 514 | Pre-battle selection or full-screen battlefield layout, map centering/zoom and overlay placement |
 | `packages/nico_shared/lib/games/tacticalvoxelrpg/tacticalvoxelrpg_interaction.dart` | 481 | Card inspection/play, target cancellation, valid action resolution and drag/click routes |
 | `packages/nico_shared/lib/games/tacticalvoxelrpg/tacticalvoxelrpg_hud.dart` | 614 | Art-directed tactical HUD, vertical company cards, activation hand, retain pouch and turn controls |
 | `packages/nico_shared/lib/games/tacticalvoxelrpg/tacticalvoxelrpg_hud_cards.dart` | 456 | Purple unit/action card faces, tap-to-inspect and drag-to-play feedback |
@@ -109,7 +110,9 @@ Lines are approximate, so you can tell big files from small ones.
 | `packages/nico_shared/lib/games/tacticalvoxelrpg/tacticalvoxelrpg_hud_presenters.dart` | 240 | Selected hero portrait, vertical squad health strip and battle phase badge |
 | `packages/nico_shared/lib/games/tacticalvoxelrpg/tacticalvoxelrpg_board.dart` | 307 | Centered battlefield grid, route arrows and queued per-tile movement animations |
 | `packages/nico_shared/lib/games/tacticalvoxelrpg/tacticalvoxelrpg_route.dart` | 67 | Terrain-weighted path search and route planning helpers |
-| `packages/nico_shared/lib/games/tacticalvoxelrpg/tacticalvoxelrpg_table.dart` | 273 | Full-screen shared battlefield with overlaid status, damage, health, camera and zoom controls |
+| `packages/nico_shared/lib/games/tacticalvoxelrpg/tacticalvoxelrpg_table.dart` | 276 | Shared waiting-for-ready screen, then full-screen battlefield with status, damage, health, camera and zoom controls |
+| `packages/nico_shared/lib/games/tacticalvoxelrpg/tacticalvoxelrpg_selection.dart` | 600 | 60-second pre-battle screen for choosing heroes, inspecting stats/subdecks/discovered cards and readying up |
+| `packages/nico_shared/lib/games/tacticalvoxelrpg/tacticalvoxelrpg_selection_table.dart` | 40 | Shared-screen status while players select their companies and ready up |
 | `packages/nico_shared/lib/screens/session_screen.dart` | 391 | **`SessionScreen`**: lobby → game → result, notices, leaving, host-as-screen area, "Reconnecting…" banner, immersive tactical UI; keeps the screen on while open |
 | `packages/nico_shared/lib/screens/screen_awake.dart` | 28 | `ScreenAwake`: reference-counted wake lock while hosting or in a room (apps, and browsers where allowed) |
 | `packages/nico_shared/lib/screens/lobby_view.dart` | 253 | Lobby: game (host's Change game menu grouped by category), players (away ones marked), Single game screen settings (host), screen-lock tip (browsers), pinned Start button |
@@ -188,6 +191,7 @@ Lines are approximate, so you can tell big files from small ones.
 | Change a game's rules | `packages/nico_shared/lib/games/<id>/<id>_game.dart` + its test |
 | Rules the host can switch (game options) | the game's `GameDefinition.options` + read them in its `createSession`; the lobby UI, server and screens handle the rest ([ADDING_A_GAME.md](ADDING_A_GAME.md)) |
 | Add or change a network message | `protocol.dart` (`Msg`; `kProtocolVersion` is set on the PR automatically) → `game_server.dart` (handle/send) → `game_client.dart` (receive/expose) |
+| Tactical RPG pre-battle selection | `tacticalvoxelrpg_draft.dart` (server state/actions), `tacticalvoxelrpg_selection.dart` (player screen), `tacticalvoxelrpg_selection_table.dart` (shared screen) |
 | New host-only command | `protocol.dart` (`Msg`), `game_server.dart` (`hostCommands` + handler), `game_client.dart` (method), `host_controls.dart` or `lobby_view.dart` (button) |
 | Lobby UI | `lobby_view.dart`; host-only native extras arrive through `hostFooter` / `hostScreenControls` from `host_setup_screen.dart` |
 | Shared screen behaviour | server: `displayState`/`_broadcastDisplay` in `game_server.dart`; Flutter: `shared_screen_view.dart`; browser: `assets/display/app.js` |
