@@ -152,6 +152,88 @@ void _finishAndSelect(TacticalVoxelRPGSession game, String unitId) {
 }
 
 void main() {
+  group('pre-battle company selection', () {
+    test('all joined players must ready before battle starts', () {
+      final game = tacticalVoxelRPGDefinition.createSession(
+        [p1, p2],
+        0,
+        Random(16),
+        const {},
+      );
+      expect(game.viewFor('p1')['phase'], 'selection');
+      expect(game.viewFor('p2')['phase'], 'selection');
+      expect(game.viewFor('p1')['draftSelectedUnitIds'], isEmpty);
+
+      for (final unit in ['closeCombat', 'ranged', 'trapper']) {
+        game.applyAction('p1', {
+          'type': 'draftSelectUnit',
+          'unit': 'p1-$unit',
+          'selected': true,
+        });
+      }
+      game.applyAction('p1', {'type': 'draftReady', 'ready': true});
+      expect(game.viewFor('p1')['phase'], 'selection');
+      expect(game.tableView()['draftReadyCount'], 1);
+
+      for (final unit in ['closeCombat', 'ranged', 'trapper']) {
+        game.applyAction('p2', {
+          'type': 'draftSelectUnit',
+          'unit': 'p2-$unit',
+          'selected': true,
+        });
+      }
+      game.applyAction('p2', {'type': 'draftReady', 'ready': true});
+      expect(game.viewFor('p1')['phase'], 'battle');
+      expect(game.viewFor('p2')['phase'], 'battle');
+    });
+
+    test('each player must select three heroes before readying up', () {
+      final game = TacticalVoxelRPGSession(
+        [p1],
+        random: Random(17),
+        preBattleSelection: true,
+      );
+      for (final unit in ['closeCombat', 'ranged']) {
+        game.applyAction('p1', {
+          'type': 'draftSelectUnit',
+          'unit': 'p1-$unit',
+          'selected': true,
+        });
+      }
+      expect(game.viewFor('p1')['draftSelectedUnitIds'], hasLength(2));
+      expect(
+        () => game.applyAction('p1', {'type': 'draftReady', 'ready': true}),
+        throwsA(isA<GameActionException>()),
+      );
+
+      game.applyAction('p1', {
+        'type': 'draftSelectUnit',
+        'unit': 'p1-trapper',
+        'selected': true,
+      });
+      game.applyAction('p1', {'type': 'draftReady', 'ready': true});
+      expect(game.viewFor('p1')['phase'], 'battle');
+    });
+
+    test('the 60-second draft timeout starts the battle', () {
+      final game = TacticalVoxelRPGSession(
+        [p1],
+        random: Random(18),
+        preBattleSelection: true,
+        selectionDuration: Duration.zero,
+      );
+      expect(game.viewFor('p1')['draftSeconds'], 0);
+      game.applyAction('p1', {'type': 'draftTimeout'});
+      expect(game.viewFor('p1')['phase'], 'battle');
+      expect(
+        (game.tableView()['units']! as List<Object?>).cast<Json>().where(
+          (unit) => unit['owner'] == 'p1',
+        ),
+        hasLength(3),
+      );
+    });
+  });
+
   group('mission setup', () {
     test('one player receives three units and a solo AI team', () {
       final game = TacticalVoxelRPGSession([p1], random: Random(10));

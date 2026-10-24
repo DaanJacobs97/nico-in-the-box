@@ -30,6 +30,64 @@ Future<void> pumpAt(WidgetTester tester, Size size, Widget child) async {
 }
 
 void main() {
+  testWidgets('pre-battle selection shows units, decks, timer and ready', (
+    tester,
+  ) async {
+    final sent = <Json>[];
+    final session = TacticalVoxelRPGSession(
+      [vera],
+      random: Random(3),
+      preBattleSelection: true,
+    );
+    Widget view() => TacticalVoxelRPGView(
+      ctx: GameViewContext(
+        view: session.viewFor('p1'),
+        myId: 'p1',
+        lobby: lobby,
+        sendAction: (action) {
+          sent.add(action);
+          session.applyAction('p1', action);
+        },
+      ),
+    );
+
+    await pumpAt(tester, const Size(1280, 800), view());
+    expect(
+      find.byKey(const ValueKey('tacticalvoxelrpg-draft-countdown')),
+      findsOneWidget,
+    );
+    expect(find.text('01:00'), findsOneWidget);
+    expect(find.text('DISCOVERED'), findsOneWidget);
+    for (final unit in ['closeCombat', 'ranged', 'trapper']) {
+      expect(
+        find.byKey(ValueKey('tacticalvoxelrpg-draft-select-p1-$unit')),
+        findsOneWidget,
+      );
+    }
+
+    for (final unit in ['closeCombat', 'ranged', 'trapper']) {
+      await tester.tap(
+        find.byKey(ValueKey('tacticalvoxelrpg-draft-select-p1-$unit')),
+      );
+      await tester.pumpWidget(MaterialApp(home: Scaffold(body: view())));
+    }
+    await tester.tap(
+      find.byKey(const ValueKey('tacticalvoxelrpg-draft-ready')),
+    );
+    await tester.pumpWidget(MaterialApp(home: Scaffold(body: view())));
+    expect(sent, [
+      {'type': 'draftSelectUnit', 'unit': 'p1-closeCombat', 'selected': true},
+      {'type': 'draftSelectUnit', 'unit': 'p1-ranged', 'selected': true},
+      {'type': 'draftSelectUnit', 'unit': 'p1-trapper', 'selected': true},
+      {'type': 'draftReady', 'ready': true},
+    ]);
+    expect(
+      find.byKey(const ValueKey('tacticalvoxelrpg-cell-3-3')),
+      findsOneWidget,
+    );
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('wide first turn shows all three playable hero cards', (
     tester,
   ) async {
