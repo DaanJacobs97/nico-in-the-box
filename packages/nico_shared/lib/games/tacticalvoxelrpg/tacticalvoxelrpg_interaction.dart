@@ -1,6 +1,152 @@
 part of 'tacticalvoxelrpg_view.dart';
 
 extension _TacticalInteraction on _TacticalVoxelRPGViewState {
+  void _inspectUnit(Map<String, Object?> unit) {
+    final portrait = _characterPortraitFor(unit);
+    showDialog<void>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: const Color(0xff1b1525),
+        content: SizedBox(
+          width: 320,
+          child: Row(
+            children: [
+              if (portrait != null)
+                SizedBox(
+                  width: 90,
+                  height: 150,
+                  child: Image.asset(
+                    portrait,
+                    package: 'nico_shared',
+                    fit: BoxFit.contain,
+                  ),
+                ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      (unit['role'] as String).toUpperCase(),
+                      style: const TextStyle(
+                        color: Color(0xffd2b9ed),
+                        fontSize: 9,
+                        letterSpacing: 2,
+                      ),
+                    ),
+                    const SizedBox(height: 5),
+                    Text(
+                      unit['name'] as String,
+                      style: const TextStyle(
+                        fontFamily: 'Georgia',
+                        fontSize: 23,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Text('${unit['hp']}/${unit['maxHp']} health'),
+                    Text('${unit['movement']} movement · ${unit['mana']} mana'),
+                    Text(
+                      '${unit['minimumRange']}–${unit['range']} weapon range',
+                    ),
+                    const SizedBox(height: 10),
+                    Text(unit['weapon'] as String),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          const Padding(
+            padding: EdgeInsets.only(right: 8),
+            child: Text(
+              'Drag this unit card onto the battlefield to activate it.',
+              style: TextStyle(color: Color(0xffb6a8c5), fontSize: 10),
+            ),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Close'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _inspectCard(Map<String, Object?> card) {
+    final view = widget.ctx.view;
+    final active = _activeUnit(_objects(view['units']), view);
+    if (active == null) return;
+    final kind = card['kind'];
+    final range = switch (kind) {
+      'move' => '${active['movement']} tiles, weighted by terrain',
+      'attack' => '${active['minimumRange']}–${active['range']} tiles',
+      'skill' => '1–4 tiles',
+      'trap' => '1–3 tiles',
+      'overwatch' => '${active['minimumRange']}–${active['range']} tiles',
+      _ => 'See card details',
+    };
+    showDialog<void>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: const Color(0xff1b1525),
+        content: SizedBox(
+          width: 300,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                card['icon'] as String,
+                style: const TextStyle(
+                  fontFamily: 'Georgia',
+                  fontSize: 54,
+                  color: Color(0xffd2b9ed),
+                ),
+              ),
+              Text(
+                '${card['type']} · ${active['name']}',
+                style: const TextStyle(
+                  color: Color(0xffd2b9ed),
+                  fontSize: 9,
+                  letterSpacing: 1.5,
+                ),
+              ),
+              const SizedBox(height: 7),
+              Text(
+                card['name'] as String,
+                style: const TextStyle(fontFamily: 'Georgia', fontSize: 23),
+              ),
+              const SizedBox(height: 12),
+              Text('${card['cost']} AP · Range: $range'),
+              if (kind == 'skill') const Text('Costs 1 mana.'),
+              const SizedBox(height: 8),
+              Text(
+                (card['text'] as String).replaceAll(
+                  '{mov}',
+                  '${active['movement']}',
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 10),
+              const Text(
+                'Drag the card onto the battlefield to target. AP is spent only when the action resolves.',
+                textAlign: TextAlign.center,
+                style: TextStyle(color: Color(0xffb6a8c5), fontSize: 10),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Close'),
+          ),
+        ],
+      ),
+    );
+  }
+
   GridPoint? _mapPointAt(
     Offset global,
     double tileSize,
@@ -71,6 +217,15 @@ extension _TacticalInteraction on _TacticalVoxelRPGViewState {
         'trap' => 'trap',
         _ => null,
       };
+    });
+  }
+
+  void _cancelTargeting() {
+    _updateState(() {
+      _selectedCardId = null;
+      _mode = null;
+      _drawingRoute = false;
+      _draftRoute.clear();
     });
   }
 
@@ -261,6 +416,16 @@ extension _TacticalInteraction on _TacticalVoxelRPGViewState {
             ..clear()
             ..addAll(path);
         });
+        final card = _objects(active['hand'])
+            .where((entry) => entry['id'] == _selectedCardId)
+            .firstOrNull;
+        if (card != null) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted && _mode == 'route' && _selectedCardId == card['id']) {
+              _useCard(active, card, path: path);
+            }
+          });
+        }
       }
       return;
     }
@@ -271,12 +436,38 @@ extension _TacticalInteraction on _TacticalVoxelRPGViewState {
       if (card != null) {
         if (_mode == 'attack' || _mode == 'skill') {
           if (unit != null && unit['owner'] != widget.ctx.myId) {
-            _useCard(active, card, target: unit['id'] as String);
+            final distance =
+                ((unit['x'] as int) - (active['x'] as int)).abs() +
+                ((unit['y'] as int) - (active['y'] as int)).abs();
+            final minimum = _mode == 'skill'
+                ? 1
+                : active['minimumRange'] as int;
+            final maximum = _mode == 'skill' ? 4 : active['range'] as int;
+            if (distance >= minimum && distance <= maximum) {
+              _useCard(active, card, target: unit['id'] as String);
+            }
           }
           return;
         }
         if (_mode == 'trap') {
-          if (point != null) _useCard(active, card, point: point);
+          if (point != null) {
+            final mapWidth = view['width'] as int? ?? tacticalMapWidth;
+            final tile = _objects(view['tiles'])[point.y * mapWidth + point.x];
+            final occupied =
+                _unitAtUnits(units, point) != null ||
+                _objects(
+                  view['traps'],
+                ).any((trap) => trap['x'] == point.x && trap['y'] == point.y);
+            final distance =
+                (point.x - (active['x'] as int)).abs() +
+                (point.y - (active['y'] as int)).abs();
+            final onPlannedRoute = _points(active['route']).contains(point);
+            if (tile['passable'] == true &&
+                !occupied &&
+                (onPlannedRoute || distance >= 1 && distance <= 3)) {
+              _useCard(active, card, point: point);
+            }
+          }
           return;
         }
         if (_mode == 'route') return;

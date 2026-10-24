@@ -20,8 +20,8 @@ class _TacticalHud extends StatelessWidget {
     required this.onToggleHand,
     required this.canAct,
     required this.canEndTurn,
-    required this.onActivate,
-    required this.onSelectCard,
+    required this.onInspectUnit,
+    required this.onInspectCard,
     required this.onRetainCard,
     required this.onPan,
     required this.onFinish,
@@ -38,8 +38,8 @@ class _TacticalHud extends StatelessWidget {
   final VoidCallback onToggleHand;
   final bool canAct;
   final bool canEndTurn;
-  final ValueChanged<String> onActivate;
-  final ValueChanged<Map<String, Object?>> onSelectCard;
+  final ValueChanged<Map<String, Object?>> onInspectUnit;
+  final ValueChanged<Map<String, Object?>> onInspectCard;
   final ValueChanged<int> onRetainCard;
   final VoidCallback onPan;
   final VoidCallback onFinish;
@@ -144,7 +144,7 @@ class _TacticalHud extends StatelessWidget {
       const SizedBox(height: 5),
       Text(
         active == null
-            ? 'Tap a hero card or drag it onto the battlefield to play it.'
+            ? 'Drag a hero card onto the battlefield to activate it. Click to inspect.'
             : 'Finish this activation before playing another hero.',
         maxLines: 2,
         style: const TextStyle(color: Color(0xff8f9a8c), fontSize: 10),
@@ -168,7 +168,7 @@ class _TacticalHud extends StatelessWidget {
               !canAct ||
               unit['completed'] == true ||
               activeId != null && unit['id'] != activeId,
-          onTap: () => onActivate(unit['id']! as String),
+          onTap: () => onInspectUnit(unit),
         ),
     ];
     if (compact) {
@@ -321,13 +321,14 @@ class _TacticalHud extends StatelessWidget {
                   selected: hand[i]['id'] == selectedCardId,
                   retained: hand[i]['id'] == active!['retainedCardId'],
                   index: i,
+                  targeting: selectedCardId != null,
                   disabled:
                       !canAct ||
                       (active!['energy'] as int) < (hand[i]['cost'] as int) ||
+                      selectedCardId != null ||
                       hand[i]['kind'] == 'skill' &&
                           (active!['mana'] as int) < 1,
-                  onTap: () => onSelectCard(hand[i]),
-                  onDragStarted: () => onSelectCard(hand[i]),
+                  onTap: () => onInspectCard(hand[i]),
                   onRetain: () => onRetainCard(hand[i]['id']! as int),
                 ),
             ],
@@ -377,7 +378,7 @@ class _TacticalHud extends StatelessWidget {
       if (active != null) ...[
         TextButton.icon(
           key: const ValueKey('tacticalvoxelrpg-finish-unit'),
-          onPressed: onFinish,
+          onPressed: selectedCardId == null ? onFinish : null,
           icon: const Icon(Icons.check_circle_outline, size: 17),
           label: const Text('Finish unit'),
         ),
@@ -402,7 +403,7 @@ class _TacticalHud extends StatelessWidget {
       const SizedBox(height: 9),
       OutlinedButton.icon(
         key: const ValueKey('tacticalvoxelrpg-pan-map'),
-        onPressed: onPan,
+        onPressed: selectedCardId == null ? onPan : null,
         icon: const Icon(Icons.pan_tool_alt, size: 15),
         label: Text(mode == 'pan' ? 'Stop panning' : 'Pan map'),
       ),
@@ -421,10 +422,14 @@ class _TacticalHud extends StatelessWidget {
     return DragTarget<_TacticalDragPayload>(
       key: const ValueKey('tacticalvoxelrpg-retain-pouch'),
       onWillAcceptWithDetails: (details) =>
-          details.data.cardId != null && details.data.unitId == active?['id'],
+          selectedCardId == null &&
+          details.data.cardId != null &&
+          details.data.unitId == active?['id'],
       onAcceptWithDetails: (details) => onRetainCard(details.data.cardId!),
       builder: (context, candidates, rejected) => OutlinedButton(
-        onPressed: active == null ? null : () => _showRetainPicker(context),
+        onPressed: active == null || selectedCardId != null
+            ? null
+            : () => _showRetainPicker(context),
         style: OutlinedButton.styleFrom(
           alignment: Alignment.centerLeft,
           backgroundColor: const Color(0xff21182d),
@@ -520,7 +525,7 @@ class _TacticalHud extends StatelessWidget {
     Object? pile,
     int count,
   ) => TextButton(
-    onPressed: count == 0
+    onPressed: count == 0 || selectedCardId != null
         ? null
         : () => showDialog<void>(
             context: context,
@@ -539,19 +544,21 @@ class _TacticalHud extends StatelessWidget {
     children: [
       OutlinedButton.icon(
         key: const ValueKey('tacticalvoxelrpg-pan-map'),
-        onPressed: onPan,
+        onPressed: selectedCardId == null ? onPan : null,
         icon: const Icon(Icons.pan_tool_alt, size: 15),
         label: Text(mode == 'pan' ? 'Stop panning' : 'Pan'),
       ),
       if (active != null)
         TextButton(
           key: const ValueKey('tacticalvoxelrpg-finish-unit'),
-          onPressed: onFinish,
+          onPressed: selectedCardId == null ? onFinish : null,
           child: const Text('Finish unit'),
         ),
       if (active != null)
         TextButton.icon(
-          onPressed: () => _showRetainPicker(context),
+          onPressed: selectedCardId == null
+              ? () => _showRetainPicker(context)
+              : null,
           icon: const Icon(Icons.inbox_outlined, size: 15),
           label: Text(
             'Retain ${active!['retainedCardId'] == null ? '0/1' : '1/1'}',

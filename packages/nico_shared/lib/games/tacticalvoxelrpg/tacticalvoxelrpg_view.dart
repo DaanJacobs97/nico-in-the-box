@@ -71,6 +71,9 @@ class _TacticalVoxelRPGViewState extends State<TacticalVoxelRPGView> {
         ? _points(view['reachable'])
         : <GridPoint>[];
     final active = _activeUnit(units, view);
+    final targetingCard = _objects(active?['hand'])
+        .where((card) => card['id'] == _selectedCardId)
+        .firstOrNull;
     final activeRoute = _points(active?['route']);
     final canAct = view['canAct'] == true;
     final turn = view['turn'] as String?;
@@ -92,7 +95,7 @@ class _TacticalVoxelRPGViewState extends State<TacticalVoxelRPGView> {
         : canAct && active == null
         ? 'Choose a hero to begin their activation.'
         : canAct && _mode == 'route'
-        ? 'Click to preview a route, then click its arrow to move. Drag from your hero to trace it.'
+        ? 'Choose a yellow square, or drag from your hero to draw a path.'
         : canAct && (_mode == 'attack' || _mode == 'skill')
         ? 'Choose an enemy inside the selected card’s range.'
         : canAct && _mode == 'trap'
@@ -174,8 +177,26 @@ class _TacticalVoxelRPGViewState extends State<TacticalVoxelRPGView> {
               child: DragTarget<_TacticalDragPayload>(
                 onWillAcceptWithDetails: (details) {
                   final payload = details.data;
+                  if (_mapPointAt(
+                        details.offset,
+                        tileSize,
+                        mapWidth,
+                        mapHeight,
+                      ) ==
+                      null) {
+                    return false;
+                  }
                   if (payload.cardId != null) {
-                    return canAct && active?['id'] == payload.unitId;
+                    if (!canAct || active?['id'] != payload.unitId) {
+                      return false;
+                    }
+                    final card = _objects(active?['hand'])
+                        .where((entry) => entry['id'] == payload.cardId)
+                        .firstOrNull;
+                    return card != null &&
+                        (active!['energy'] as int) >= (card['cost'] as int) &&
+                        (card['kind'] != 'skill' ||
+                            (active['mana'] as int) >= 1);
                   }
                   final unit = units
                       .where((entry) => entry['id'] == payload.unitId)
@@ -371,6 +392,50 @@ class _TacticalVoxelRPGViewState extends State<TacticalVoxelRPGView> {
                   action: view['lastAction'],
                 ),
               ),
+            if (_selectedCardId != null)
+              Positioned(
+                right: compact ? 12 : 245,
+                top: compact ? 112 : 78,
+                child: _OverlayPanel(
+                  child: SizedBox(
+                    width: compact ? 210 : 220,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        _HudLabel(
+                          'PLAYING ${targetingCard?['name'] ?? 'CARD'}',
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          switch (_mode) {
+                            'route' => 'Choose a yellow square, or drag a path and click its endpoint.',
+                            'attack' || 'skill' =>
+                              'Choose a red-highlighted enemy to attack.',
+                            'trap' => 'Choose a highlighted empty square.',
+                            _ => 'Choose a valid target for this card.',
+                          },
+                          style: const TextStyle(
+                            color: Color(0xffe0d5f0),
+                            fontSize: 11,
+                            height: 1.35,
+                          ),
+                        ),
+                        Align(
+                          alignment: Alignment.centerRight,
+                          child: TextButton(
+                            key: const ValueKey(
+                              'tacticalvoxelrpg-cancel-targeting',
+                            ),
+                            onPressed: _cancelTargeting,
+                            child: const Text('Cancel'),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
             if (damage != null)
               Positioned(
                 left: 0,
@@ -411,15 +476,8 @@ class _TacticalVoxelRPGViewState extends State<TacticalVoxelRPGView> {
                       setState(() => _handCollapsed = !_handCollapsed),
                   canAct: canAct,
                   canEndTurn: view['canEndTurn'] == true,
-                  onActivate: (id) {
-                    setState(() {
-                      _selectedCardId = null;
-                      _mode = null;
-                      _draftRoute.clear();
-                    });
-                    widget.ctx.sendAction({'type': 'selectUnit', 'unit': id});
-                  },
-                  onSelectCard: _selectCard,
+                  onInspectUnit: _inspectUnit,
+                  onInspectCard: _inspectCard,
                   onRetainCard: _retainCard,
                   onPan: () =>
                       setState(() => _mode = _mode == 'pan' ? null : 'pan'),
@@ -432,7 +490,7 @@ class _TacticalVoxelRPGViewState extends State<TacticalVoxelRPGView> {
             ),
             Positioned(
               right: compact ? 8 : 230,
-              top: 72,
+              top: _selectedCardId == null ? 72 : 205,
               child: _MapZoomControls(
                 keyPrefix: 'tacticalvoxelrpg',
                 onZoomIn: () => _zoomMap(1.25),

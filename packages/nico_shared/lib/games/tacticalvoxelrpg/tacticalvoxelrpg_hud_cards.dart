@@ -119,7 +119,7 @@ class _UnitActivationCard extends StatelessWidget {
         child: Transform.rotate(angle: -0.04, child: face),
       ),
       childWhenDragging: Opacity(opacity: 0.35, child: face),
-      child: GestureDetector(onTap: disabled ? null : onTap, child: face),
+      child: GestureDetector(onTap: onTap, child: face),
     );
   }
 
@@ -146,8 +146,8 @@ class _TacticalHandCard extends StatelessWidget {
     required this.retained,
     required this.disabled,
     required this.index,
+    required this.targeting,
     required this.onTap,
-    required this.onDragStarted,
     required this.onRetain,
   });
 
@@ -159,8 +159,8 @@ class _TacticalHandCard extends StatelessWidget {
   final bool retained;
   final bool disabled;
   final int index;
+  final bool targeting;
   final VoidCallback onTap;
-  final VoidCallback onDragStarted;
   final VoidCallback onRetain;
 
   @override
@@ -222,7 +222,11 @@ class _TacticalHandCard extends StatelessWidget {
       ),
       padding: const EdgeInsets.fromLTRB(10, 12, 10, 8),
       child: Opacity(
-        opacity: disabled ? 0.55 : 1,
+        opacity: targeting
+            ? 0.3
+            : disabled
+            ? 0.55
+            : 1,
         child: Stack(
           clipBehavior: Clip.none,
           children: [
@@ -334,7 +338,7 @@ class _TacticalHandCard extends StatelessWidget {
               bottom: 0,
               right: 0,
               child: InkWell(
-                onTap: onRetain,
+                onTap: targeting ? null : onRetain,
                 child: Padding(
                   padding: const EdgeInsets.all(2),
                   child: Text(
@@ -374,14 +378,13 @@ class _TacticalHandCard extends StatelessWidget {
     return Draggable<_TacticalDragPayload>(
       key: ValueKey('tacticalvoxelrpg-draggable-card-${card['id']}'),
       data: _TacticalDragPayload.card(unitId, card['id']! as int),
-      maxSimultaneousDrags: disabled ? 0 : 1,
+      maxSimultaneousDrags: disabled || targeting ? 0 : 1,
       feedback: Material(
         color: Colors.transparent,
         child: Transform.rotate(angle: -0.025, child: face),
       ),
-      onDragStarted: onDragStarted,
       childWhenDragging: Opacity(opacity: 0.25, child: face),
-      child: GestureDetector(onTap: onTap, child: face),
+      child: GestureDetector(onTap: targeting ? null : onTap, child: face),
     );
   }
 }
