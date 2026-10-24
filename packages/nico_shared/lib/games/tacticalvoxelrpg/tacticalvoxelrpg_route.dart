@@ -29,29 +29,39 @@ extension _TacticalRoutePlanning on _TacticalVoxelRPGViewState {
       return tacticalMovementScale;
     }
 
-    final path = <GridPoint>[];
-    var current = origin;
-    var routeCost = 0;
-    while (current != target) {
-      final next = _stepToward(current, target);
-      if (next == null ||
-          next.x < 0 ||
-          next.x >= mapWidth ||
-          next.y < 0 ||
-          next.y >= mapHeight) {
-        return null;
+    final budget = (active['movement'] as int) * tacticalMovementScale;
+    final bestCost = <GridPoint, int>{origin: 0};
+    final open = <({GridPoint point, int cost, List<GridPoint> path})>[
+      (point: origin, cost: 0, path: const []),
+    ];
+    while (open.isNotEmpty) {
+      open.sort((a, b) => a.cost.compareTo(b.cost));
+      final current = open.removeAt(0);
+      if (current.cost != bestCost[current.point]) continue;
+      if (current.point == target) return current.path;
+      for (final next in [
+        GridPoint(current.point.x + 1, current.point.y),
+        GridPoint(current.point.x - 1, current.point.y),
+        GridPoint(current.point.x, current.point.y + 1),
+        GridPoint(current.point.x, current.point.y - 1),
+      ]) {
+        if (next.x < 0 ||
+            next.x >= mapWidth ||
+            next.y < 0 ||
+            next.y >= mapHeight ||
+            _unitAtUnits(units, next) != null) {
+          continue;
+        }
+        final tile = tiles[next.y * mapWidth + next.x];
+        if (tile['passable'] != true) continue;
+        final nextCost = current.cost + costOf(tile);
+        if (nextCost > budget || nextCost >= (bestCost[next] ?? 0x7fffffff)) {
+          continue;
+        }
+        bestCost[next] = nextCost;
+        open.add((point: next, cost: nextCost, path: [...current.path, next]));
       }
-      final tile = tiles[next.y * mapWidth + next.x];
-      if (tile['passable'] != true || _unitAtUnits(units, next) != null) {
-        return null;
-      }
-      routeCost += costOf(tile);
-      if (routeCost > (active['movement'] as int) * tacticalMovementScale) {
-        return null;
-      }
-      path.add(next);
-      current = next;
     }
-    return path;
+    return null;
   }
 }

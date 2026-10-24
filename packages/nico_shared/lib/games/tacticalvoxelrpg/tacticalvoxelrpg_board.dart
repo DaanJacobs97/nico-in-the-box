@@ -10,6 +10,7 @@ class _TacticalBoard extends StatefulWidget {
     required this.lastAction,
     required this.recentActions,
     required this.attackTargets,
+    required this.attackRange,
     required this.trapTargets,
     required this.tileSize,
     required this.mapWidth,
@@ -24,6 +25,7 @@ class _TacticalBoard extends StatefulWidget {
   final Object? lastAction;
   final List<Map<String, Object?>> recentActions;
   final Set<String> attackTargets;
+  final Set<GridPoint> attackRange;
   final Set<GridPoint> trapTargets;
   final double tileSize;
   final int mapWidth;
@@ -181,6 +183,10 @@ class _TacticalBoardState extends State<_TacticalBoard> {
                 trap: trap,
                 reachable: widget.reachable.contains(point),
                 route: widget.route.contains(point),
+                routeArrow: _routeArrowAt(point),
+                routeDestination:
+                    widget.route.isNotEmpty && widget.route.last == point,
+                attackRange: widget.attackRange.contains(point),
                 attackTarget:
                     unit != null &&
                     widget.attackTargets.contains(unit['id'] as String),
@@ -266,6 +272,20 @@ class _TacticalBoardState extends State<_TacticalBoard> {
       height: height,
       child: IgnorePointer(child: contents),
     );
+  }
+
+  double? _routeArrowAt(GridPoint point) {
+    final index = widget.route.indexOf(point);
+    if (index < 0) return null;
+    final adjacent = index == widget.route.length - 1
+        ? index == 0
+              ? null
+              : widget.route[index - 1]
+        : widget.route[index + 1];
+    if (adjacent == null) return 0;
+    return index == widget.route.length - 1
+        ? atan2(point.y - adjacent.y, point.x - adjacent.x)
+        : atan2(adjacent.y - point.y, adjacent.x - point.x);
   }
 
   double _attackDirectionFor(Map<String, Object?> unit) {

@@ -14,6 +14,7 @@ part 'tacticalvoxelrpg_cell.dart';
 part 'tacticalvoxelrpg_table.dart';
 part 'tacticalvoxelrpg_board.dart';
 part 'tacticalvoxelrpg_route.dart';
+part 'tacticalvoxelrpg_interaction.dart';
 part 'tacticalvoxelrpg_hud.dart';
 part 'tacticalvoxelrpg_hud_cards.dart';
 part 'tacticalvoxelrpg_hud_presenters.dart';
@@ -33,6 +34,7 @@ class _TacticalVoxelRPGViewState extends State<TacticalVoxelRPGView> {
   String? _mode;
   bool _drawingRoute = false;
   bool _ignoreNextMapUp = false;
+  bool _handCollapsed = false;
   int? _selectedCardId;
   final List<GridPoint> _draftRoute = [];
 
@@ -54,204 +56,20 @@ class _TacticalVoxelRPGViewState extends State<TacticalVoxelRPGView> {
     _mapTransform.value = vm.Matrix4.identity();
   }
 
-  GridPoint? _mapPointAt(
-    Offset global,
-    double tileSize,
-    int mapWidth,
-    int mapHeight,
-  ) {
-    final renderObject = _mapViewportKey.currentContext?.findRenderObject();
-    if (renderObject is! RenderBox) return null;
-    final local = renderObject.globalToLocal(global);
-    final scene = _mapTransform.toScene(local);
-    final pitch = tileSize + 1 / mapWidth;
-    final x = (scene.dx / pitch).floor();
-    final y = (scene.dy / pitch).floor();
-    if (x < 0 || x >= mapWidth || y < 0 || y >= mapHeight) return null;
-    return GridPoint(x, y);
+  void _updateState(VoidCallback update) {
+    if (mounted) setState(update);
   }
 
-  void _selectCard(Json card) {
-    final view = widget.ctx.view;
-    final active = _activeUnit(_objects(view['units']), view);
-    if (active == null) return;
-    final kind = card['kind'];
-    if (kind == 'overwatch') {
-      _useCard(active, card);
-      return;
-    }
-    setState(() {
-      _selectedCardId = card['id'] as int;
-      _draftRoute.clear();
-      _drawingRoute = false;
-      _mode = switch (kind) {
-        'move' => 'route',
-        'attack' => 'attack',
-        'skill' => 'skill',
-        'trap' => 'trap',
-        _ => null,
-      };
-    });
-  }
-
-  void _useCard(
-    Map<String, Object?> active,
-    Json card, {
-    List<GridPoint>? path,
-    String? target,
-    GridPoint? point,
-  }) {
-    final action = <String, Object?>{
-      'type': 'playCard',
-      'unit': active['id'],
-      'cardId': card['id'],
-      if (path != null) 'path': [for (final step in path) step.toJson()],
-      'target': ?target,
-      'x': ?point?.x,
-      'y': ?point?.y,
-    };
-    widget.ctx.sendAction(action);
-    setState(() {
-      _selectedCardId = null;
-      _mode = null;
-      _draftRoute.clear();
-      _drawingRoute = false;
-    });
-  }
-
-  void _finishActive(Map<String, Object?> active) {
-    widget.ctx.sendAction({'type': 'finishUnit', 'unit': active['id']});
-    setState(() {
-      _selectedCardId = null;
-      _mode = null;
-      _draftRoute.clear();
-    });
-  }
-
-  void _pointerDown(GridPoint? point) {
-    _draftRoute.clear();
-    _drawingRoute = false;
-    final view = widget.ctx.view;
-    final active = _activeUnit(_objects(view['units']), view);
-    if (view['canAct'] == true &&
-        _mode == 'route' &&
-        active != null &&
-        point == GridPoint(active['x']! as int, active['y']! as int)) {
-      _drawingRoute = true;
-    }
-  }
-
-  void _pointerMove(GridPoint? point) {
-    if (!_drawingRoute || point == null || _draftRoute.contains(point)) return;
-    final view = widget.ctx.view;
-    final units = _objects(view['units']);
-    final active = _activeUnit(units, view);
-    if (active == null) return;
-    final mapWidth = view['width'] as int? ?? tacticalMapWidth;
-    final origin = GridPoint(active['x']! as int, active['y']! as int);
-    final previous = _draftRoute.isEmpty ? origin : _draftRoute.last;
-    final next = _stepToward(previous, point);
-    if (next == null) return;
-    final tiles = _objects(view['tiles']);
-    final tile = tiles[next.y * mapWidth + next.x];
-    if (tile['passable'] != true || _unitAtUnits(units, next) != null) return;
-    final movement = active['movement'] as int;
-    final profile = active['terrainMovementCosts'];
-    int costOf(Map<String, Object?> routeTile) {
-      if (profile is Map<Object?, Object?>) {
-        final cost = profile[routeTile['terrain']];
-        if (cost is num) return cost.toInt();
-      }
-      return tacticalMovementScale;
-    }
-
-    final routeCost = _draftRoute.fold<int>(
-      0,
-      (total, step) => total + costOf(tiles[step.y * mapWidth + step.x]),
-    );
-    if (routeCost + costOf(tile) <= movement * tacticalMovementScale) {
-      setState(() => _draftRoute.add(next));
-    }
-  }
-
-  void _pointerUp(GridPoint? point, Map<String, Object?>? unit) {
-    final view = widget.ctx.view;
-    final units = _objects(view['units']);
-    final active = _activeUnit(units, view);
-    if (view['canAct'] != true) return;
-    if (_mode == 'pan') return;
-    if (_drawingRoute && _draftRoute.isNotEmpty && active != null) {
-      widget.ctx.sendAction({
-        'type': 'planRoute',
-        'unit': active['id'],
-        'path': [for (final step in _draftRoute) step.toJson()],
-      });
-      setState(() {
-        _drawingRoute = false;
-        _draftRoute.clear();
-      });
-      return;
-    }
-    if (_mode == 'route' && point != null && active != null) {
-      final path = _routeToTile(
-        GridPoint(active['x']! as int, active['y']! as int),
-        point,
-        active,
-        units,
-        _objects(view['tiles']),
-        view['width'] as int? ?? tacticalMapWidth,
-        view['height'] as int? ?? tacticalMapHeight,
-      );
-      if (path != null && path.isNotEmpty) {
-        widget.ctx.sendAction({
-          'type': 'planRoute',
-          'unit': active['id'],
-          'path': [for (final step in path) step.toJson()],
-        });
-        setState(() {
-          _drawingRoute = false;
-          _draftRoute.clear();
-        });
-      }
-      return;
-    }
-    if (active == null && unit != null && unit['owner'] == widget.ctx.myId) {
-      widget.ctx.sendAction({'type': 'selectUnit', 'unit': unit['id']});
-      return;
-    }
-    if (active != null && _selectedCardId != null) {
-      final cards = _objects(active['hand']);
-      final card = cards
-          .where((entry) => entry['id'] == _selectedCardId)
-          .firstOrNull;
-      if (card != null) {
-        if (_mode == 'attack' || _mode == 'skill') {
-          if (unit != null && unit['owner'] != widget.ctx.myId) {
-            _useCard(active, card, target: unit['id'] as String);
-          }
-          return;
-        }
-        if (_mode == 'trap') {
-          if (point != null) _useCard(active, card, point: point);
-          return;
-        }
-        if (_mode == 'route') return;
-      }
-    }
-    setState(() {
-      _mode = null;
-      _drawingRoute = false;
-    });
-  }
-
-  @override
   @override
   Widget build(BuildContext context) {
     final view = widget.ctx.view;
     final units = _objects(view['units']);
     final tiles = _objects(view['tiles']);
     final traps = _objects(view['traps']);
-    final reachable = _points(view['reachable']);
+    final availableMovement = _mode == 'route' && _selectedCardId != null;
+    final reachable = availableMovement
+        ? _points(view['reachable'])
+        : <GridPoint>[];
     final active = _activeUnit(units, view);
     final activeRoute = _points(active?['route']);
     final canAct = view['canAct'] == true;
@@ -274,7 +92,7 @@ class _TacticalVoxelRPGViewState extends State<TacticalVoxelRPGView> {
         : canAct && active == null
         ? 'Choose a hero to begin their activation.'
         : canAct && _mode == 'route'
-        ? 'Drag a route from the active hero to a highlighted tile.'
+        ? 'Click to preview a route, then click its arrow to move. Drag from your hero to trace it.'
         : canAct && (_mode == 'attack' || _mode == 'skill')
         ? 'Choose an enemy inside the selected card’s range.'
         : canAct && _mode == 'trap'
@@ -298,9 +116,20 @@ class _TacticalVoxelRPGViewState extends State<TacticalVoxelRPGView> {
           ),
         );
         final attackTargets = <String>{};
+        final attackRange = <GridPoint>{};
         if (active != null && (_mode == 'attack' || _mode == 'skill')) {
           final minimum = _mode == 'skill' ? 1 : active['minimumRange'] as int;
           final maximum = _mode == 'skill' ? 4 : active['range'] as int;
+          for (var y = 0; y < mapHeight; y++) {
+            for (var x = 0; x < mapWidth; x++) {
+              final distance =
+                  (x - (active['x'] as int)).abs() +
+                  (y - (active['y'] as int)).abs();
+              if (distance >= minimum && distance <= maximum) {
+                attackRange.add(GridPoint(x, y));
+              }
+            }
+          }
           for (final target in units.where(
             (unit) => unit['owner'] != widget.ctx.myId,
           )) {
@@ -333,6 +162,11 @@ class _TacticalVoxelRPGViewState extends State<TacticalVoxelRPGView> {
             }
           }
         }
+        final visibleRoute = _mode == 'route' || _mode == 'trap'
+            ? _draftRoute.isNotEmpty
+                  ? _draftRoute
+                  : activeRoute
+            : <GridPoint>[];
         return Stack(
           fit: StackFit.expand,
           children: [
@@ -410,7 +244,9 @@ class _TacticalVoxelRPGViewState extends State<TacticalVoxelRPGView> {
                             );
                             _pointerUp(
                               point,
-                              point == null ? null : _unitAtUnits(units, point),
+                              point == null
+                                  ? null
+                                  : _unitAtMapPoint(units, point),
                             );
                           },
                           child: InteractiveViewer(
@@ -422,19 +258,28 @@ class _TacticalVoxelRPGViewState extends State<TacticalVoxelRPGView> {
                             minScale: 0.7,
                             maxScale: 2.4,
                             boundaryMargin: const EdgeInsets.all(180),
-                            child: _TacticalBoard(
-                              tiles: tiles,
-                              units: units,
-                              traps: traps,
-                              reachable: reachable,
-                              route: [...activeRoute, ..._draftRoute],
-                              lastAction: view['lastAction'],
-                              recentActions: _objects(view['recentActions']),
-                              attackTargets: attackTargets,
-                              trapTargets: trapTargets,
-                              tileSize: tileSize,
-                              mapWidth: mapWidth,
-                              mapHeight: mapHeight,
+                            child: SizedBox(
+                              width: constraints.maxWidth,
+                              height: constraints.maxHeight,
+                              child: Center(
+                                child: _TacticalBoard(
+                                  tiles: tiles,
+                                  units: units,
+                                  traps: traps,
+                                  reachable: reachable,
+                                  route: visibleRoute,
+                                  lastAction: view['lastAction'],
+                                  recentActions: _objects(
+                                    view['recentActions'],
+                                  ),
+                                  attackTargets: attackTargets,
+                                  attackRange: attackRange,
+                                  trapTargets: trapTargets,
+                                  tileSize: tileSize,
+                                  mapWidth: mapWidth,
+                                  mapHeight: mapHeight,
+                                ),
+                              ),
                             ),
                           ),
                         ),
@@ -477,7 +322,7 @@ class _TacticalVoxelRPGViewState extends State<TacticalVoxelRPGView> {
             ),
             Positioned(
               left: 28,
-              top: 78,
+              top: 100,
               child: IgnorePointer(
                 child: SizedBox(
                   width: compact ? 230 : 330,
@@ -514,7 +359,7 @@ class _TacticalVoxelRPGViewState extends State<TacticalVoxelRPGView> {
             ),
             Positioned(
               left: 28,
-              top: 150,
+              top: 168,
               child: _SquadHealthRow(units: ownUnits, activeId: active?['id']),
             ),
             if (!compact && portraitUnit != null)
@@ -561,16 +406,21 @@ class _TacticalVoxelRPGViewState extends State<TacticalVoxelRPGView> {
                   hand: _objects(active?['hand']),
                   selectedCardId: _selectedCardId,
                   mode: _mode,
+                  handCollapsed: _handCollapsed,
+                  onToggleHand: () =>
+                      setState(() => _handCollapsed = !_handCollapsed),
                   canAct: canAct,
                   canEndTurn: view['canEndTurn'] == true,
-                  onActivate: (id) =>
-                      widget.ctx.sendAction({'type': 'selectUnit', 'unit': id}),
+                  onActivate: (id) {
+                    setState(() {
+                      _selectedCardId = null;
+                      _mode = null;
+                      _draftRoute.clear();
+                    });
+                    widget.ctx.sendAction({'type': 'selectUnit', 'unit': id});
+                  },
                   onSelectCard: _selectCard,
-                  onRetainCard: (id) => widget.ctx.sendAction({
-                    'type': 'retainCard',
-                    'unit': active?['id'],
-                    'cardId': id,
-                  }),
+                  onRetainCard: _retainCard,
                   onPan: () =>
                       setState(() => _mode = _mode == 'pan' ? null : 'pan'),
                   onFinish: () {

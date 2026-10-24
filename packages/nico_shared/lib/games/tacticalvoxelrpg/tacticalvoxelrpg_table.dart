@@ -112,6 +112,7 @@ class _TacticalVoxelRPGTableState extends State<TacticalVoxelRPGTable> {
                     lastAction: action,
                     recentActions: _objects(table['recentActions']),
                     attackTargets: const {},
+                    attackRange: const {},
                     trapTargets: const {},
                     tileSize: _tileSize,
                     mapWidth: mapWidth,

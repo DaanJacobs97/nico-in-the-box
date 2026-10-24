@@ -103,7 +103,10 @@ class _VoxelCell extends StatelessWidget {
     required this.trap,
     required this.reachable,
     required this.route,
+    required this.routeArrow,
+    required this.routeDestination,
     required this.attackTarget,
+    required this.attackRange,
     this.trapTarget = false,
     required this.damage,
     required this.damageEvent,
@@ -117,7 +120,10 @@ class _VoxelCell extends StatelessWidget {
   final bool trap;
   final bool reachable;
   final bool route;
+  final double? routeArrow;
+  final bool routeDestination;
   final bool attackTarget;
+  final bool attackRange;
   final bool trapTarget;
   final int? damage;
   final int? damageEvent;
@@ -162,21 +168,29 @@ class _VoxelCell extends StatelessWidget {
     return DecoratedBox(
       decoration: BoxDecoration(
         color: trapTarget
-            ? Color.lerp(color, const Color(0xffc3a868), 0.22)
+            ? Color.lerp(color, const Color(0xffc3a868), 0.3)
+            : attackRange
+            ? Color.lerp(color, const Color(0xffc74462), 0.36)
+            : reachable
+            ? Color.lerp(color, const Color(0xfff2cf52), 0.38)
+            : route
+            ? Color.lerp(color, const Color(0xffdbb450), 0.3)
             : color,
         border: Border.all(
           color: route
-              ? Colors.cyanAccent
+              ? const Color(0xffffd56b)
               : trapTarget
               ? const Color(0xffd6bd84)
               : attackTarget
-              ? Colors.redAccent
+              ? const Color(0xffff536b)
+              : attackRange
+              ? const Color(0xffd94159)
               : reachable
-              ? Colors.lightBlueAccent
+              ? const Color(0xffffdf70)
               : wall
               ? const Color(0xff524d5b)
               : const Color(0xff211e25),
-          width: route || attackTarget || trapTarget ? 2 : 1,
+          width: route || attackTarget || attackRange || trapTarget ? 2 : 1,
         ),
         boxShadow: wall
             ? const [
@@ -202,6 +216,18 @@ class _VoxelCell extends StatelessWidget {
               Icons.warning_amber_rounded,
               color: Colors.deepOrange,
               size: tileSize * 0.55,
+            ),
+          if (routeArrow != null)
+            Transform.rotate(
+              angle: routeArrow!,
+              child: Icon(
+                routeDestination
+                    ? Icons.arrow_circle_right
+                    : Icons.arrow_right_alt,
+                color: const Color(0xffffdf70),
+                size: tileSize * 0.58,
+                shadows: const [Shadow(color: Colors.black87, blurRadius: 4)],
+              ),
             ),
           if (unit != null && showUnit)
             Column(
