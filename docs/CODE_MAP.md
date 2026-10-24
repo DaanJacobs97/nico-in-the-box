@@ -101,10 +101,11 @@ Lines are approximate, so you can tell big files from small ones.
 | `packages/nico_shared/lib/games/tacticalvoxelrpg/tacticalvoxelrpg_movement.dart` | 151 | Character-weighted route validation, movement range and tactical AI pathing |
 | `packages/nico_shared/lib/games/tacticalvoxelrpg/tacticalvoxelrpg_sprite.dart` | 275 | Slime sprite-sheet playback and character portrait idle, walk, attack and hurt animations |
 | `packages/nico_shared/lib/games/tacticalvoxelrpg/tacticalvoxelrpg_cell.dart` | 299 | Tactical map cells, movement/attack range tints, route arrows, damage numbers and zoom controls |
-| `packages/nico_shared/lib/games/tacticalvoxelrpg/tacticalvoxelrpg_view.dart` | 506 | Full-screen battlefield layout, map centering/zoom and overlay placement |
+| `packages/nico_shared/lib/games/tacticalvoxelrpg/tacticalvoxelrpg_view.dart` | 509 | Full-screen battlefield layout, map centering/zoom and overlay placement |
 | `packages/nico_shared/lib/games/tacticalvoxelrpg/tacticalvoxelrpg_interaction.dart` | 481 | Card inspection/play, target cancellation, valid action resolution and drag/click routes |
-| `packages/nico_shared/lib/games/tacticalvoxelrpg/tacticalvoxelrpg_hud.dart` | 617 | Art-directed tactical HUD, vertical company cards, hidden hand, retain pouch and turn controls |
-| `packages/nico_shared/lib/games/tacticalvoxelrpg/tacticalvoxelrpg_hud_cards.dart` | 390 | Purple unit/action card faces, tap-to-inspect and drag-to-play feedback |
+| `packages/nico_shared/lib/games/tacticalvoxelrpg/tacticalvoxelrpg_hud.dart` | 614 | Art-directed tactical HUD, vertical company cards, activation hand, retain pouch and turn controls |
+| `packages/nico_shared/lib/games/tacticalvoxelrpg/tacticalvoxelrpg_hud_cards.dart` | 456 | Purple unit/action card faces, tap-to-inspect and drag-to-play feedback |
+| `packages/nico_shared/lib/games/tacticalvoxelrpg/tacticalvoxelrpg_hud_activation.dart` | 30 | Unit-card hand shown before a hero activation; displays a clear missing-cards fallback |
 | `packages/nico_shared/lib/games/tacticalvoxelrpg/tacticalvoxelrpg_hud_presenters.dart` | 240 | Selected hero portrait, vertical squad health strip and battle phase badge |
 | `packages/nico_shared/lib/games/tacticalvoxelrpg/tacticalvoxelrpg_board.dart` | 307 | Centered battlefield grid, route arrows and queued per-tile movement animations |
 | `packages/nico_shared/lib/games/tacticalvoxelrpg/tacticalvoxelrpg_route.dart` | 67 | Terrain-weighted path search and route planning helpers |
