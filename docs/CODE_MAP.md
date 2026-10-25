@@ -57,6 +57,7 @@ Lines are approximate, so you can tell big files from small ones.
 | `lib/net/web_pages.dart` | 75 | Small generated HTML pages: landing page, "not included" pages |
 | `lib/net/display_frontend.dart` | 20 | `DisplayFrontend` interface + `HtmlDisplayFrontend` (serves `/screen/`) |
 | `lib/net/multicast_lock.dart` | 18 | Android Wi-Fi multicast lock via MethodChannel (no-op elsewhere) |
+| `lib/debug/tactical_performance_log.dart` | 50 | Native-only opt-in tactical frame/rebuild summaries in a JSONL file under the system temp directory |
 | `lib/screens/home_screen.dart` | 67 | Host / Join buttons |
 | `lib/screens/host_setup_screen.dart` | 162 | Nickname, room name, game (grouped by category), Single game screen settings → `HostedRoom.create` → `SessionScreen` |
 | `lib/screens/join_screen.dart` | 237 | Room scan list + manual IP; nickname retry loop; `parseManualAddress` |
@@ -101,14 +102,17 @@ Lines are approximate, so you can tell big files from small ones.
 | `packages/nico_shared/lib/games/tacticalvoxelrpg/tacticalvoxelrpg_map.dart` | 481 | Seeded 40×30 multiplayer and 15×15 solo biome maps with rivers, cliffs, roads and spawn clearings |
 | `packages/nico_shared/lib/games/tacticalvoxelrpg/tacticalvoxelrpg_movement.dart` | 151 | Character-weighted route validation, movement range and tactical AI pathing |
 | `packages/nico_shared/lib/games/tacticalvoxelrpg/tacticalvoxelrpg_sprite.dart` | 275 | Slime sprite-sheet playback and character portrait idle, walk, attack and hurt animations |
-| `packages/nico_shared/lib/games/tacticalvoxelrpg/tacticalvoxelrpg_cell.dart` | 299 | Tactical map cells, movement/attack range tints, route arrows, damage numbers and zoom controls |
-| `packages/nico_shared/lib/games/tacticalvoxelrpg/tacticalvoxelrpg_view.dart` | 514 | Pre-battle selection or full-screen battlefield layout, map centering/zoom and overlay placement |
-| `packages/nico_shared/lib/games/tacticalvoxelrpg/tacticalvoxelrpg_interaction.dart` | 481 | Card inspection/play, target cancellation, valid action resolution and drag/click routes |
-| `packages/nico_shared/lib/games/tacticalvoxelrpg/tacticalvoxelrpg_hud.dart` | 614 | Art-directed tactical HUD, vertical company cards, activation hand, retain pouch and turn controls |
-| `packages/nico_shared/lib/games/tacticalvoxelrpg/tacticalvoxelrpg_hud_cards.dart` | 456 | Purple unit/action card faces, tap-to-inspect and drag-to-play feedback |
+| `packages/nico_shared/lib/games/tacticalvoxelrpg/tacticalvoxelrpg_cell.dart` | 299 | Tactical map cells, movement/attack/trap tints, route arrows, damage numbers and zoom controls |
+| `packages/nico_shared/lib/games/tacticalvoxelrpg/tacticalvoxelrpg_view.dart` | 534 | Pre-battle selection or full-screen battlefield layout, map centering/zoom and overlay placement |
+| `packages/nico_shared/lib/games/tacticalvoxelrpg/tacticalvoxelrpg_performance.dart` | 112 | Optional frame timing and tactical screen/rebuild metrics (reports every five seconds) |
+| `packages/nico_shared/lib/games/tacticalvoxelrpg/tacticalvoxelrpg_interaction.dart` | 489 | Card inspection/play, transformed map hit-testing, target cancellation and action resolution |
+| `packages/nico_shared/lib/games/tacticalvoxelrpg/tacticalvoxelrpg_hud.dart` | 502 | Art-directed tactical HUD, vertical company cards, activation hand and translucent overlay layout |
+| `packages/nico_shared/lib/games/tacticalvoxelrpg/tacticalvoxelrpg_hud_controls.dart` | 122 | Tactical turn controls, pile browsing, retain pouch and compact controls |
+| `packages/nico_shared/lib/games/tacticalvoxelrpg/tacticalvoxelrpg_hud_layout.dart` | 26 | Bottom-aligned, clipped action-hand expand/collapse viewport |
+| `packages/nico_shared/lib/games/tacticalvoxelrpg/tacticalvoxelrpg_hud_cards.dart` | 580 | Purple hero/action card faces with headshot unit cards and drag-to-play feedback |
 | `packages/nico_shared/lib/games/tacticalvoxelrpg/tacticalvoxelrpg_hud_activation.dart` | 30 | Unit-card hand shown before a hero activation; displays a clear missing-cards fallback |
 | `packages/nico_shared/lib/games/tacticalvoxelrpg/tacticalvoxelrpg_hud_presenters.dart` | 240 | Selected hero portrait, vertical squad health strip and battle phase badge |
-| `packages/nico_shared/lib/games/tacticalvoxelrpg/tacticalvoxelrpg_board.dart` | 307 | Centered battlefield grid, route arrows and queued per-tile movement animations |
+| `packages/nico_shared/lib/games/tacticalvoxelrpg/tacticalvoxelrpg_board.dart` | 318 | Centered battlefield grid, map-canvas hit-test key, route arrows and queued movement animations |
 | `packages/nico_shared/lib/games/tacticalvoxelrpg/tacticalvoxelrpg_route.dart` | 67 | Terrain-weighted path search and route planning helpers |
 | `packages/nico_shared/lib/games/tacticalvoxelrpg/tacticalvoxelrpg_table.dart` | 276 | Shared waiting-for-ready screen, then full-screen battlefield with status, damage, health, camera and zoom controls |
 | `packages/nico_shared/lib/games/tacticalvoxelrpg/tacticalvoxelrpg_selection.dart` | 600 | 60-second pre-battle screen for choosing heroes, inspecting stats/subdecks/discovered cards and readying up |
@@ -192,6 +196,8 @@ Lines are approximate, so you can tell big files from small ones.
 | Rules the host can switch (game options) | the game's `GameDefinition.options` + read them in its `createSession`; the lobby UI, server and screens handle the rest ([ADDING_A_GAME.md](ADDING_A_GAME.md)) |
 | Add or change a network message | `protocol.dart` (`Msg`; `kProtocolVersion` is set on the PR automatically) → `game_server.dart` (handle/send) → `game_client.dart` (receive/expose) |
 | Tactical RPG pre-battle selection | `tacticalvoxelrpg_draft.dart` (server state/actions), `tacticalvoxelrpg_selection.dart` (player screen), `tacticalvoxelrpg_selection_table.dart` (shared screen) |
+| Diagnose tactical RPG rendering performance | `lib/debug/tactical_performance_log.dart` (native temp-file sink), `SessionScreen.performanceLog`, `tacticalvoxelrpg_view.dart` (frame and rebuild metrics) |
+| Tactical RPG map picking, trap placement and hand overlay | `tacticalvoxelrpg_interaction.dart`, `tacticalvoxelrpg_view.dart`, `tacticalvoxelrpg_cell.dart`, `tacticalvoxelrpg_hud_layout.dart` |
 | New host-only command | `protocol.dart` (`Msg`), `game_server.dart` (`hostCommands` + handler), `game_client.dart` (method), `host_controls.dart` or `lobby_view.dart` (button) |
 | Lobby UI | `lobby_view.dart`; host-only native extras arrive through `hostFooter` / `hostScreenControls` from `host_setup_screen.dart` |
 | Shared screen behaviour | server: `displayState`/`_broadcastDisplay` in `game_server.dart`; Flutter: `shared_screen_view.dart`; browser: `assets/display/app.js` |
