@@ -258,13 +258,6 @@ Map<String, Object?>? _unitAtUnits(
   return null;
 }
 
-int? _lastDamageForCell(GridPoint point, Object? action) {
-  final hit = _lastDamage(action);
-  return hit != null && hit['x'] == point.x && hit['y'] == point.y
-      ? hit['damage'] as int
-      : null;
-}
-
 int? _lastEvent(Object? action) =>
     action is Map<Object?, Object?> ? action['event'] as int? : null;
 

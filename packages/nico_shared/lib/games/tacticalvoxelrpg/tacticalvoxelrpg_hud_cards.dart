@@ -24,7 +24,7 @@ class _UnitActivationCard extends StatelessWidget {
     final fill = unit['completed'] == true;
     final health = (unit['hp'] as int) / (unit['maxHp'] as int);
     final face = AnimatedContainer(
-      duration: const Duration(milliseconds: 200),
+      duration: const Duration(milliseconds: 170),
       width: compact
           ? 64
           : handCard
@@ -360,7 +360,7 @@ class _TacticalHandCard extends StatelessWidget {
     final cardHeight = compact ? 172.0 : 246.0;
     final tilts = const [-0.075, -0.035, 0.0, 0.035, 0.075];
     final face = AnimatedContainer(
-      duration: const Duration(milliseconds: 220),
+      duration: const Duration(milliseconds: 170),
       curve: Curves.easeOutCubic,
       width: cardWidth,
       height: cardHeight,

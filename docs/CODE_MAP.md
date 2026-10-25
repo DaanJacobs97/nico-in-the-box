@@ -101,7 +101,7 @@ Lines are approximate, so you can tell big files from small ones.
 | `packages/nico_shared/lib/games/tacticalvoxelrpg/tacticalvoxelrpg_cards.dart` | 310 | Tactical RPG card definitions, private draw/discard hands, card actions, attacks and retention |
 | `packages/nico_shared/lib/games/tacticalvoxelrpg/tacticalvoxelrpg_map.dart` | 481 | Seeded 40×30 multiplayer and 15×15 solo biome maps with rivers, cliffs, roads and spawn clearings |
 | `packages/nico_shared/lib/games/tacticalvoxelrpg/tacticalvoxelrpg_movement.dart` | 151 | Character-weighted route validation, movement range and tactical AI pathing |
-| `packages/nico_shared/lib/games/tacticalvoxelrpg/tacticalvoxelrpg_sprite.dart` | 275 | Slime sprite-sheet playback and character portrait idle, walk, attack and hurt animations |
+| `packages/nico_shared/lib/games/tacticalvoxelrpg/tacticalvoxelrpg_sprite.dart` | 294 | Slime sprite-sheet playback and character portrait walk, attack and hurt animations (idle sprites stay still) |
 | `packages/nico_shared/lib/games/tacticalvoxelrpg/tacticalvoxelrpg_cell.dart` | 299 | Tactical map cells, movement/attack/trap tints, route arrows, damage numbers and zoom controls |
 | `packages/nico_shared/lib/games/tacticalvoxelrpg/tacticalvoxelrpg_view.dart` | 534 | Pre-battle selection or full-screen battlefield layout, map centering/zoom and overlay placement |
 | `packages/nico_shared/lib/games/tacticalvoxelrpg/tacticalvoxelrpg_performance.dart` | 112 | Optional frame timing and tactical screen/rebuild metrics (reports every five seconds) |
@@ -112,9 +112,9 @@ Lines are approximate, so you can tell big files from small ones.
 | `packages/nico_shared/lib/games/tacticalvoxelrpg/tacticalvoxelrpg_hud_cards.dart` | 580 | Purple hero/action card faces with headshot unit cards and drag-to-play feedback |
 | `packages/nico_shared/lib/games/tacticalvoxelrpg/tacticalvoxelrpg_hud_activation.dart` | 30 | Unit-card hand shown before a hero activation; displays a clear missing-cards fallback |
 | `packages/nico_shared/lib/games/tacticalvoxelrpg/tacticalvoxelrpg_hud_presenters.dart` | 240 | Selected hero portrait, vertical squad health strip and battle phase badge |
-| `packages/nico_shared/lib/games/tacticalvoxelrpg/tacticalvoxelrpg_board.dart` | 318 | Centered battlefield grid, map-canvas hit-test key, route arrows and queued movement animations |
+| `packages/nico_shared/lib/games/tacticalvoxelrpg/tacticalvoxelrpg_board.dart` | 334 | Centered battlefield grid, pre-indexed cell overlays, map-canvas hit-test key and queued movement animations |
 | `packages/nico_shared/lib/games/tacticalvoxelrpg/tacticalvoxelrpg_route.dart` | 67 | Terrain-weighted path search and route planning helpers |
-| `packages/nico_shared/lib/games/tacticalvoxelrpg/tacticalvoxelrpg_table.dart` | 276 | Shared waiting-for-ready screen, then full-screen battlefield with status, damage, health, camera and zoom controls |
+| `packages/nico_shared/lib/games/tacticalvoxelrpg/tacticalvoxelrpg_table.dart` | 269 | Shared waiting-for-ready screen, then full-screen battlefield with status, damage, health, camera and zoom controls |
 | `packages/nico_shared/lib/games/tacticalvoxelrpg/tacticalvoxelrpg_selection.dart` | 600 | 60-second pre-battle screen for choosing heroes, inspecting stats/subdecks/discovered cards and readying up |
 | `packages/nico_shared/lib/games/tacticalvoxelrpg/tacticalvoxelrpg_selection_table.dart` | 40 | Shared-screen status while players select their companies and ready up |
 | `packages/nico_shared/lib/screens/session_screen.dart` | 391 | **`SessionScreen`**: lobby → game → result, notices, leaving, host-as-screen area, "Reconnecting…" banner, immersive tactical UI; keeps the screen on while open |

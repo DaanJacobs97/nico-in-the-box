@@ -95,18 +95,33 @@ class _TacticalCharacterArt extends StatefulWidget {
 
 class _TacticalCharacterArtState extends State<_TacticalCharacterArt>
     with TickerProviderStateMixin {
-  late final AnimationController _idle = AnimationController(
+  late final AnimationController _motion = AnimationController(
     vsync: this,
-    duration: const Duration(milliseconds: 1350),
-  )..repeat(reverse: true);
+    duration: const Duration(milliseconds: 480),
+  );
   late final AnimationController _action = AnimationController(
     vsync: this,
-    duration: const Duration(milliseconds: 360),
+    duration: const Duration(milliseconds: 280),
   );
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.animation == 'walk') _motion.repeat();
+  }
 
   @override
   void didUpdateWidget(covariant _TacticalCharacterArt oldWidget) {
     super.didUpdateWidget(oldWidget);
+    if (oldWidget.animation != widget.animation) {
+      if (widget.animation == 'walk') {
+        _motion.repeat();
+      } else {
+        _motion
+          ..stop()
+          ..value = 0;
+      }
+    }
     if (oldWidget.event != widget.event &&
         (widget.animation == 'attack' ||
             widget.animation == 'hurt' ||
@@ -117,56 +132,59 @@ class _TacticalCharacterArtState extends State<_TacticalCharacterArt>
 
   @override
   void dispose() {
-    _idle.dispose();
+    _motion.dispose();
     _action.dispose();
     super.dispose();
   }
 
   @override
-  Widget build(BuildContext context) => AnimatedBuilder(
-    animation: Listenable.merge([_idle, _action]),
-    child: Image.asset(
-      widget.asset,
-      package: 'nico_shared',
-      width: widget.width,
-      height: widget.height,
-      fit: BoxFit.contain,
-      filterQuality: FilterQuality.medium,
-      cacheWidth: (widget.width * MediaQuery.devicePixelRatioOf(context))
-          .round(),
-      errorBuilder: (context, error, stackTrace) => const SizedBox.shrink(),
+  Widget build(BuildContext context) => RepaintBoundary(
+    child: AnimatedBuilder(
+      animation: Listenable.merge([_motion, _action]),
+      child: Image.asset(
+        widget.asset,
+        package: 'nico_shared',
+        width: widget.width,
+        height: widget.height,
+        fit: BoxFit.contain,
+        filterQuality: FilterQuality.medium,
+        cacheWidth: (widget.width * MediaQuery.devicePixelRatioOf(context))
+            .round(),
+        errorBuilder: (context, error, stackTrace) => const SizedBox.shrink(),
+      ),
+      builder: (context, image) {
+        final progress = Curves.easeOut.transform(_action.value);
+        var dx = 0.0;
+        var dy = 0.0;
+        var scale = 1.0;
+        if (widget.animation == 'walk') {
+          final phase = _motion.value * pi * 2;
+          dx = 2.5 * sin(phase);
+          dy = -2 * sin(phase).abs();
+        } else if (widget.animation == 'attack') {
+          dx = widget.attackDirection * 20 * sin(progress * pi);
+          scale += 0.08 * sin(progress * pi);
+        } else if (widget.animation == 'hurt') {
+          dx = 8 * sin(progress * pi * 5) * (1 - progress);
+        } else if (widget.animation == 'special') {
+          dy -= 12 * sin(progress * pi);
+          scale += 0.1 * sin(progress * pi);
+        }
+        final art = widget.animation == 'hurt' && _action.isAnimating
+            ? ColorFiltered(
+                colorFilter: const ColorFilter.mode(
+                  Color(0x66ff554d),
+                  BlendMode.srcATop,
+                ),
+                child: image,
+              )
+            : image;
+        return Transform.translate(
+          offset: Offset(dx, dy),
+          child: Transform.scale(scale: scale, child: art),
+        );
+      },
     ),
-    builder: (context, image) {
-      final progress = Curves.easeOut.transform(_action.value);
-      var dx = 0.0;
-      var dy = -3 * sin(_idle.value * pi);
-      var scale = 1.0;
-      if (widget.animation == 'walk') {
-        dx = 2.5 * sin(_idle.value * pi * 2);
-        dy = -2 * sin(_idle.value * pi * 2).abs();
-      } else if (widget.animation == 'attack') {
-        dx = widget.attackDirection * 20 * sin(progress * pi);
-        scale += 0.08 * sin(progress * pi);
-      } else if (widget.animation == 'hurt') {
-        dx = 8 * sin(progress * pi * 5) * (1 - progress);
-      } else if (widget.animation == 'special') {
-        dy -= 12 * sin(progress * pi);
-        scale += 0.1 * sin(progress * pi);
-      }
-      final art = widget.animation == 'hurt' && _action.isAnimating
-          ? ColorFiltered(
-              colorFilter: const ColorFilter.mode(
-                Color(0x66ff554d),
-                BlendMode.srcATop,
-              ),
-              child: image,
-            )
-          : image;
-      return Transform.translate(
-        offset: Offset(dx, dy),
-        child: Transform.scale(scale: scale, child: art),
-      );
-    },
   );
 }
 

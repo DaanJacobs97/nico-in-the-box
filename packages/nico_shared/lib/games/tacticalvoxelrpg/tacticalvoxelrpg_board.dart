@@ -151,6 +151,33 @@ class _TacticalBoardState extends State<_TacticalBoard> {
   @override
   Widget build(BuildContext context) {
     final stopwatch = Stopwatch()..start();
+    final unitsAt = <GridPoint, Map<String, Object?>>{
+      for (final unit in widget.units)
+        GridPoint(unit['x']! as int, unit['y']! as int): unit,
+    };
+    final trapsAt = <GridPoint>{
+      for (final trap in widget.traps)
+        GridPoint(trap['x']! as int, trap['y']! as int),
+    };
+    final reachable = widget.reachable.toSet();
+    final route = widget.route.toSet();
+    final routeArrows = <GridPoint, double>{};
+    for (var index = 0; index < widget.route.length; index++) {
+      final point = widget.route[index];
+      final isLast = index == widget.route.length - 1;
+      final adjacent = isLast
+          ? index == 0
+                ? null
+                : widget.route[index - 1]
+          : widget.route[index + 1];
+      routeArrows[point] = adjacent == null
+          ? 0
+          : isLast
+          ? atan2(point.y - adjacent.y, point.x - adjacent.x)
+          : atan2(adjacent.y - point.y, adjacent.x - point.x);
+    }
+    final damage = _lastDamage(widget.lastAction);
+    final damageEvent = _lastEvent(widget.lastAction);
     final result = Center(
       child: SizedBox(
         width: widget.tileSize * widget.mapWidth,
@@ -160,50 +187,53 @@ class _TacticalBoardState extends State<_TacticalBoard> {
           fit: StackFit.expand,
           clipBehavior: Clip.none,
           children: [
-            GridView.builder(
-              physics: const NeverScrollableScrollPhysics(),
-              padding: EdgeInsets.zero,
-              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: widget.mapWidth,
-                mainAxisSpacing: 1,
-                crossAxisSpacing: 1,
+            RepaintBoundary(
+              child: GridView.builder(
+                physics: const NeverScrollableScrollPhysics(),
+                padding: EdgeInsets.zero,
+                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: widget.mapWidth,
+                  mainAxisSpacing: 1,
+                  crossAxisSpacing: 1,
+                ),
+                itemCount: widget.mapWidth * widget.mapHeight,
+                itemBuilder: (context, index) {
+                  final x = index % widget.mapWidth;
+                  final y = index ~/ widget.mapWidth;
+                  final point = GridPoint(x, y);
+                  final tile = widget.tiles[index];
+                  final unit = unitsAt[point];
+                  final cellDamage =
+                      damage != null && damage['x'] == x && damage['y'] == y
+                      ? damage['damage'] as int
+                      : null;
+                  return _VoxelCell(
+                    key: ValueKey('tacticalvoxelrpg-cell-$x-$y'),
+                    terrain: tile['terrain'] as String,
+                    unit: unit,
+                    showUnit:
+                        unit?['sprite'] is! String &&
+                        _characterPortraitFor(unit) == null &&
+                        unit?['id'] != _movingUnitId &&
+                        !_queuedStarts.containsKey(unit?['id']),
+                    trap: trapsAt.contains(point),
+                    reachable: reachable.contains(point),
+                    route: route.contains(point),
+                    routeArrow: routeArrows[point],
+                    routeDestination:
+                        widget.route.isNotEmpty && widget.route.last == point,
+                    attackRange: widget.attackRange.contains(point),
+                    attackTarget:
+                        unit != null &&
+                        widget.attackTargets.contains(unit['id'] as String),
+                    trapTarget: widget.trapTargets.contains(point),
+                    damage: cellDamage,
+                    damageEvent: damageEvent,
+                    unitAnimation: _slimeAnimationFor(unit, widget.lastAction),
+                    tileSize: widget.tileSize,
+                  );
+                },
               ),
-              itemCount: widget.mapWidth * widget.mapHeight,
-              itemBuilder: (context, index) {
-                final x = index % widget.mapWidth;
-                final y = index ~/ widget.mapWidth;
-                final point = GridPoint(x, y);
-                final tile = widget.tiles[index];
-                final unit = _unitAtUnits(widget.units, point);
-                final trap = widget.traps.any(
-                  (entry) => entry['x'] == x && entry['y'] == y,
-                );
-                return _VoxelCell(
-                  key: ValueKey('tacticalvoxelrpg-cell-$x-$y'),
-                  terrain: tile['terrain'] as String,
-                  unit: unit,
-                  showUnit:
-                      unit?['sprite'] is! String &&
-                      _characterPortraitFor(unit) == null &&
-                      unit?['id'] != _movingUnitId &&
-                      !_queuedStarts.containsKey(unit?['id']),
-                  trap: trap,
-                  reachable: widget.reachable.contains(point),
-                  route: widget.route.contains(point),
-                  routeArrow: _routeArrowAt(point),
-                  routeDestination:
-                      widget.route.isNotEmpty && widget.route.last == point,
-                  attackRange: widget.attackRange.contains(point),
-                  attackTarget:
-                      unit != null &&
-                      widget.attackTargets.contains(unit['id'] as String),
-                  trapTarget: widget.trapTargets.contains(point),
-                  damage: _lastDamageForCell(point, widget.lastAction),
-                  damageEvent: _lastEvent(widget.lastAction),
-                  unitAnimation: _slimeAnimationFor(unit, widget.lastAction),
-                  tileSize: widget.tileSize,
-                );
-              },
             ),
             for (final unit in widget.units.where(
               (unit) =>
@@ -283,20 +313,6 @@ class _TacticalBoardState extends State<_TacticalBoard> {
       height: height,
       child: IgnorePointer(child: contents),
     );
-  }
-
-  double? _routeArrowAt(GridPoint point) {
-    final index = widget.route.indexOf(point);
-    if (index < 0) return null;
-    final adjacent = index == widget.route.length - 1
-        ? index == 0
-              ? null
-              : widget.route[index - 1]
-        : widget.route[index + 1];
-    if (adjacent == null) return 0;
-    return index == widget.route.length - 1
-        ? atan2(point.y - adjacent.y, point.x - adjacent.x)
-        : atan2(adjacent.y - point.y, adjacent.x - point.x);
   }
 
   double _attackDirectionFor(Map<String, Object?> unit) {

@@ -295,7 +295,7 @@ class _TacticalHud extends StatelessWidget {
         const cardWidth = 145.0;
         final gap = constraints.maxWidth >= cardWidth * hand.length ? 3.0 : 0.0;
         final cards = AnimatedSwitcher(
-          duration: const Duration(milliseconds: 240),
+          duration: const Duration(milliseconds: 180),
           switchInCurve: Curves.easeOutCubic,
           switchOutCurve: Curves.easeInCubic,
           transitionBuilder: (child, animation) => FadeTransition(
