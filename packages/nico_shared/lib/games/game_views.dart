@@ -16,6 +16,7 @@ class GameViewContext {
     required this.lobby,
     required this.sendAction,
     this.compact = false,
+    this.performanceLog,
   });
 
   /// This player's view, produced by the game's `GameSession.viewFor`.
@@ -27,6 +28,9 @@ class GameViewContext {
   /// A shared screen is showing the table, so show only this player's
   /// hand and inputs (plus a one-line status).
   final bool compact;
+
+  /// Optional native diagnostics sink; keeps this package usable on web.
+  final void Function(Map<String, Object?> event)? performanceLog;
 
   String nicknameOf(String playerId) =>
       playerId == myId ? 'You' : lobby.nicknameOf(playerId);

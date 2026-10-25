@@ -28,12 +28,12 @@ class _UnitActivationCard extends StatelessWidget {
       width: compact
           ? 64
           : handCard
-          ? 120
+          ? 178
           : 174,
       height: compact
           ? 90
           : handCard
-          ? 190
+          ? 260
           : 72,
       decoration: BoxDecoration(
         gradient: LinearGradient(
@@ -76,7 +76,35 @@ class _UnitActivationCard extends StatelessWidget {
             ? Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  SizedBox(height: 76, child: _unitArt(art)),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      _CardStatBadge(
+                        icon: Icons.bolt,
+                        label: '${unit['energy']}/${unit['maxEnergy']} AP',
+                      ),
+                      _CardStatBadge(
+                        icon: Icons.favorite,
+                        label: '${unit['hp']}/${unit['maxHp']}',
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 5),
+                  ClipRRect(
+                    borderRadius: const BorderRadius.vertical(
+                      top: Radius.circular(48),
+                      bottom: Radius.circular(5),
+                    ),
+                    child: Container(
+                      height: 82,
+                      decoration: const BoxDecoration(
+                        gradient: RadialGradient(
+                          colors: [Color(0xff42496a), Color(0xff15182b)],
+                        ),
+                      ),
+                      child: _unitHeadshot(art),
+                    ),
+                  ),
                   Text(
                     (unit['role'] as String).toUpperCase(),
                     maxLines: 1,
@@ -96,16 +124,7 @@ class _UnitActivationCard extends StatelessWidget {
                     textAlign: TextAlign.center,
                     style: const TextStyle(fontFamily: 'Georgia', fontSize: 13),
                   ),
-                  const Spacer(),
-                  Text(
-                    '${unit['hp']}/${unit['maxHp']} HP · 2 AP',
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(
-                      color: Color(0xffd7c9e5),
-                      fontSize: 8,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
+                  const SizedBox(height: 3),
                   ClipRRect(
                     borderRadius: BorderRadius.circular(2),
                     child: LinearProgressIndicator(
@@ -116,14 +135,44 @@ class _UnitActivationCard extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 5),
+                  Row(
+                    children: [
+                      _unitStat('MOVE', '${unit['movement']}'),
+                      _unitStat(
+                        'RANGE',
+                        '${unit['minimumRange']}–${unit['range']}',
+                      ),
+                      _unitStat('ATTACK', '8'),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
                   Text(
-                    'MOV ${unit['movement']} · RANGE ${unit['minimumRange']}–${unit['range']}',
+                    '${unit['weapon']} · ${unit['mana']} MANA',
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     textAlign: TextAlign.center,
                     style: const TextStyle(
-                      color: Color(0xffb7a7c9),
+                      color: Color(0xffd7c9e5),
+                      fontSize: 8,
+                    ),
+                  ),
+                  Text(
+                    '${_unitDeckSize(unit)}-CARD ACTION DECK',
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      color: Color(0xff9ea1c3),
                       fontSize: 7,
+                      letterSpacing: 0.7,
+                    ),
+                  ),
+                  const Spacer(),
+                  const Text(
+                    'DRAG TO PLAY ↗',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: Color(0xffc2b1ed),
+                      fontSize: 8,
+                      letterSpacing: 1,
                     ),
                   ),
                 ],
@@ -199,6 +248,78 @@ class _UnitActivationCard extends StatelessWidget {
           errorBuilder: (context, error, stackTrace) =>
               const Icon(Icons.person_outline),
         );
+
+  Widget _unitHeadshot(String? art) => art == null
+      ? const Icon(Icons.person_outline, color: Color(0xffb9a8ca), size: 44)
+      : Image.asset(
+          art,
+          package: 'nico_shared',
+          fit: BoxFit.cover,
+          alignment: const Alignment(0, -0.72),
+          filterQuality: FilterQuality.medium,
+          errorBuilder: (context, error, stackTrace) =>
+              const Icon(Icons.person_outline),
+        );
+
+  Widget _unitStat(String label, String value) => Expanded(
+    child: Container(
+      decoration: const BoxDecoration(
+        border: Border(right: BorderSide(color: Color(0x557e7b9b))),
+      ),
+      child: Column(
+        children: [
+          Text(
+            value,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              color: Color(0xffded8ff),
+              fontFamily: 'Georgia',
+              fontSize: 13,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          Text(
+            label,
+            style: const TextStyle(
+              color: Color(0xff9eaccd),
+              fontSize: 6,
+              letterSpacing: 0.6,
+            ),
+          ),
+        ],
+      ),
+    ),
+  );
+
+  int _unitDeckSize(Map<String, Object?> unit) =>
+      (unit['handSize'] as int? ?? 0) +
+      (unit['drawCount'] as int? ?? 0) +
+      (unit['discardCount'] as int? ?? 0);
+}
+
+class _CardStatBadge extends StatelessWidget {
+  const _CardStatBadge({required this.icon, required this.label});
+
+  final IconData icon;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) => Row(
+    mainAxisSize: MainAxisSize.min,
+    children: [
+      Icon(icon, size: 10, color: const Color(0xffd4c2fa)),
+      const SizedBox(width: 2),
+      Text(
+        label,
+        style: const TextStyle(
+          color: Color(0xffe4dff1),
+          fontSize: 8,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+    ],
+  );
 }
 
 class _TacticalHandCard extends StatelessWidget {
@@ -441,16 +562,19 @@ class _TacticalHandCard extends StatelessWidget {
         ),
       ),
     );
-    return Draggable<_TacticalDragPayload>(
-      key: ValueKey('tacticalvoxelrpg-draggable-card-${card['id']}'),
-      data: _TacticalDragPayload.card(unitId, card['id']! as int),
-      maxSimultaneousDrags: disabled || targeting ? 0 : 1,
-      feedback: Material(
-        color: Colors.transparent,
-        child: Transform.rotate(angle: -0.025, child: face),
+    return IgnorePointer(
+      ignoring: targeting,
+      child: Draggable<_TacticalDragPayload>(
+        key: ValueKey('tacticalvoxelrpg-draggable-card-${card['id']}'),
+        data: _TacticalDragPayload.card(unitId, card['id']! as int),
+        maxSimultaneousDrags: disabled || targeting ? 0 : 1,
+        feedback: Material(
+          color: Colors.transparent,
+          child: Transform.rotate(angle: -0.025, child: face),
+        ),
+        childWhenDragging: Opacity(opacity: 0.25, child: face),
+        child: GestureDetector(onTap: onTap, child: face),
       ),
-      childWhenDragging: Opacity(opacity: 0.25, child: face),
-      child: GestureDetector(onTap: targeting ? null : onTap, child: face),
     );
   }
 }

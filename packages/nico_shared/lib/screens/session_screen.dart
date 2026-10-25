@@ -23,6 +23,7 @@ class SessionScreen extends StatefulWidget {
     this.hostFooter,
     this.hostScreenControls,
     this.casterAvailable = false,
+    this.performanceLog,
   });
 
   final GameClient client;
@@ -39,6 +40,9 @@ class SessionScreen extends StatefulWidget {
 
   /// See [LobbyView.casterAvailable].
   final bool casterAvailable;
+
+  /// Optional diagnostics sink provided by native app builds.
+  final void Function(Map<String, Object?> event)? performanceLog;
 
   @override
   State<SessionScreen> createState() => _SessionScreenState();
@@ -220,7 +224,10 @@ class _SessionScreenState extends State<SessionScreen> {
                     )
                   : _client.isHost && lobby.display.hostIsScreen
                   ? _HostScreenArea(client: _client)
-                  : _GameArea(client: _client),
+                  : _GameArea(
+                      client: _client,
+                      performanceLog: widget.performanceLog,
+                    ),
             ),
           );
         },
@@ -253,9 +260,10 @@ class _SessionScreenState extends State<SessionScreen> {
 }
 
 class _GameArea extends StatelessWidget {
-  const _GameArea({required this.client});
+  const _GameArea({required this.client, this.performanceLog});
 
   final GameClient client;
+  final void Function(Map<String, Object?> event)? performanceLog;
 
   @override
   Widget build(BuildContext context) {
@@ -277,6 +285,9 @@ class _GameArea extends StatelessWidget {
               lobby: lobby,
               sendAction: client.sendAction,
               compact: lobby.sharedScreenActive,
+              performanceLog: client.gameId == 'tacticalvoxelrpg'
+                  ? performanceLog
+                  : null,
             ),
           ),
         ),

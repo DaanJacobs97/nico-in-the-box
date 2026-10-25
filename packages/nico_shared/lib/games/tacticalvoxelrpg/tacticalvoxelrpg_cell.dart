@@ -168,7 +168,7 @@ class _VoxelCell extends StatelessWidget {
     return DecoratedBox(
       decoration: BoxDecoration(
         color: trapTarget
-            ? Color.lerp(color, const Color(0xffc3a868), 0.3)
+            ? Color.lerp(color, const Color(0xffd83353), 0.52)
             : attackRange
             ? Color.lerp(color, const Color(0xffc74462), 0.36)
             : reachable
@@ -180,7 +180,7 @@ class _VoxelCell extends StatelessWidget {
           color: route
               ? const Color(0xffffd56b)
               : trapTarget
-              ? const Color(0xffd6bd84)
+              ? const Color(0xffff4c69)
               : attackTarget
               ? const Color(0xffff536b)
               : attackRange

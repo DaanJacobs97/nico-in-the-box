@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'dart:math';
+import 'dart:ui' show FrameTiming;
 
+import 'package:flutter/foundation.dart' show kDebugMode, kProfileMode;
 import 'package:flutter/material.dart';
 import 'package:vector_math/vector_math_64.dart' as vm;
 
@@ -21,6 +23,9 @@ part 'tacticalvoxelrpg_hud_activation.dart';
 part 'tacticalvoxelrpg_hud_presenters.dart';
 part 'tacticalvoxelrpg_selection.dart';
 part 'tacticalvoxelrpg_selection_table.dart';
+part 'tacticalvoxelrpg_performance.dart';
+part 'tacticalvoxelrpg_hud_layout.dart';
+part 'tacticalvoxelrpg_hud_controls.dart';
 
 class TacticalVoxelRPGView extends StatefulWidget {
   const TacticalVoxelRPGView({super.key, required this.ctx});
@@ -33,16 +38,28 @@ class TacticalVoxelRPGView extends StatefulWidget {
 
 class _TacticalVoxelRPGViewState extends State<TacticalVoxelRPGView> {
   final TransformationController _mapTransform = TransformationController();
-  final GlobalKey _mapViewportKey = GlobalKey();
+  final GlobalKey _mapCanvasKey = GlobalKey();
   String? _mode;
   bool _drawingRoute = false;
   bool _ignoreNextMapUp = false;
   bool _handCollapsed = false;
   int? _selectedCardId;
   final List<GridPoint> _draftRoute = [];
+  late final _TacticalPerformanceTracker _diagnostics;
+
+  @override
+  void initState() {
+    super.initState();
+    _diagnostics = _TacticalPerformanceTracker(
+      sink: widget.ctx.performanceLog,
+      currentView: () => widget.ctx.view,
+      devicePixelRatio: () => View.of(context).devicePixelRatio,
+    )..start();
+  }
 
   @override
   void dispose() {
+    _diagnostics.dispose();
     _mapTransform.dispose();
     super.dispose();
   }
@@ -65,6 +82,7 @@ class _TacticalVoxelRPGViewState extends State<TacticalVoxelRPGView> {
 
   @override
   Widget build(BuildContext context) {
+    _diagnostics.recordViewBuild();
     final view = widget.ctx.view;
     if (view['phase'] == 'selection') {
       return _TacticalUnitSelectionScreen(ctx: widget.ctx);
@@ -155,18 +173,19 @@ class _TacticalVoxelRPGViewState extends State<TacticalVoxelRPGView> {
         }
         final trapTargets = <GridPoint>{};
         if (active != null && _mode == 'trap') {
+          final plannedTrapRoute = <GridPoint>{...activeRoute, ..._draftRoute};
           for (var y = 0; y < mapHeight; y++) {
             for (var x = 0; x < mapWidth; x++) {
               final point = GridPoint(x, y);
               final distance =
                   (x - (active['x'] as int)).abs() +
                   (y - (active['y'] as int)).abs();
+              final onPlannedRoute = plannedTrapRoute.contains(point);
               final tile = tiles[y * mapWidth + x];
               final occupied =
                   _unitAtUnits(units, point) != null ||
                   traps.any((trap) => trap['x'] == x && trap['y'] == y);
-              if (distance >= 1 &&
-                  distance <= 3 &&
+              if ((distance >= 1 && distance <= 3 || onPlannedRoute) &&
                   tile['passable'] == true &&
                   !occupied) {
                 trapTargets.add(point);
@@ -240,7 +259,6 @@ class _TacticalVoxelRPGViewState extends State<TacticalVoxelRPGView> {
                       fit: StackFit.expand,
                       children: [
                         Listener(
-                          key: _mapViewportKey,
                           behavior: HitTestBehavior.opaque,
                           onPointerDown: (event) {
                             _ignoreNextMapUp = false;
@@ -308,6 +326,8 @@ class _TacticalVoxelRPGViewState extends State<TacticalVoxelRPGView> {
                                   tileSize: tileSize,
                                   mapWidth: mapWidth,
                                   mapHeight: mapHeight,
+                                  canvasKey: _mapCanvasKey,
+                                  onBuild: _diagnostics.recordBoardBuild,
                                 ),
                               ),
                             ),

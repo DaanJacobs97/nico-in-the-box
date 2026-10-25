@@ -51,26 +51,39 @@ class _TacticalHud extends StatelessWidget {
       final height = min(compact ? 400.0 : 340.0, constraints.maxHeight);
       return SizedBox(
         height: height,
-        child: DecoratedBox(
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: [Color(0x0015101d), Color(0xe2141020), Color(0xf8120e1b)],
-              stops: [0, 0.13, 0.52],
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            Positioned.fill(
+              child: IgnorePointer(
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [
+                        const Color(0x00121526),
+                        const Color(0x26121526),
+                        const Color(0x44121526),
+                      ],
+                      stops: [0, 0.15, compact ? 0.78 : 0.7],
+                    ),
+                  ),
+                ),
+              ),
             ),
-          ),
-          child: Padding(
-            padding: EdgeInsets.fromLTRB(
-              compact ? 10 : 28,
-              compact ? 8 : 24,
-              compact ? 10 : 28,
-              compact ? 6 : 12,
+            Padding(
+              padding: EdgeInsets.fromLTRB(
+                compact ? 10 : 28,
+                compact ? 8 : 24,
+                compact ? 10 : 28,
+                compact ? 6 : 12,
+              ),
+              child: compact
+                  ? _compactLayout(context, activeId)
+                  : _wideLayout(context, activeId),
             ),
-            child: compact
-                ? _compactLayout(context, activeId)
-                : _wideLayout(context, activeId),
-          ),
+          ],
         ),
       );
     },
@@ -98,27 +111,29 @@ class _TacticalHud extends StatelessWidget {
       ),
       if (active != null) ...[
         const SizedBox(height: 4),
-        SizedBox(
-          height: handCollapsed ? 70 : 176,
-          child: Row(
-            children: [
-              Expanded(
-                child: handCollapsed
-                    ? ClipRect(child: _handCards(context, compact: true))
-                    : _handCards(context, compact: true),
-              ),
-              IconButton(
-                key: const ValueKey('tacticalvoxelrpg-toggle-hand'),
-                tooltip: handCollapsed
-                    ? 'Show action hand'
-                    : 'Hide action hand',
-                onPressed: onToggleHand,
-                icon: Icon(
-                  handCollapsed ? Icons.expand_less : Icons.expand_more,
-                  color: const Color(0xffd2b9ed),
+        AnimatedSize(
+          duration: const Duration(milliseconds: 220),
+          alignment: Alignment.bottomCenter,
+          curve: Curves.easeOutCubic,
+          child: SizedBox(
+            height: handCollapsed ? 70 : 176,
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Expanded(child: _handViewport(context, compact: true)),
+                IconButton(
+                  key: const ValueKey('tacticalvoxelrpg-toggle-hand'),
+                  tooltip: handCollapsed
+                      ? 'Show action hand'
+                      : 'Hide action hand',
+                  onPressed: onToggleHand,
+                  icon: Icon(
+                    handCollapsed ? Icons.expand_less : Icons.expand_more,
+                    color: const Color(0xffd2b9ed),
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ],
@@ -198,20 +213,12 @@ class _TacticalHud extends StatelessWidget {
       const SizedBox(height: 3),
       Expanded(
         child: Row(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
+          crossAxisAlignment: CrossAxisAlignment.end,
           children: [
             Expanded(
-              child: handCollapsed && active != null
-                  ? Align(
-                      alignment: Alignment.topCenter,
-                      child: SizedBox(
-                        height: 70,
-                        child: ClipRect(
-                          child: _handCards(context, compact: false),
-                        ),
-                      ),
-                    )
-                  : _handCards(context, compact: false),
+              child: active == null
+                  ? _handCards(context, compact: false)
+                  : _handViewport(context, compact: false),
             ),
             if (active != null)
               SizedBox(
@@ -333,6 +340,7 @@ class _TacticalHud extends StatelessWidget {
         );
         return SingleChildScrollView(
           scrollDirection: Axis.horizontal,
+          hitTestBehavior: HitTestBehavior.deferToChild,
           physics: const BouncingScrollPhysics(),
           child: ConstrainedBox(
             constraints: BoxConstraints(minWidth: constraints.maxWidth),
@@ -345,73 +353,6 @@ class _TacticalHud extends StatelessWidget {
       },
     );
   }
-
-  Widget _turnControls(BuildContext context) => Column(
-    crossAxisAlignment: CrossAxisAlignment.stretch,
-    children: [
-      if (active != null)
-        Row(
-          children: [
-            Expanded(
-              child: _pileButton(
-                context,
-                'Draw',
-                active!['drawPile'],
-                active!['drawCount'] as int? ?? 0,
-              ),
-            ),
-            Expanded(
-              child: _pileButton(
-                context,
-                'Discard',
-                active!['discardPile'],
-                active!['discardCount'] as int? ?? 0,
-              ),
-            ),
-          ],
-        ),
-      const Spacer(),
-      if (active != null) ...[_retainPouch(context), const SizedBox(height: 7)],
-      if (active != null) ...[
-        TextButton.icon(
-          key: const ValueKey('tacticalvoxelrpg-finish-unit'),
-          onPressed: selectedCardId == null ? onFinish : null,
-          icon: const Icon(Icons.check_circle_outline, size: 17),
-          label: const Text('Finish unit'),
-        ),
-      ],
-      FilledButton.icon(
-        key: const ValueKey('tacticalvoxelrpg-end-turn'),
-        onPressed: canAct && canEndTurn ? onEndTurn : null,
-        style: FilledButton.styleFrom(
-          backgroundColor: const Color(0xffbfa5df),
-          foregroundColor: const Color(0xff181322),
-          disabledBackgroundColor: const Color(0xff30283b),
-          disabledForegroundColor: const Color(0xffa99ab7),
-          shape: const RoundedRectangleBorder(borderRadius: BorderRadius.zero),
-          padding: const EdgeInsets.symmetric(vertical: 15, horizontal: 8),
-        ),
-        icon: const Icon(Icons.skip_next, size: 17),
-        label: Text(
-          active == null ? 'END ROUND' : 'END TURN',
-          style: const TextStyle(fontSize: 10, letterSpacing: 1),
-        ),
-      ),
-      const SizedBox(height: 9),
-      OutlinedButton.icon(
-        key: const ValueKey('tacticalvoxelrpg-pan-map'),
-        onPressed: selectedCardId == null ? onPan : null,
-        icon: const Icon(Icons.pan_tool_alt, size: 15),
-        label: Text(mode == 'pan' ? 'Stop panning' : 'Pan map'),
-      ),
-      if (active == null)
-        const Text(
-          '2 ACTION POINTS PER UNIT / TURN',
-          textAlign: TextAlign.center,
-          style: TextStyle(color: Color(0xff6e7c6c), fontSize: 8),
-        ),
-    ],
-  );
 
   Widget _retainPouch(BuildContext context) {
     final retainedId = active?['retainedCardId'];
@@ -515,59 +456,6 @@ class _TacticalHud extends StatelessWidget {
       ),
     );
   }
-
-  Widget _pileButton(
-    BuildContext context,
-    String label,
-    Object? pile,
-    int count,
-  ) => TextButton(
-    onPressed: count == 0 || selectedCardId != null
-        ? null
-        : () => showDialog<void>(
-            context: context,
-            builder: (context) => _TacticalPileDialog(
-              title: '${active!['name']} · $label pile',
-              cards: _objects(pile),
-            ),
-          ),
-    child: Text('$label · $count', style: const TextStyle(fontSize: 9)),
-  );
-
-  Widget _compactControls(BuildContext context) => Wrap(
-    alignment: WrapAlignment.center,
-    spacing: 5,
-    runSpacing: 3,
-    children: [
-      OutlinedButton.icon(
-        key: const ValueKey('tacticalvoxelrpg-pan-map'),
-        onPressed: selectedCardId == null ? onPan : null,
-        icon: const Icon(Icons.pan_tool_alt, size: 15),
-        label: Text(mode == 'pan' ? 'Stop panning' : 'Pan'),
-      ),
-      if (active != null)
-        TextButton(
-          key: const ValueKey('tacticalvoxelrpg-finish-unit'),
-          onPressed: selectedCardId == null ? onFinish : null,
-          child: const Text('Finish unit'),
-        ),
-      if (active != null)
-        TextButton.icon(
-          onPressed: selectedCardId == null
-              ? () => _showRetainPicker(context)
-              : null,
-          icon: const Icon(Icons.inbox_outlined, size: 15),
-          label: Text(
-            'Retain ${active!['retainedCardId'] == null ? '0/1' : '1/1'}',
-          ),
-        ),
-      FilledButton(
-        key: const ValueKey('tacticalvoxelrpg-end-turn'),
-        onPressed: canAct && canEndTurn ? onEndTurn : null,
-        child: const Text('End turn'),
-      ),
-    ],
-  );
 }
 
 class _TacticalPileDialog extends StatelessWidget {

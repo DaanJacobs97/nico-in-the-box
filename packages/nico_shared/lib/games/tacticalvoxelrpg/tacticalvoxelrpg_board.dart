@@ -15,6 +15,8 @@ class _TacticalBoard extends StatefulWidget {
     required this.tileSize,
     required this.mapWidth,
     required this.mapHeight,
+    this.canvasKey,
+    this.onBuild,
   });
 
   final List<Map<String, Object?>> tiles;
@@ -30,6 +32,8 @@ class _TacticalBoard extends StatefulWidget {
   final double tileSize;
   final int mapWidth;
   final int mapHeight;
+  final GlobalKey? canvasKey;
+  final void Function(int elapsedMicros)? onBuild;
 
   @override
   State<_TacticalBoard> createState() => _TacticalBoardState();
@@ -145,71 +149,78 @@ class _TacticalBoardState extends State<_TacticalBoard> {
   }
 
   @override
-  Widget build(BuildContext context) => Center(
-    child: SizedBox(
-      width: widget.tileSize * widget.mapWidth,
-      height: widget.tileSize * widget.mapHeight,
-      child: Stack(
-        fit: StackFit.expand,
-        clipBehavior: Clip.none,
-        children: [
-          GridView.builder(
-            physics: const NeverScrollableScrollPhysics(),
-            padding: EdgeInsets.zero,
-            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: widget.mapWidth,
-              mainAxisSpacing: 1,
-              crossAxisSpacing: 1,
+  Widget build(BuildContext context) {
+    final stopwatch = Stopwatch()..start();
+    final result = Center(
+      child: SizedBox(
+        width: widget.tileSize * widget.mapWidth,
+        height: widget.tileSize * widget.mapHeight,
+        key: widget.canvasKey,
+        child: Stack(
+          fit: StackFit.expand,
+          clipBehavior: Clip.none,
+          children: [
+            GridView.builder(
+              physics: const NeverScrollableScrollPhysics(),
+              padding: EdgeInsets.zero,
+              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: widget.mapWidth,
+                mainAxisSpacing: 1,
+                crossAxisSpacing: 1,
+              ),
+              itemCount: widget.mapWidth * widget.mapHeight,
+              itemBuilder: (context, index) {
+                final x = index % widget.mapWidth;
+                final y = index ~/ widget.mapWidth;
+                final point = GridPoint(x, y);
+                final tile = widget.tiles[index];
+                final unit = _unitAtUnits(widget.units, point);
+                final trap = widget.traps.any(
+                  (entry) => entry['x'] == x && entry['y'] == y,
+                );
+                return _VoxelCell(
+                  key: ValueKey('tacticalvoxelrpg-cell-$x-$y'),
+                  terrain: tile['terrain'] as String,
+                  unit: unit,
+                  showUnit:
+                      unit?['sprite'] is! String &&
+                      _characterPortraitFor(unit) == null &&
+                      unit?['id'] != _movingUnitId &&
+                      !_queuedStarts.containsKey(unit?['id']),
+                  trap: trap,
+                  reachable: widget.reachable.contains(point),
+                  route: widget.route.contains(point),
+                  routeArrow: _routeArrowAt(point),
+                  routeDestination:
+                      widget.route.isNotEmpty && widget.route.last == point,
+                  attackRange: widget.attackRange.contains(point),
+                  attackTarget:
+                      unit != null &&
+                      widget.attackTargets.contains(unit['id'] as String),
+                  trapTarget: widget.trapTargets.contains(point),
+                  damage: _lastDamageForCell(point, widget.lastAction),
+                  damageEvent: _lastEvent(widget.lastAction),
+                  unitAnimation: _slimeAnimationFor(unit, widget.lastAction),
+                  tileSize: widget.tileSize,
+                );
+              },
             ),
-            itemCount: widget.mapWidth * widget.mapHeight,
-            itemBuilder: (context, index) {
-              final x = index % widget.mapWidth;
-              final y = index ~/ widget.mapWidth;
-              final point = GridPoint(x, y);
-              final tile = widget.tiles[index];
-              final unit = _unitAtUnits(widget.units, point);
-              final trap = widget.traps.any(
-                (entry) => entry['x'] == x && entry['y'] == y,
-              );
-              return _VoxelCell(
-                key: ValueKey('tacticalvoxelrpg-cell-$x-$y'),
-                terrain: tile['terrain'] as String,
-                unit: unit,
-                showUnit:
-                    unit?['sprite'] is! String &&
-                    _characterPortraitFor(unit) == null &&
-                    unit?['id'] != _movingUnitId &&
-                    !_queuedStarts.containsKey(unit?['id']),
-                trap: trap,
-                reachable: widget.reachable.contains(point),
-                route: widget.route.contains(point),
-                routeArrow: _routeArrowAt(point),
-                routeDestination:
-                    widget.route.isNotEmpty && widget.route.last == point,
-                attackRange: widget.attackRange.contains(point),
-                attackTarget:
-                    unit != null &&
-                    widget.attackTargets.contains(unit['id'] as String),
-                trapTarget: widget.trapTargets.contains(point),
-                damage: _lastDamageForCell(point, widget.lastAction),
-                damageEvent: _lastEvent(widget.lastAction),
-                unitAnimation: _slimeAnimationFor(unit, widget.lastAction),
-                tileSize: widget.tileSize,
-              );
-            },
-          ),
-          for (final unit in widget.units.where(
-            (unit) =>
-                _characterPortraitFor(unit) != null ||
-                unit['sprite'] is String ||
-                unit['id'] == _movingUnitId ||
-                _queuedStarts.containsKey(unit['id']),
-          ))
-            _unitOverlay(unit),
-        ],
+            for (final unit in widget.units.where(
+              (unit) =>
+                  _characterPortraitFor(unit) != null ||
+                  unit['sprite'] is String ||
+                  unit['id'] == _movingUnitId ||
+                  _queuedStarts.containsKey(unit['id']),
+            ))
+              _unitOverlay(unit),
+          ],
+        ),
       ),
-    ),
-  );
+    );
+    stopwatch.stop();
+    widget.onBuild?.call(stopwatch.elapsedMicroseconds);
+    return result;
+  }
 
   Widget _unitOverlay(Map<String, Object?> unit) {
     final moving = unit['id'] == _movingUnitId && _movingPosition != null;

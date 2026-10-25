@@ -153,15 +153,18 @@ extension _TacticalInteraction on _TacticalVoxelRPGViewState {
     int mapWidth,
     int mapHeight,
   ) {
-    final renderObject = _mapViewportKey.currentContext?.findRenderObject();
+    final renderObject = _mapCanvasKey.currentContext?.findRenderObject();
     if (renderObject is! RenderBox) return null;
     final local = renderObject.globalToLocal(global);
-    final scene = _mapTransform.toScene(local);
+    if (local.dx < 0 ||
+        local.dy < 0 ||
+        local.dx >= renderObject.size.width ||
+        local.dy >= renderObject.size.height) {
+      return null;
+    }
     final pitch = tileSize + 1 / mapWidth;
-    final mapLeft = (renderObject.size.width - tileSize * mapWidth) / 2;
-    final mapTop = (renderObject.size.height - tileSize * mapHeight) / 2;
-    final x = ((scene.dx - mapLeft) / pitch).floor();
-    final y = ((scene.dy - mapTop) / pitch).floor();
+    final x = (local.dx / pitch).floor();
+    final y = (local.dy / pitch).floor();
     if (x < 0 || x >= mapWidth || y < 0 || y >= mapHeight) return null;
     return GridPoint(x, y);
   }
@@ -379,7 +382,10 @@ extension _TacticalInteraction on _TacticalVoxelRPGViewState {
         _unitAtUnits(units, point) == null &&
         (_draftRoute.lastOrNull == point ||
             _points(view['reachable']).contains(point));
-    if (unit != null && unit['owner'] == widget.ctx.myId && !routeDestination) {
+    if (unit != null &&
+        unit['owner'] == widget.ctx.myId &&
+        !routeDestination &&
+        _selectedCardId == null) {
       _updateState(() {
         _selectedCardId = null;
         _mode = null;
@@ -461,7 +467,9 @@ extension _TacticalInteraction on _TacticalVoxelRPGViewState {
             final distance =
                 (point.x - (active['x'] as int)).abs() +
                 (point.y - (active['y'] as int)).abs();
-            final onPlannedRoute = _points(active['route']).contains(point);
+            final onPlannedRoute =
+                _points(active['route']).contains(point) ||
+                _draftRoute.contains(point);
             if (tile['passable'] == true &&
                 !occupied &&
                 (onPlannedRoute || distance >= 1 && distance <= 3)) {
