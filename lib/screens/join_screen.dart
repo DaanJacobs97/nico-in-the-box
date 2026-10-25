@@ -8,6 +8,7 @@ import 'package:nico_shared/net/protocol.dart';
 import 'package:nico_shared/screens/session_screen.dart';
 import 'package:nico_shared/widgets/nickname_dialog.dart';
 
+import '../debug/tactical_performance_log.dart';
 import '../net/multicast_lock.dart';
 
 /// Parses "host" or "host:port" typed by the user. Returns null if invalid.
@@ -93,7 +94,10 @@ class _JoinScreenState extends State<JoinScreen> {
         }
         await Navigator.of(context).pushReplacement(
           MaterialPageRoute<void>(
-            builder: (_) => SessionScreen(client: client),
+            builder: (_) => SessionScreen(
+              client: client,
+              performanceLog: TacticalPerformanceLog.sink,
+            ),
           ),
         );
         return;

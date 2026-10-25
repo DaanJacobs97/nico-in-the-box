@@ -7,6 +7,7 @@ import 'package:nico_shared/screens/session_screen.dart';
 import 'package:nico_shared/widgets/display_settings_editor.dart';
 import 'package:nico_shared/widgets/game_category_header.dart';
 
+import '../debug/tactical_performance_log.dart';
 import '../net/hosted_room.dart';
 import '../widgets/caster_picker.dart';
 import '../widgets/join_info.dart';
@@ -65,6 +66,7 @@ class _HostSetupScreenState extends State<HostSetupScreen> {
         MaterialPageRoute<void>(
           builder: (_) => SessionScreen(
             client: room.client,
+            performanceLog: TacticalPerformanceLog.sink,
             onClose: room.close,
             hostFooter: JoinInfo(room: room),
             casterAvailable: true,
